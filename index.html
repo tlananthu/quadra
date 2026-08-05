@@ -280,7 +280,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.5</span></h1>
+                <h1>Quadra <span class="version-badge">v1.6</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -1623,7 +1623,7 @@
         }
 
         function searchTag(tag, event) { event.stopPropagation(); document.getElementById('searchInput').value = tag; handleSearch(); }
-        function clearSearch() { document.getElementById('searchInput').value = ''; handleSearch(); }
+        clearSearch = function() { document.getElementById('searchInput').value = ''; handleSearch(); }
 
         // --- Boolean Search Parser (AND / OR) ---
         function matchSearchQuery(noteText, rawQuery) {
@@ -1658,7 +1658,10 @@
 
         function renderNotes(searchQuery = '') {
             ['inbox', 'calendar', 'q1', 'q2', 'q3', 'q4', 'closed'].forEach(q => { const el = document.getElementById(`list-${q}`); if (el) el.innerHTML = ''; });
-            let filteredNotes = notes.filter(note => !note.deleted && matchSearchQuery(note.text, searchQuery));
+            let filteredNotes = notes.notes ? notes : notes.filter(note => !note.deleted && matchSearchQuery(note.text, searchQuery));
+            
+            // Re-eval filtering safely
+            filteredNotes = notes.filter(note => !note.deleted && matchSearchQuery(note.text, searchQuery));
             filteredNotes.sort((a, b) => { if (!a.dueDate && !b.dueDate) return 0; if (!a.dueDate) return -1; if (!b.dueDate) return 1; return a.dueDate.localeCompare(b.dueDate); });
 
             let filteredCounts = { q1: 0, q2: 0, q3: 0, q4: 0, inbox: 0, calendar: 0, closed: 0 };
@@ -2118,7 +2121,7 @@
                     if (sn.deleted && sn.dirty) { if (remoteTaskMap[sn.id]) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); } catch(e){} } sn.dirty = false; continue; }
                     if (sn.dirty && !sn.deleted) {
                         const targetListId = gapiListIds[sn.quadrant]; const remoteObj = remoteTaskMap[sn.id]; const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; const payload = { tasklist: targetListId, title: sn.text, status: gStatus }; if (sn.dueDate) payload.due = sn.dueDate; else payload.due = null;
-                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} } else { try { payload.task = sn.id; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
+                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} } else { try { payload.task = sn.id; payload.tasklist = targetListId; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
                         sn.dirty = false;
                     } else if (!sn.dirty && !sn.deleted) { const remoteObj = remoteTaskMap[sn.id]; if (remoteObj) { sn.text = remoteObj.task.title || ''; sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; sn.quadrant = remoteObj.quadKey; sn.dueDate = remoteObj.task.due || null; delete remoteTaskMap[sn.id]; } }
                 }
