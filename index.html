@@ -279,7 +279,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.3</span></h1>
+                <h1>Quadra <span class="version-badge">v1.4</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -422,6 +422,7 @@
                                 <button class="btn-outline" style="padding: 4px 8px;" onclick="changeTrackerDay(-1)">←</button>
                                 <input type="date" id="trackerDate" onchange="renderTrackerTimeline()">
                                 <button class="btn-outline" style="padding: 4px 8px;" onclick="changeTrackerDay(1)">→</button>
+                                <button class="btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="goToToday()">Today</button>
                             </h2>
                             <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted);">
                                 🔍 Zoom: 
@@ -810,6 +811,12 @@
             const d = new Date(dateInput.value);
             d.setDate(d.getDate() + offset);
             dateInput.value = d.toLocaleDateString('en-CA').split('T')[0];
+            renderTrackerTimeline();
+        }
+
+        function goToToday() {
+            const dateInput = document.getElementById('trackerDate');
+            dateInput.value = new Date().toLocaleDateString('en-CA').split('T')[0];
             renderTrackerTimeline();
         }
 
