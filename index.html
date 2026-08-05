@@ -279,7 +279,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.1</span></h1>
+                <h1>Quadra <span class="version-badge">v1.2</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -293,12 +293,12 @@
         </div>
         
         <div class="header-actions">
-            <button class="btn btn-outline" onclick="performBackgroundSync()" title="Sync tasks with Google Tasks">🔄 Sync Tasks</button>
+            <button class="btn btn-outline" onclick="performBackgroundSync()" title="Sync tasks with Google Tasks">🔄</button>
             <div class="view-toggle" id="viewToggleGroup">
-                <button id="btnGrid" onclick="setLayout('grid')">⊞ Matrix</button>
-                <button id="btnKanban" onclick="setLayout('kanban')">⏸ Kanban</button>
-                <button id="btnOverdue" onclick="setLayout('overdue')">⚠️ Overdue</button>
-                <button id="btnTracker" onclick="setLayout('tracker')">⏱️ Tracker</button>
+                <button id="btnGrid" onclick="setLayout('grid')">⊞</button>
+                <button id="btnKanban" onclick="setLayout('kanban')">⏸</button>
+                <button id="btnOverdue" onclick="setLayout('overdue')">⚠️</button>
+                <button id="btnTracker" onclick="setLayout('tracker')">⏱️</button>
             </div>
             <button id="authorize_button" class="btn" onclick="handleAuthClick()">Sign In</button>
             <button id="signout_button" class="btn btn-outline" onclick="handleSignoutClick()">Sign Out</button>
@@ -431,8 +431,8 @@
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <button class="btn btn-outline" style="padding: 8px 16px; font-size: 14px;" onclick="exportTimesheet()" title="Export Timesheet">📋 Export Timesheet</button>
-                            <button class="btn btn-outline" style="padding: 8px 16px; font-size: 14px;" onclick="importCalendarEvents()" title="Import meetings for this day">📥 Sync Meetings</button>
+                            <button class="btn btn-outline" style="padding: 8px 16px; font-size: 14px;" onclick="exportTimesheet()" title="Export Timesheet">📋</button>
+                            <button class="btn btn-outline" style="padding: 8px 16px; font-size: 14px;" onclick="importCalendarEvents()" title="Import meetings for this day">📥</button>
                             <span id="trackerDailyTotal" style="font-weight: 600; color: var(--brand-primary);">Total: 0h</span>
                         </div>
                     </div>
@@ -451,7 +451,10 @@
             <div class="settings-container">
                 <div class="settings-header">
                     <h2>Configuration Settings</h2>
-                    <button class="btn" onclick="saveSettings()">Save Changes</button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="btn btn-outline" onclick="handleSignoutClick()">↪ Sign Out of Google</button>
+                        <button class="btn" onclick="saveSettings()">Save Changes</button>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -878,6 +881,29 @@
             canvas.appendChild(colsContainer);
 
             let totalTimeRendered = 0;
+            let weeklyTotalRendered = 0;
+            const weekDateKeys = new Set(datesToRender.map(dtObj => dtObj.date));
+
+            notes.forEach(note => {
+                if (note.deleted || !note.timeBlocks) return;
+                note.timeBlocks.forEach(tb => {
+                    const duration = roundToQuarterHour(tb.duration);
+                    if (!duration) return;
+
+                    const blockStart = roundToQuarterHour(tb.startHour);
+                    const blockEnd = blockStart + duration;
+
+                    if (weekDateKeys.has(tb.date)) {
+                        weeklyTotalRendered += duration;
+                    }
+
+                    if (tb.date === baseDateStr) {
+                        totalTimeRendered += duration;
+                    } else if (tb.date === addDays(baseDateStr, -1) && blockStart < 24 && blockEnd > 24) {
+                        totalTimeRendered += roundToQuarterHour(blockEnd - 24);
+                    }
+                });
+            });
 
             datesToRender.forEach(dtObj => {
                 const dateStr = dtObj.date;
@@ -1025,7 +1051,9 @@
                 colsContainer.appendChild(col);
             });
 
-            document.getElementById('trackerDailyTotal').innerText = `Total: ${roundToQuarterHour(totalTimeRendered)}h`;
+            const dayTotal = roundToQuarterHour(totalTimeRendered);
+            const weekTotal = roundToQuarterHour(weeklyTotalRendered);
+            document.getElementById('trackerDailyTotal').innerText = `${dayTotal}h/${weekTotal}h`;
 
             const scrollArea = document.getElementById('timelineScrollArea');
             if (scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
