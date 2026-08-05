@@ -58,7 +58,7 @@
             position: relative;
         }
 
-        .header-left { display: flex; align-items: center; gap: 24px; flex-grow: 1; max-width: 600px; }
+        .header-left { display: flex; align-items: center; gap: 24px; flex-grow: 1; max-width: 750px; }
         .brand-container { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
         .logo-svg { width: 28px; height: 28px; color: var(--brand-primary); }
         header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: baseline; gap: 8px; }
@@ -280,7 +280,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.4</span></h1>
+                <h1>Quadra <span class="version-badge">v1.5</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -1293,7 +1293,6 @@
             const trackerSection = document.getElementById('timeTrackerSection');
             const trackerChevron = document.getElementById('trackerToggleChevron');
             
-            // If clicked from tracker view (or timeline context provided), show time tracking details; otherwise hide by default
             if (currentLayout === 'tracker' || timelineContext) {
                 trackerSection.style.display = 'block';
                 trackerChevron.innerText = '▼';
@@ -1631,10 +1630,8 @@
             if (!rawQuery || rawQuery.trim() === '') return true;
             let textLower = noteText.toLowerCase();
             
-            // Check for OR groups first
             let orGroups = rawQuery.split(/\s+or\s+/i);
             for (let orGroup of orGroups) {
-                // Within each OR group, check for AND conditions (separated by 'and' or spaces)
                 let andTerms = orGroup.split(/\s+(?:and\s+)?/i).map(t => t.trim()).filter(t => t.length > 0 && t !== 'and' && t !== 'or');
                 if (andTerms.length === 0) continue;
                 
@@ -1930,7 +1927,6 @@
                 });
             }
             checkConfigState();
-            // Initial search handle on load to respect persisted query
             if (savedSearchQuery) {
                 handleSearch();
             }
