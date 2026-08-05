@@ -65,14 +65,15 @@
 
         .search-container { flex: 0 1 auto; position: relative; max-width: 520px; }
         .search-container input {
-            width: 38px; min-width: 38px; padding: 10px 10px 10px 30px; border-radius: 20px;
+            width: 350px; 
+            min-width: 38px; padding: 10px 10px 10px 30px; border-radius: 20px;
             border: 1px solid transparent; background: transparent;
             font-size: 14px; outline: none; transition: all 0.2s;
             cursor: pointer; color: transparent;
         }
         .search-container input:focus,
         .search-container input:not(:placeholder-shown) {
-            width: 100%; min-width: 240px; padding: 10px 36px 10px 40px;
+            width: 100%; min-width: 350px; padding: 10px 36px 10px 40px;
             border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); background: #ffffff;
             cursor: text; color: var(--text-main);
         }
@@ -355,7 +356,7 @@
         .resize-handle::after { content: ''; width: 24px; height: 3px; background: rgba(0,0,0,0.3); border-radius: 2px; }
 
         /* --- Overdue Tasks Full Page View --- */
-        #overdue-view { display: none; flex-grow: 1; width: 100%; overflow-y: auto; background: #ffffff; padding: 40px; }
+        #overdue-view { display: none; flex-grow: 1; width: 100%; overflow: y: auto; background: #ffffff; padding: 40px; }
         .overdue-container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
         .overdue-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
         .overdue-header h2 { font-size: 22px; font-weight: 700; color: #9F1239; display: flex; align-items: center; gap: 8px; }
@@ -432,7 +433,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.0</span></h1>
+                <h1>Quadra <span class="version-badge">v2.1</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -440,9 +441,9 @@
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" id="searchInput" placeholder="Search tasks, #tags, @people, or use AND/OR" oninput="handleSearch()" onfocus="updateSearchSuggestions()">
+                <input type="text" id="searchInput" placeholder="Search tasks, #tags, @people, or use AND/OR" oninput="handleSearch()">
                 <button class="clear-search" id="clearSearchBtn" onclick="clearSearch()" title="Clear search">×</button>
-                <div id="searchSuggestions" class="search-suggestions"></div>
+                <div id="searchSuggestions" style="display:none;" class="search-suggestions"></div>
             </div>
         </div>
         
@@ -1912,6 +1913,14 @@
             const searchInput = document.getElementById('searchInput');
             if(!searchInput) return;
             const query = searchInput.value;
+            
+            // Persist the query to localStorage if it exists, otherwise remove it
+            if (query.trim().length > 0) {
+                localStorage.setItem('quadra_search', query);
+            } else {
+                localStorage.removeItem('quadra_search');
+            }
+
             document.getElementById('clearSearchBtn').style.display = query.length > 0 ? 'block' : 'none';
             renderNotes(query);
             updateSearchSuggestions();
@@ -2410,7 +2419,17 @@
             }
         }
 
-        setLayout(currentLayout); renderNotes();
+        // --- Execute Initial Render logic with Search Preservation ---
+        setLayout(currentLayout); 
+        
+        const savedSearch = localStorage.getItem('quadra_search') || '';
+        const searchInputEl = document.getElementById('searchInput');
+        if (searchInputEl && savedSearch) {
+            searchInputEl.value = savedSearch;
+            document.getElementById('clearSearchBtn').style.display = 'block';
+        }
+        
+        renderNotes(savedSearch);
     </script>
 </body>
 </html>
