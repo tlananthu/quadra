@@ -87,6 +87,303 @@
         .btn-outline { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
         .btn-outline:hover { background-color: var(--bg-main); }
         
+        #backNavBtn, #signout_button, #authorize_button { display: none; }
+
+        .tags-bar { display: flex; gap: 8px; padding: 12px 32px; background: #ffffff; border-bottom: 1px solid var(--border-color); overflow-x: auto; flex-shrink: 0; scrollbar-width: none; -ms-overflow-style: none; }
+        .tags-bar::-webkit-scrollbar { display: none; }
+        .tags-bar:empty { display: none; }
+        .filter-tag { background: rgba(79, 70, 229, 0.08); color: var(--brand-primary); padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s; border: 1px solid transparent; }
+        .filter-tag:hover { background: rgba(79, 70, 229, 0.15); transform: translateY(-1px); }
+        .filter-tag.person-filter { background: var(--person-tag-bg); color: var(--person-tag); }
+        .filter-tag.person-filter:hover { background: var(--person-tag-hover); }
+
+        /* Matrix Layout */
+        .matrix-container { display: grid; gap: 24px; padding: 24px; flex-grow: 1; transition: all 0.3s ease; max-width: 1600px; margin: 0 auto; width: 100%; position: relative; overflow-y: auto; overflow-x: auto; }
+        .matrix-container.layout-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; min-width: 700px; }
+        .matrix-container.layout-kanban { grid-template-columns: repeat(4, minmax(300px, 1fr)); grid-template-rows: 1fr; overflow-x: auto; }
+        
+        .quadrant { border-radius: 16px; padding: 20px; display: flex; flex-direction: column; border: 1px solid rgba(0,0,0,0.05); min-height: 0; transition: box-shadow 0.2s; }
+        .quadrant.drag-over { box-shadow: 0 0 0 2px var(--brand-primary) inset; }
+        #q1 { background-color: var(--q1-bg); } #q2 { background-color: var(--q2-bg); } #q3 { background-color: var(--q3-bg); } #q4 { background-color: var(--q4-bg); }
+
+        .q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .q-header h2 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .q-badge { font-size: 12px; font-weight: 600; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 12px; color: var(--text-muted); }
+        
+        .header-buttons { display: flex; gap: 8px; align-items: center; }
+        .icon-btn { background: rgba(255,255,255,0.5); border: none; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.2s; font-size: 16px; font-weight: bold; }
+        .icon-btn:hover { background: rgba(255,255,255,0.9); color: var(--brand-primary); }
+        .add-btn { color: var(--brand-primary); font-size: 20px; padding: 0; }
+
+        .task-list { flex-grow: 1; overflow-y: auto; padding-bottom: 10px; scrollbar-width: thin; }
+        
+        /* Note Styling */
+        .note { background-color: #ffffff; border: 1px solid rgba(0,0,0,0.05); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: flex-start; font-size: 14px; line-height: 1.5; cursor: grab; transition: transform 0.2s, box-shadow 0.2s; }
+        .note:active { cursor: grabbing; }
+        .note:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.05); transform: translateY(-1px); }
+        .note-content-wrapper { flex-grow: 1; cursor: pointer; padding: 2px 0; }
+        .note-text { white-space: pre-wrap; word-break: break-word; max-height: 4.5em; overflow-y: auto; padding-right: 4px; }
+        .note-text::-webkit-scrollbar { width: 4px; } .note-text::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 4px; }
+        .hashtag { color: var(--brand-primary); font-weight: 600; cursor: pointer; border-radius: 4px; padding: 0 2px; text-decoration: underline dotted var(--brand-primary); }
+        .hashtag:hover { background-color: rgba(79, 70, 229, 0.1); }
+        .person-tag { color: var(--person-tag); font-weight: 600; cursor: pointer; border-radius: 4px; padding: 0 2px; text-decoration: underline dotted var(--person-tag); }
+        .person-tag:hover { background-color: var(--person-tag-hover); }
+
+        .note-actions { display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; padding-left: 12px; flex-shrink: 0; }
+        .note:hover .note-actions { opacity: 1; }
+        .action-btn { background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1; font-weight: bold; }
+        .complete-btn { color: #10B981; } .delete-btn { color: #EF4444; } .restore-btn { color: #3B82F6; }  
+        .closed-note { opacity: 0.6; box-shadow: none; cursor: default; }
+        .closed-note .note-text { text-decoration: line-through; cursor: default; overflow-y: hidden; }
+
+        /* --- TIME TRACKER VIEW --- */
+        #tracker-view { display: none; flex-grow: 1; width: 100%; overflow: hidden; background: #ffffff; }
+        .tracker-layout { display: flex; height: 100%; }
+        
+        .tracker-palette { width: 350px; flex-shrink: 0; border-right: 1px solid var(--border-color); background: var(--bg-main); display: flex; flex-direction: column; overflow: hidden;}
+        .palette-header { padding: 16px; border-bottom: 1px solid var(--border-color); background: #ffffff; }
+        .palette-header h3 { font-size: 15px; margin-bottom: 4px; }
+        .palette-header p { font-size: 12px; color: var(--text-muted); }
+        .palette-list { flex-grow: 1; overflow-y: auto; padding: 16px; }
+        .palette-note { background: #fff; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; font-size: 13px; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.02); transition: transform 0.1s, border-color 0.2s; }
+        .palette-note:hover { border-color: var(--brand-primary); transform: translateY(-1px); }
+
+        .tracker-canvas-wrapper { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; background: #F8FAFC; user-select: none; }
+        .tracker-toolbar { padding: 16px 24px; background: #ffffff; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;}
+        .tracker-toolbar h2 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 12px;}
+        .tracker-toolbar input[type="date"] { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 14px; }
+        
+        .timeline-scroll-area { flex-grow: 1; overflow-y: auto; overflow-x: hidden; position: relative; padding: 24px 0;}
+        
+        .timeline { position: relative; margin: 0 24px 24px 24px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02); display: flex; }
+        
+        .timeline-bg-lines { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; pointer-events: none; }
+        .time-row { position: absolute; width: 100%; border-top: 1px dashed var(--border-color); box-sizing: border-box; display: flex; align-items: flex-start; padding-left: 0; }
+        .time-label { color: var(--text-muted); font-size: 11px; font-weight: 500; position: absolute; left: 8px; top: -8px; background: #ffffff; padding: 0 4px; line-height: 1; z-index: 5; }
+        
+        .timeline-cols-container { position: absolute; left: 55px; right: 0; top: 0; bottom: 0; display: flex; z-index: 2; }
+        .time-col { flex: 1; position: relative; border-left: 1px solid var(--border-color); height: 100%; cursor: crosshair; }
+        .time-col:first-child { border-left: none; }
+        .time-col.drag-over { background: rgba(79, 70, 229, 0.03); box-shadow: inset 0 0 0 2px var(--brand-primary); }
+        
+        .col-header { position: sticky; top: 0; background: rgba(255,255,255,0.9); backdrop-filter: blur(4px); z-index: 20; text-align: center; font-weight: 600; font-size: 13px; padding: 10px 0; border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .col-header.today { color: var(--brand-primary); }
+
+        .schedule-overlay { 
+            position: absolute; left: -55px; right: 0; 
+            background: repeating-linear-gradient( 45deg, rgba(0,0,0,0.04), rgba(0,0,0,0.04) 10px, rgba(0,0,0,0.08) 10px, rgba(0,0,0,0.08) 20px ); 
+            pointer-events: none; z-index: 1; 
+            border-top: 1px solid rgba(0,0,0,0.1); border-bottom: 1px solid rgba(0,0,0,0.1); 
+            display: flex; align-items: center; justify-content: flex-start; padding-left: 65px;
+            color: var(--text-main); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; 
+        }
+        
+        .current-time-line { position: absolute; left: 0; right: 0; height: 2px; background: #EF4444; z-index: 25; pointer-events: none; }
+        .current-time-line::before { content: ''; position: absolute; left: -6px; top: -4px; width: 10px; height: 10px; background: #EF4444; border-radius: 50%; }
+        .current-time-badge { position: absolute; left: 6px; top: -14px; background: #EF4444; color: white; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px; letter-spacing: 0.5px; }
+
+        .logged-block { position: absolute; left: 6px; right: 6px; background: var(--brand-primary); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border: 1px solid rgba(255, 255, 255, 0.4); overflow: hidden; cursor: grab; transition: box-shadow 0.1s; user-select: none; display: flex; justify-content: space-between; align-items: flex-start; min-height: 24px; }
+        
+        .logged-block.q1 { background-color: var(--q1-bg); border-color: var(--q1-border); color: var(--q1-text); }
+        .logged-block.q2 { background-color: var(--q2-bg); border-color: var(--q2-border); color: var(--q2-text); }
+        .logged-block.q3 { background-color: var(--q3-bg); border-color: var(--q3-border); color: var(--q3-text); }
+        .logged-block.q4 { background-color: var(--q4-bg); border-color: var(--q4-border); color: var(--q4-text); }
+        .logged-block.is-meeting { background-color: var(--q2-bg); border-color: var(--q2-border); color: var(--q2-text); }
+
+        .logged-block:active { cursor: grabbing; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 12;}
+        .block-info { pointer-events: none; overflow: hidden; flex-grow: 1; padding-right: 4px; }
+        .block-title { font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+        .block-meta { font-size: 11px; opacity: 0.9; line-height: 1; }
+        
+        .block-edit-icon { background: rgba(0,0,0,0.08); border: none; color: inherit; width: 20px; height: 20px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.2s; flex-shrink: 0; z-index: 12; }
+        .block-edit-icon:hover { background: rgba(0,0,0,0.15); }
+
+        .resize-handle { position: absolute; bottom: 0; left: 0; right: 0; height: 10px; cursor: ns-resize; display: flex; justify-content: center; align-items: center; z-index: 11; opacity: 0.7; transition: opacity 0.2s; }
+        .resize-handle:hover { opacity: 1; }
+        .resize-handle::after { content: ''; width: 24px; height: 3px; background: rgba(0,0,0,0.3); border-radius: 2px; }
+
+        /* --- Overdue Tasks Full Page View --- */
+        #overdue-view { display: none; flex-grow: 1; width: 100%; overflow-y: auto; background: #ffffff; padding: 40px; }
+        .overdue-container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+        .overdue-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
+        .overdue-header h2 { font-size: 22px; font-weight: 700; color: #9F1239; display: flex; align-items: center; gap: 8px; }
+        .overdue-card { background: #FFF1F2; border: 1px solid #FECDD3; border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: transform 0.2s; }
+        .overdue-card:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+
+        /* --- Sticky Sidebar & Trays --- */
+        .toggle-sidebar-btn { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: var(--brand-primary); color: white; border: none; padding: 16px 8px; border-radius: 8px 0 0 8px; cursor: pointer; z-index: 91; display: flex; flex-direction: column; gap: 8px; align-items: center; box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toggle-sidebar-btn.open { right: 350px; }
+        .toggle-sidebar-btn span { writing-mode: vertical-rl; text-orientation: mixed; font-weight: 600; letter-spacing: 1px; }
+
+        .side-panel { position: absolute; top: 0; right: -350px; width: 350px; height: 100%; background: #ffffff; z-index: 90; box-shadow: -5px 0 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; border-left: 1px solid var(--border-color); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .side-panel.open { right: 0; }
+        .side-panel-header { padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); background: #F8FAFC; flex-shrink: 0; }
+        .side-panel-header h2 { font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0; }
+        .close-sidebar-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); line-height: 1; }
+        
+        .inbox-tray, .calendar-tray, .closed-tray { display: flex; flex-direction: column; flex-shrink: 0; }
+        .calendar-tray, .closed-tray { border-top: 1px solid var(--border-color); }
+        
+        .tray-header { padding: 12px 24px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #ffffff; transition: background 0.2s; }
+        .tray-header:hover { background: #F9FAFB; }
+        .tray-header h3 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text-main); }
+        
+        .tray-content { height: 0; overflow: hidden; display: flex; flex-direction: column; transition: flex-grow 0.3s ease, padding 0.3s ease; background: #F8FAFC; }
+        .tray-content.open { flex-grow: 1; padding: 16px 24px; overflow-y: auto; height: auto; max-height: calc(33vh - 40px); border-bottom: 1px solid var(--border-color); }
+
+        /* --- Settings Page View --- */
+        #settings-view { display: none; flex-grow: 1; width: 100%; overflow-y: auto; background: #ffffff; padding: 40px; }
+        .settings-container { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+        .settings-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
+        .settings-header h2 { font-size: 22px; font-weight: 700; }
+
+        /* Overlays & Modals */
+        .overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(249, 250, 251, 0.95); z-index: 95; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; backdrop-filter: blur(4px); }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 32px; border-radius: 16px; width: 95%; max-width: 800px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 16px; max-height: 90vh; overflow-y: auto; }
+        .form-group { text-align: left; }
+        .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-main); }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: inherit; font-size: 14px; }
+        .form-group input[type="date"] { width: auto; min-width: 180px; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--brand-primary); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+
+        .form-row-inline { display: flex; align-items: center; gap: 16px; }
+        .form-row-inline label { width: 120px; font-size: 14px; font-weight: 600; color: var(--text-main); flex-shrink: 0; margin-bottom: 0; }
+
+        .responsive-date-hours-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            align-items: center;
+        }
+
+        /* Toast Notification System */
+        #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+        .toast { background: var(--text-main); color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transform: translateY(10px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: auto; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        #sync-banner { display: none; position: fixed; bottom: 24px; right: 24px; background: var(--text-main); color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <div class="brand-container">
+                <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                    <rect x="14" y="3" width="7" height="7" rx="1.5" fill="currentColor"></rect>
+                    <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                    <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                </svg>
+                <h1>Quadra <span class="version-badge">v1.3</span></h1>
+            </div>
+            
+            <div class="search-container" id="searchHeaderContainer">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Search tasks,Here is the corrected and updated HTML code for version 1.3. 
+
+### Fixes Applied:
+* **Version Update**: Updated the header version badge from `v8.11` to `v1.3`.
+* **Sign-Out Button Visibility**: Fixed the UI state logic in the `checkConfigState()` function. Previously, if the configuration checked out but there was no active token, the sign-out button wasn't explicitly hidden, which could cause display state issues depending on load order. It now explicitly sets `display: none` or `display: inline-block` across all authentication state branches.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quadra | Eisenhower Matrix & Time Tracker</title>
+    <style>
+        @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap)');
+
+        :root {
+            --brand-primary: #4F46E5;
+            --brand-primary-hover: #4338CA;
+            --brand-meeting: #0D9488; 
+            --person-tag: #059669;
+            --person-tag-bg: rgba(5, 150, 105, 0.08);
+            --person-tag-hover: rgba(5, 150, 105, 0.15);
+            
+            /* Quadrant Colors */
+            --q1-bg: #FFE4E6; --q1-border: #FDA4AF; --q1-text: #9F1239;
+            --q2-bg: #E0F2FE; --q2-border: #7DD3FC; --q2-text: #0369A1;
+            --q3-bg: #FEF3C7; --q3-border: #FCD34D; --q3-text: #B45309;
+            --q4-bg: #F1F5F9; --q4-border: #CBD5E1; --q4-text: #475569;
+
+            --bg-main: #F9FAFB;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
+            
+            --hour-height: 60px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        
+        body { 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+        }
+
+        .main-wrapper {
+            display: flex; flex-direction: column; flex-grow: 1;
+            position: relative; overflow: hidden;
+            transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @media (min-width: 769px) {
+            body.sidebar-open .main-wrapper { padding-right: 350px; }
+            body.sidebar-open #sync-banner { right: 374px; }
+        }
+
+        /* Header & Logo */
+        header {
+            background-color: #ffffff; padding: 16px 32px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center; z-index: 100; gap: 24px; flex-shrink: 0;
+            position: relative;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 24px; flex-grow: 1; max-width: 600px; }
+        .brand-container { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .logo-svg { width: 28px; height: 28px; color: var(--brand-primary); }
+        header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: baseline; gap: 8px; }
+        .version-badge { font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--bg-main); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); letter-spacing: 0.5px; }
+
+        .search-container { flex-grow: 1; position: relative; }
+        .search-container input {
+            width: 100%; padding: 10px 36px 10px 40px; border-radius: 20px;
+            border: 1px solid var(--border-color); background: var(--bg-main);
+            font-size: 14px; outline: none; transition: all 0.2s;
+        }
+        .search-container input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); background: #ffffff; }
+        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 16px; height: 16px; }
+        .clear-search { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; display: none; line-height: 1; padding: 0 4px; }
+        .clear-search:hover { color: var(--text-main); }
+
+        .header-actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+
+        .view-toggle { display: flex; background-color: #F1F5F9; border-radius: 8px; padding: 4px; gap: 4px; margin-right: 8px; }
+        .view-toggle button { background: transparent; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s; }
+        .view-toggle button:hover { color: var(--text-main); }
+        .view-toggle button.active { background-color: white; color: var(--brand-primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        .btn { background-color: var(--brand-primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: background-color 0.2s; }
+        .btn:hover { background-color: var(--brand-primary-hover); }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
+        .btn-outline:hover { background-color: var(--bg-main); }
+        
         #backBtn, #signout_button, #authorize_button { display: none; }
 
         .tags-bar { display: flex; gap: 8px; padding: 12px 32px; background: #ffffff; border-bottom: 1px solid var(--border-color); overflow-x: auto; flex-shrink: 0; scrollbar-width: none; -ms-overflow-style: none; }
@@ -280,7 +577,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.2</span></h1>
+                <h1>Quadra <span class="version-badge">v1.3</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -288,7 +585,7 @@
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" id="searchInput" placeholder="Search tasks, #tags, or @people (use AND/OR)..." oninput="handleSearch()">
+                <input type="text" id="searchInput" placeholder="Search tasks, #tags, or @people..." oninput="handleSearch()">
                 <button class="clear-search" id="clearSearchBtn" onclick="clearSearch()" title="Clear search">×</button>
             </div>
         </div>
@@ -486,7 +783,7 @@
 
                 <div class="form-group" id="outlookIcsGroup" style="display: none;">
                     <label>Google Apps Script Bridge Web App URL</label>
-                    <input type="text" id="configIcsUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec" style="font-family: monospace;">
+                    <input type="text" id="configIcsUrl" placeholder="[https://script.google.com/macros/s/AKfycb.../exec](https://script.google.com/macros/s/AKfycb.../exec)" style="font-family: monospace;">
                     <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Paste your deployed Apps Script Web App URL (`/exec`).</p>
                 </div>
 
@@ -587,8 +884,8 @@
         </div>
     </div>
 
-    <script async defer src="https://apis.google.com/js/api.js"></script>
-    <script async defer src="https://accounts.google.com/gsi/client"></script>
+    <script async defer src="[https://apis.google.com/js/api.js](https://apis.google.com/js/api.js)"></script>
+    <script async defer src="[https://accounts.google.com/gsi/client](https://accounts.google.com/gsi/client)"></script>
 
     <script>
         // --- Helper Function: Round to 15-Minute Scale ---
@@ -622,7 +919,7 @@
         let clockIntervalId = null;
         let timelineZoom = parseFloat(localStorage.getItem('quadra_zoom')) || 1;
         
-        const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.readonly';
+        const SCOPES = '[https://www.googleapis.com/auth/tasks](https://www.googleapis.com/auth/tasks) [https://www.googleapis.com/auth/calendar.readonly](https://www.googleapis.com/auth/calendar.readonly)';
 
         const defaultSchedule = [
             { title: 'Out of office hours', startHour: 14, endHour: 29 }, 
@@ -936,114 +1233,91 @@
                     });
                 });
 
-                // --- Google Calendar Style Overlap Collision Engine ---
-                let dayBlocks = [];
                 notes.forEach(note => {
                     if (note.deleted || !note.timeBlocks) return;
                     note.timeBlocks.forEach(tb => {
                         let blockStart = roundToQuarterHour(tb.startHour);
                         let duration = roundToQuarterHour(tb.duration);
                         let blockEnd = blockStart + duration;
-                        if (blockEnd < blockStart) blockEnd += 24;
+                        if (blockEnd < blockStart) {
+                            blockEnd += 24;
+                        }
                         let actualDuration = roundToQuarterHour(blockEnd - blockStart);
 
                         if (tb.date === dateStr) {
-                            totalTimeRendered += duration;
+                            totalTimeRendered += duration; 
                             let renderStart = blockStart % 24;
                             let renderDuration = duration;
+
                             if (blockStart < 24 && blockEnd > 24) {
-                                renderDuration = 24 - blockStart;
+                                renderDuration = 24 - blockStart; 
                             } else if (blockStart >= 24) {
-                                return;
+                                return; 
                             }
-                            dayBlocks.push({
-                                note, tb, blockStart, blockEnd: blockStart + renderDuration,
-                                renderStart, renderDuration, actualDuration,
-                                colIndex: 0, totalCols: 1
-                            });
+
+                            const blockEl = document.createElement('div');
+                            const isMeeting = note.eventId || note.text.includes('#meeting');
+                            const quadClass = note.quadrant || 'q2';
+                            blockEl.className = 'logged-block' + (isMeeting ? ' is-meeting' : ` ${quadClass}`);
+                            blockEl.id = `block-${tb.id}`;
+                            blockEl.style.top = `${renderStart * hourPx}px`;
+                            blockEl.style.height = `${Math.max(15, renderDuration * hourPx)}px`;
+                            
+                            let displayTitle = note.text.split('\n')[0].substring(0, 40);
+                            const actualEndHour = (blockStart + actualDuration) % 24;
+                            const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)} (${actualDuration}h)`;
+
+                            blockEl.innerHTML = `
+                                <div class="block-info">
+                                    <div class="block-title">${displayTitle}</div>
+                                    <div class="block-meta">${timeStr}</div>
+                                </div>
+                                <button class="block-edit-icon" onclick="openEditBlockModal('${note.id}', '${tb.id}', event)" title="Edit Time Block Hours">📝</button>
+                                <div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', '${tb.id}', true)"></div>
+                            `;
+                            
+                            blockEl.onclick = (e) => {
+                                if(e.target.closest('.block-edit-icon') || e.target.closest('.resize-handle')) return;
+                                openTaskModal(null, note.id, e);
+                            };
+
+                            blockEl.onmousedown = (e) => {
+                                if(e.target.closest('.block-edit-icon') || e.target.closest('.resize-handle')) return;
+                                startBlockDrag(e, note.id, tb.id, false);
+                            };
+                            col.appendChild(blockEl);
+                        } 
+                        else if (tb.date === addDays(dateStr, -1)) {
+                            if (blockStart < 24 && blockEnd > 24) {
+                                let overflowDuration = roundToQuarterHour(blockEnd - 24);
+                                totalTimeRendered += overflowDuration; 
+                                const blockEl = document.createElement('div');
+                                const isMeeting = note.eventId || note.text.includes('#meeting');
+                                const quadClass = note.quadrant || 'q2';
+                                blockEl.className = 'logged-block' + (isMeeting ? ' is-meeting' : ` ${quadClass}`);
+                                blockEl.id = `block-overflow-${tb.id}`;
+                                blockEl.style.top = `0px`;
+                                blockEl.style.height = `${Math.max(15, overflowDuration * hourPx)}px`;
+                                
+                                let displayTitle = note.text.split('\n')[0].substring(0, 40);
+                                const actualEndHour = (blockStart + actualDuration) % 24;
+                                const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)} (${actualDuration}h)`;
+
+                                blockEl.innerHTML = `
+                                    <div class="block-info">
+                                        <div class="block-title">${displayTitle} (cont.)</div>
+                                        <div class="block-meta">${timeStr}</div>
+                                    </div>
+                                    <button class="block-edit-icon" onclick="openEditBlockModal('${note.id}', '${tb.id}', event)" title="Edit Time Block Hours">📝</button>
+                                `;
+                                blockEl.onclick = (e) => {
+                                    if(e.target.closest('.block-edit-icon')) return;
+                                    openTaskModal(null, note.id, e);
+                                };
+                                col.appendChild(blockEl);
+                            }
                         }
                     });
-                });
-
-                dayBlocks.sort((a, b) => a.blockStart - b.blockStart || (b.blockEnd - b.blockStart) - (a.blockEnd - a.blockStart));
-
-                let groups = [];
-                dayBlocks.forEach(b => {
-                    let placed = false;
-                    for (let g of groups) {
-                        let overlaps = g.some(item => Math.max(item.blockStart, b.blockStart) < Math.min(item.blockEnd, b.blockEnd));
-                        if (overlaps) {
-                            g.push(b);
-                            placed = true;
-                            break;
-                        }
-                    }
-                    if (!placed) {
-                        groups.push([b]);
-                    }
-                });
-
-                groups.forEach(g => {
-                    let columns = [];
-                    g.forEach(b => {
-                        let placedCol = false;
-                        for (let i = 0; i < columns.length; i++) {
-                            let lastInCol = columns[i][columns[i].length - 1];
-                            if (lastInCol.blockEnd <= b.blockStart) {
-                                columns[i].push(b);
-                                b.colIndex = i;
-                                placedCol = true;
-                                break;
-                            }
-                        }
-                        if (!placedCol) {
-                            b.colIndex = columns.length;
-                            columns.push([b]);
-                        }
-                    });
-                    let totalCols = columns.length;
-                    g.forEach(b => { b.totalCols = totalCols; });
-                });
-
-                dayBlocks.forEach(b => {
-                    const { note, tb, blockStart, actualDuration, renderStart, renderDuration, colIndex, totalCols } = b;
-
-                    const blockEl = document.createElement('div');
-                    const isMeeting = note.eventId || note.text.includes('#meeting');
-                    const quadClass = note.quadrant || 'q2';
-                    blockEl.className = 'logged-block' + (isMeeting ? ' is-meeting' : ` ${quadClass}`);
-                    blockEl.id = `block-${tb.id}`;
-                    
-                    const widthPct = (100 / totalCols) - 2;
-                    const leftPct = (colIndex * (100 / totalCols)) + 1;
-                    blockEl.style.left = `${leftPct}%`;
-                    blockEl.style.width = `${Math.max(15, widthPct)}%`;
-                    blockEl.style.top = `${renderStart * hourPx}px`;
-                    blockEl.style.height = `${Math.max(15, renderDuration * hourPx)}px`;
-                    
-                    let displayTitle = note.text.split('\n')[0].substring(0, 40);
-                    const actualEndHour = (blockStart + actualDuration) % 24;
-                    const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)} (${actualDuration}h)`;
-
-                    blockEl.innerHTML = `
-                        <div class="block-info">
-                            <div class="block-title">${displayTitle}</div>
-                            <div class="block-meta">${timeStr}</div>
-                        </div>
-                        <button class="block-edit-icon" onclick="openEditBlockModal('${note.id}', '${tb.id}', event)" title="Edit Time Block Hours">📝</button>
-                        <div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', '${tb.id}', true)"></div>
-                    `;
-                    
-                    blockEl.onclick = (e) => {
-                        if(e.target.closest('.block-edit-icon') || e.target.closest('.resize-handle')) return;
-                        openTaskModal(null, note.id, e);
-                    };
-
-                    blockEl.onmousedown = (e) => {
-                        if(e.target.closest('.block-edit-icon') || e.target.closest('.resize-handle')) return;
-                        startBlockDrag(e, note.id, tb.id, false);
-                    };
-                    col.appendChild(blockEl);
                 });
 
                 colsContainer.appendChild(col);
@@ -1095,6 +1369,8 @@
         }
 
         // --- Drag & Resize Engine ---
+        let dragState = null;
+
         function startBlockDrag(e, noteId, blockId, isResize) {
             e.stopPropagation();
             const note = notes.find(n => n.id === noteId);
@@ -1178,6 +1454,8 @@
         }
 
         // --- Modals & Keyboard Escape Handler ---
+        let currentEditingId = null; let currentAddingQuadrant = null;
+        
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const taskModal = document.getElementById('taskModal');
@@ -1190,6 +1468,20 @@
                 }
             }
         });
+
+        function timeStrToDecimal(timeStr) {
+            if (!timeStr) return null;
+            const [h, m] = timeStr.split(':').map(Number);
+            return h + (m / 60);
+        }
+
+        function decimalToTimeStr(dec) {
+            let norm = dec % 24;
+            let h = Math.floor(norm);
+            let m = Math.round((norm - h) * 60);
+            if (m === 60) { h++; m = 0; }
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        }
 
         function onTimesChanged() {
             const startVal = document.getElementById('taskStartTime').value;
@@ -1270,6 +1562,8 @@
             modal.style.display = 'flex'; 
             setTimeout(() => titleInput.focus(), 100);
         }
+
+        let pendingTimelineContext = null;
 
         function closeTaskModal() { 
             document.getElementById('taskModal').style.display = 'none'; 
@@ -1353,6 +1647,7 @@
             closeTaskModal();
         }
 
+        let editingBlockState = null;
         function openEditBlockModal(noteId, blockId, event) {
             if (event) event.stopPropagation();
             const note = notes.find(n => n.id === noteId);
@@ -1380,16 +1675,295 @@
             note.dirty = true; saveNotes(); handleSearch(); closeEditBlockModal();
         }
 
-        // --- Sidebar & Panels ---
+        // --- Clear Calendar Cache from Settings ---
+        function clearCalendarCache() {
+            if (confirm("Are you sure you want to clear the calendar event cache? This will allow re-importing all meetings when you click Sync Meetings.")) {
+                notes = notes.filter(n => !n.eventId);
+                saveNotes();
+                handleSearch();
+                showToast("Calendar event cache cleared!");
+            }
+        }
+
+        // --- Export Engine ---
+        function exportTimesheet() {
+            const baseDateStr = document.getElementById('trackerDate').value;
+            const [y, m, d] = baseDateStr.split('-');
+            const baseDate = new Date(y, m - 1, d);
+            let datesToExport = [];
+            
+            if (currentTrackerMode === 'day') {
+                datesToExport.push(baseDateStr);
+            } else {
+                const dayOfWeek = baseDate.getDay();
+                const startOfWeek = new Date(baseDate);
+                startOfWeek.setDate(baseDate.getDate() - dayOfWeek);
+                for(let i=0; i<7; i++) {
+                    let dateIter = new Date(startOfWeek);
+                    dateIter.setDate(startOfWeek.getDate() + i);
+                    
+                    const localY = dateIter.getFullYear();
+                    const localM = String(dateIter.getMonth() + 1).padStart(2, '0');
+                    const localD = String(dateIter.getDate()).padStart(2, '0');
+                    
+                    datesToExport.push(`${localY}-${localM}-${localD}`);
+                }
+            }
+
+            let plainTextLog = `Timesheet Report\n`;
+            let overallTotal = 0;
+
+            datesToExport.forEach(dateStr => {
+                let dailyHrs = 0;
+                let dailyLog = "";
+                notes.forEach(note => {
+                    if (note.deleted || !note.timeBlocks) return;
+                    note.timeBlocks.forEach(tb => { 
+                        if(tb.date === dateStr) {
+                            let dur = roundToQuarterHour(tb.duration);
+                            dailyHrs += dur;
+                            const tags = note.text.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
+                            let identifier = tags ? tags.join(' ') : note.text.substring(0, 40).replace(/\n/g, ' ') + '...';
+                            dailyLog += `- [${identifier}] ${dur}h\n`;
+                        }
+                    });
+                });
+                
+                if (dailyHrs > 0 || currentTrackerMode === 'day') {
+                     plainTextLog += `\nDate: ${dateStr}\n------------------------\n`;
+                     if(dailyHrs > 0) plainTextLog += dailyLog;
+                     else plainTextLog += "No time logged.\n";
+                     plainTextLog += `Total: ${roundToQuarterHour(dailyHrs)}h\n`;
+                }
+                overallTotal += dailyHrs;
+            });
+            
+            if (currentTrackerMode === 'week') {
+                 plainTextLog += `\n========================\nWeekly Total: ${roundToQuarterHour(overallTotal)}h\n`;
+            }
+
+            navigator.clipboard.writeText(plainTextLog).then(() => showToast("Timesheet copied to clipboard!")).catch(err => showToast("Copy failed"));
+        }
+
+        // --- Config Settings & UI ---
+        async function loadCalendars() {
+            if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.getToken()) return;
+            const token = gapi.client.getToken();
+            if (!token || !token.access_token) return;
+            try {
+                const res = await fetch('[https://www.googleapis.com/calendar/v3/users/me/calendarList](https://www.googleapis.com/calendar/v3/users/me/calendarList)', {
+                    headers: { 'Authorization': `Bearer ${token.access_token}` }
+                });
+                const data = await res.json();
+                if (data.error) return;
+
+                const calendars = data.items || [];
+                const select = document.getElementById('configCalendar');
+                const currentVal = appConfig.calendarId;
+                select.innerHTML = '<option value="">-- Select a Calendar --</option>';
+                calendars.forEach(cal => {
+                    const opt = document.createElement('option');
+                    opt.value = cal.id; opt.innerText = cal.summary;
+                    if(cal.id === currentVal) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error("Auto Calendar Load Error:", e);
+            }
+        }
+
+        function renderScheduleSettings() {
+            const container = document.getElementById('scheduleConfigList');
+            container.innerHTML = '';
+            appSchedule.forEach(block => addScheduleRow(block));
+        }
+
+        function formatTimeForInput(decimalHour) {
+            let normalized = decimalHour % 24;
+            const hrs = Math.floor(normalized).toString().padStart(2, '0');
+            const mins = Math.round((normalized % 1) * 60).toString().padStart(2, '0');
+            return `${hrs}:${mins}`;
+        }
+
+        function addScheduleRow(block = {title: '', startHour: 14, endHour: 29}) {
+            const div = document.createElement('div');
+            div.className = 'schedule-row';
+            div.style.display = 'flex'; div.style.gap = '8px'; div.style.marginBottom = '8px';
+            div.innerHTML = `
+                <input type="text" class="sched-title" value="${block.title}" placeholder="Label" style="flex:2; padding:8px;">
+                <input type="time" class="sched-start" value="${formatTimeForInput(block.startHour)}" style="padding:8px;">
+                <input type="time" class="sched-end" value="${formatTimeForInput(block.endHour)}" style="padding:8px;">
+                <button class="btn btn-outline" style="color:red; padding:8px 12px;" onclick="this.parentElement.remove()">×</button>
+            `;
+            document.getElementById('scheduleConfigList').appendChild(div);
+        }
+
+        function saveSettings() {
+            appConfig.clientId = document.getElementById('configClientId').value.trim();
+            appConfig.apiKey = document.getElementById('configApiKey').value.trim();
+            appConfig.ignoreKeywords = document.getElementById('configIgnoreKeywords').value.trim();
+            appConfig.calSource = document.getElementById('configCalSource').value;
+            appConfig.icsUrl = document.getElementById('configIcsUrl').value.trim();
+            
+            const calendarSelect = document.getElementById('configCalendar');
+            if (calendarSelect && calendarSelect.value) {
+                appConfig.calendarId = calendarSelect.value;
+            }
+            
+            localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+            
+            const rows = document.querySelectorAll('.schedule-row');
+            appSchedule = Array.from(rows).map(row => {
+                const startStr = row.querySelector('.sched-start').value.split(':');
+                const endStr = row.querySelector('.sched-end').value.split(':');
+                
+                let startH = parseInt(startStr[0] || 0) + (parseInt(startStr[1] || 0) / 60);
+                let endH = parseInt(endStr[0] || 0) + (parseInt(endStr[1] || 0) / 60);
+                
+                if (endH <= startH) {
+                    endH += 24;
+                }
+
+                return {
+                    title: row.querySelector('.sched-title').value,
+                    startHour: roundToQuarterHour(startH),
+                    endHour: roundToQuarterHour(endH)
+                };
+            });
+            localStorage.setItem('quadra_schedule', JSON.stringify(appSchedule));
+            
+            closeSettingsPage(); 
+            showToast("Configuration saved!");
+        }
+
+        // --- Core UI Tasks & Notes Matrix ---
+        function renderTagsList() {
+            const tagsBar = document.getElementById('quick-tags-bar'); if (!tagsBar) return;
+            const tagCounts = {};
+
+            notes.forEach(note => {
+                if (!note.deleted && note.status === 'active' && !note.eventId) {
+                    const matches = note.text.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
+                    if (matches) {
+                        const uniqueTags = new Set(matches.map(t => t.toLowerCase()));
+                        uniqueTags.forEach(tag => { tagCounts[tag] = (tagCounts[tag] || 0) + 1; });
+                    }
+                }
+            });
+
+            tagsBar.innerHTML = '';
+
+            const sortedTags = Object.keys(tagCounts).sort((a, b) => {
+                if (tagCounts[b] !== tagCounts[a]) return tagCounts[b] - tagCounts[a];
+                return a.localeCompare(b);
+            });
+
+            sortedTags.forEach(tag => {
+                const btn = document.createElement('button');
+                const isPerson = tag.startsWith('@');
+                btn.className = 'filter-tag' + (isPerson ? ' person-filter' : '');
+                btn.innerText = `${tag} (${tagCounts[tag]})`;
+                btn.onclick = (e) => { 
+                    const searchInput = document.getElementById('searchInput'); 
+                    if (searchInput.value === tag) clearSearch(); else searchTag(tag, e); 
+                };
+                tagsBar.appendChild(btn);
+            });
+        }
+
+        function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); }
+        
+        function parseTags(str) { 
+            let html = escapeHTML(str);
+            html = html.replace(/(#[a-zA-Z0-9_]+)/g, '<span class="hashtag" onclick="searchTag(\'$1\', event)">$1</span>');
+            html = html.replace(/(@[a-zA-Z0-9_]+)/g, '<span class="person-tag" onclick="searchTag(\'$1\', event)">$1</span>');
+            return html;
+        }
+
+        function searchTag(tag, event) { event.stopPropagation(); document.getElementById('searchInput').value = tag; handleSearch(); }
+        function clearSearch() { document.getElementById('searchInput').value = ''; handleSearch(); }
+
+        function handleSearch() {
+            const searchInput = document.getElementById('searchInput');
+            if(!searchInput) return;
+            const query = searchInput.value.toLowerCase();
+            document.getElementById('clearSearchBtn').style.display = query.length > 0 ? 'block' : 'none';
+            renderNotes(query);
+        }
+
+        function renderNotes(searchQuery = '') {
+            ['inbox', 'calendar', 'q1', 'q2', 'q3', 'q4', 'closed'].forEach(q => { const el = document.getElementById(`list-${q}`); if (el) el.innerHTML = ''; });
+            let filteredNotes = notes.filter(note => !note.deleted && note.text.toLowerCase().includes(searchQuery));
+            filteredNotes.sort((a, b) => { if (!a.dueDate && !b.dueDate) return 0; if (!a.dueDate) return -1; if (!b.dueDate) return 1; return a.dueDate.localeCompare(b.dueDate); });
+
+            let filteredCounts = { q1: 0, q2: 0, q3: 0, q4: 0, inbox: 0, calendar: 0, closed: 0 };
+
+            filteredNotes.forEach(note => {
+                let targetListId = `list-${note.quadrant}`;
+                if (note.eventId) {
+                    targetListId = 'list-calendar';
+                }
+                const list = document.getElementById(targetListId);
+                if (list) {
+                    if (note.status === 'active' && !note.eventId && filteredCounts[note.quadrant] !== undefined) {
+                        filteredCounts[note.quadrant]++;
+                    }
+                    if (note.eventId && filteredCounts['calendar'] !== undefined) {
+                        filteredCounts['calendar']++;
+                    }
+                    if (note.quadrant === 'inbox' && filteredCounts['inbox'] !== undefined) {
+                        filteredCounts['inbox']++;
+                    }
+
+                    const noteEl = document.createElement('div'); noteEl.className = 'note' + (note.status === 'closed' ? ' closed-note' : '');
+                    if (note.status === 'active' && !note.eventId) { noteEl.draggable = true; noteEl.ondragstart = (e) => e.dataTransfer.setData('text/plain', note.id); }
+
+                    const contentWrapper = document.createElement('div'); contentWrapper.className = 'note-content-wrapper';
+                    contentWrapper.innerHTML = `<div class="note-text">${parseTags(note.text)}</div>`;
+                    
+                    if (note.dueDate) contentWrapper.innerHTML += `<div style="font-size:12px; color:var(--brand-primary); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>`;
+                    
+                    contentWrapper.onclick = (e) => openTaskModal(null, note.id, e);
+
+                    const actionsDiv = document.createElement('div'); actionsDiv.className = 'note-actions';
+                    if (!note.eventId) {
+                        if (note.status === 'active') actionsDiv.innerHTML = `<button class="action-btn complete-btn" onclick="completeTask('${note.id}')">✓</button>`;
+                        else actionsDiv.innerHTML = `<button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×</button>`;
+                    } else {
+                        actionsDiv.innerHTML = `<button class="action-btn delete-btn" onclick="deleteTask('${note.id}')" title="Remove event">×</button>`;
+                    }
+                    
+                    noteEl.append(contentWrapper, actionsDiv); list.appendChild(noteEl);
+                }
+            });
+
+            const activeNotes = notes.filter(n => !n.deleted && n.status === 'active' && !n.eventId);
+            document.getElementById('closed-count').innerText = notes.filter(n => !n.deleted && n.status === 'closed' && !n.eventId).length;
+            document.getElementById('inbox-count').innerText = filteredCounts.inbox;
+            document.getElementById('calendar-count').innerText = filteredCounts.calendar;
+            
+            ['q1', 'q2', 'q3', 'q4'].forEach(q => {
+                const badge = document.getElementById(`badge-${q}`);
+                if (badge) badge.innerText = filteredCounts[q];
+            });
+            
+            if (currentLayout === 'tracker') renderTrackerTimeline();
+            renderTagsList();
+        }
+
+        function completeTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'closed'; note.quadrant = 'closed'; note.dirty = true; saveNotes(); handleSearch(); } }
+        function restoreTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'active'; note.quadrant = 'inbox'; note.dirty = true; saveNotes(); handleSearch(); } }
+        function deleteTask(id) { const note = notes.find(n => n.id === id); if (note) { note.deleted = true; note.dirty = true; saveNotes(); handleSearch(); } }
+
         function toggleSidebar() { const panel = document.getElementById('sidePanel'); const btn = document.getElementById('sidebarToggleBtn'); panel.classList.toggle('open'); btn.classList.toggle('open'); document.body.classList.toggle('sidebar-open'); }
         function toggleClosedTray() { const content = document.getElementById('closed-tray-content'); const chevron = document.getElementById('closed-chevron'); if (content.classList.contains('open')) { content.classList.remove('open'); chevron.innerText = '▼'; } else { content.classList.add('open'); chevron.innerText = '▲'; } }
         function toggleCalendarTray() { const content = document.getElementById('calendar-tray-content'); const chevron = document.getElementById('calendar-chevron'); if (content.classList.contains('open')) { content.classList.remove('open'); chevron.innerText = '▼'; } else { content.classList.add('open'); chevron.innerText = '▲'; } }
         function toggleInboxTray() { const content = document.getElementById('inbox-tray-content'); const chevron = document.getElementById('inbox-chevron'); if (content.classList.contains('open')) { content.classList.remove('open'); chevron.innerText = '▼'; } else { content.classList.add('open'); chevron.innerText = '▲'; } }
 
-        // --- Init & Auth ---
         function checkConfigState() {
             if (!appConfig.clientId && appConfig.calSource === 'google') {
                 document.getElementById('overlay-actions').innerHTML = `<button class="btn" onclick="openSettingsPage()">Configure Keys</button><button class="btn btn-outline" onclick="dismissOverlay()">Use Offline (Local Storage)</button>`;
+                document.getElementById('signout_button').style.display = 'none';
             } else {
                 document.getElementById('overlay-actions').innerHTML = `<button class="btn" onclick="handleAuthClick()">Sign In with Google</button><button class="btn btn-outline" onclick="dismissOverlay()">Use Offline</button>`;
                 
@@ -1401,16 +1975,178 @@
                     isGoogleSynced = true;
                     if (typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: savedTokenData.token });
                     loadCalendars(); 
-                } else { if(appConfig.calSource === 'google') document.getElementById('authorize_button').style.display = 'inline-block'; else document.getElementById('auth-overlay').style.display = 'none'; }
+                } else { 
+                    document.getElementById('signout_button').style.display = 'none';
+                    if(appConfig.calSource === 'google') document.getElementById('authorize_button').style.display = 'inline-block'; 
+                    else document.getElementById('auth-overlay').style.display = 'none'; 
+                }
             }
         }
-        
         function dismissOverlay() { document.getElementById('auth-overlay').style.display = 'none'; renderNotes(); }
 
+        function exportData() { const dataStr = JSON.stringify(notes, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `quadra_backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url); }
+        function triggerImport() { document.getElementById('importFile').click(); }
+        function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const importedNotes = JSON.parse(e.target.result); if (Array.isArray(importedNotes)) { const noteMap = new Map(notes.map(n => [n.id, n])); importedNotes.forEach(inNote => { inNote.dirty = true; noteMap.set(inNote.id, inNote); }); notes = Array.from(noteMap.values()); saveNotes(); handleSearch(); showToast("Tasks merged!"); closeSettingsPage(); } else showToast("Invalid format."); } catch (err) { showToast("Error reading file."); } event.target.value = ''; }; reader.readAsText(file); }
+
+        // --- Robust Universal Timezone ICS Parser ---
+        function parseICS(icsText, targetDateStr, ignoreKeywords) {
+            let events = [];
+            let vTimezones = {};
+            let lines = icsText.split(/\r\n|\n|\r/);
+            let currentEvent = null;
+            let currentTzId = null;
+            let currentTzProp = null;
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                if (line.startsWith('BEGIN:VTIMEZONE')) {
+                    currentTzId = null;
+                } else if (line.startsWith('TZID:')) {
+                    currentTzId = line.substring(5).trim();
+                    if (!vTimezones[currentTzId]) vTimezones[currentTzId] = {};
+                } else if (line.startsWith('BEGIN:STANDARD') || line.startsWith('BEGIN:DAYLIGHT')) {
+                    currentTzProp = line.includes('DAYLIGHT') ? 'DAYLIGHT' : 'STANDARD';
+                } else if (line.startsWith('TZOFFSETFROM:') || line.startsWith('TZOFFSETTO:')) {
+                    if (currentTzId && currentTzProp) {
+                        let offsetStr = line.substring(13).trim();
+                        let sign = offsetStr.startsWith('-') ? -1 : 1;
+                        let hrs = parseInt(offsetStr.substring(1, 3)) || 0;
+                        let mins = parseInt(offsetStr.substring(3, 5)) || 0;
+                        let totalHours = sign * (hrs + (mins / 60));
+                        
+                        if (!vTimezones[currentTzId][currentTzProp]) {
+                            vTimezones[currentTzId][currentTzProp] = {};
+                        }
+                        if (line.startsWith('TZOFFSETTO:')) {
+                            vTimezones[currentTzId][currentTzProp].offsetTo = totalHours;
+                        }
+                    }
+                } else if (line.startsWith('END:VTIMEZONE')) {
+                    currentTzId = null;
+                    currentTzProp = null;
+                }
+            }
+
+            const fallbackOffsets = {
+                'AUS EASTERN STANDARD TIME': 10,
+                'E. AUSTRALIA STANDARD TIME': 10,
+                'AEST': 10,
+                'AEDT': 11,
+                'GMT': 0,
+                'UTC': 0,
+                'PACIFIC STANDARD TIME': -8,
+                'EASTERN STANDARD TIME': -5,
+                'CENTRAL STANDARD TIME': -6
+            };
+
+            for (let line of lines) {
+                if (line === 'BEGIN:VEVENT') {
+                    currentEvent = {};
+                } else if (line === 'END:VEVENT' && currentEvent) {
+                    if (currentEvent.SUMMARY && Object.keys(currentEvent).some(k => k.startsWith('DTSTART'))) {
+                        events.push(currentEvent);
+                    }
+                    currentEvent = null;
+                } else if (currentEvent) {
+                    let colonIdx = line.indexOf(':');
+                    if (colonIdx !== -1) {
+                        let fullKey = line.substring(0, colonIdx);
+                        let val = line.substring(colonIdx + 1);
+                        currentEvent[fullKey] = val;
+                    }
+                }
+            }
+
+            let parsedEvents = [];
+            events.forEach(ev => {
+                let summary = ev.SUMMARY || 'Meeting';
+                let lowerSummary = summary.toLowerCase();
+                let shouldIgnore = ignoreKeywords.some(kw => lowerSummary.includes(kw));
+                if (shouldIgnore) return;
+
+                let dtStartKey = Object.keys(ev).find(k => k.startsWith('DTSTART'));
+                let dtEndKey = Object.keys(ev).find(k => k.startsWith('DTEND'));
+
+                if (!dtStartKey || !ev[dtStartKey]) return;
+
+                let dtStartVal = ev[dtStartKey];
+                let dtEndVal = dtEndKey ? ev[dtEndKey] : dtStartVal;
+
+                let parseUniversalDate = (keyName, valStr) => {
+                    let clean = valStr.trim();
+                    let match = clean.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2}))?Z?$/);
+                    if (!match) return null;
+
+                    let y = parseInt(match[1]);
+                    let m = parseInt(match[2]) - 1;
+                    let d = parseInt(match[3]);
+                    let h = match[4] ? parseInt(match[4]) : 0;
+                    let min = match[5] ? parseInt(match[5]) : 0;
+                    let s = match[6] ? parseInt(match[6]) : 0;
+
+                    let dateObj;
+                    if (clean.endsWith('Z')) {
+                        dateObj = new Date(Date.UTC(y, m, d, h, min, s));
+                    } else {
+                        let tzidMatch = keyName.match(/TZID=([^;:]+)/i);
+                        let sourceOffset = undefined;
+
+                        if (tzidMatch) {
+                            let tzidKey = tzidMatch[1].trim();
+                            if (vTimezones[tzidKey]) {
+                                let tzData = vTimezones[tzidKey]['DAYLIGHT'] || vTimezones[tzidKey]['STANDARD'];
+                                if (tzData && tzData.offsetTo !== undefined) {
+                                    sourceOffset = tzData.offsetTo;
+                                }
+                            }
+                            if (sourceOffset === undefined) {
+                                sourceOffset = fallbackOffsets[tzidKey.toUpperCase()];
+                            }
+                        }
+
+                        if (sourceOffset !== undefined) {
+                            let localBrowserOffsetHours = -new Date().getTimezoneOffset() / 60;
+                            let netOffsetDiff = localBrowserOffsetHours - sourceOffset;
+                            dateObj = new Date(y, m, d, h + netOffsetDiff, min, s);
+                        } else {
+                            dateObj = new Date(y, m, d, h, min, s);
+                        }
+                    }
+
+                    return {
+                        dateStr: dateObj.toLocaleDateString('en-CA').split('T')[0],
+                        hour: dateObj.getHours() + (dateObj.getMinutes() / 60)
+                    };
+                };
+
+                try {
+                    let startParsed = parseUniversalDate(dtStartKey, dtStartVal);
+                    let endParsed = parseUniversalDate(dtEndKey || dtStartKey, dtEndVal);
+
+                    if (startParsed && endParsed && startParsed.dateStr === targetDateStr) {
+                        let startHour = roundToQuarterHour(startParsed.hour);
+                        let endHour = roundToQuarterHour(endParsed.hour);
+                        if (endHour <= startHour) endHour += 24;
+                        let duration = Math.max(0.25, roundToQuarterHour(endHour - startHour));
+
+                        parsedEvents.push({
+                            id: ev.UID || (Math.random().toString()),
+                            summary: summary,
+                            startHour: startHour,
+                            duration: duration
+                        });
+                    }
+                } catch(e) {}
+            });
+
+            return parsedEvents;
+        }
+
+        // --- Google API Initialization ---
         window.addEventListener('load', () => {
             if (typeof gapi !== 'undefined' && appConfig.apiKey) {
                 gapi.load('client', () => {
-                    gapi.client.init({ apiKey: appConfig.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'] }).catch(() => {});
+                    gapi.client.init({ apiKey: appConfig.apiKey, discoveryDocs: ['[https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest](https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest)'] }).catch(() => {});
                 });
             }
             if (typeof google !== 'undefined' && google.accounts && appConfig.clientId) {
@@ -1433,9 +2169,210 @@
             checkConfigState();
         });
         
-        setLayout(currentLayout); 
-        renderNotes();
+        function handleAuthClick() { 
+            if (!appConfig.clientId) return openSettingsPage(); 
+            if (!tokenClient && typeof google !== 'undefined' && google.accounts) { 
+                tokenClient = google.accounts.oauth2.initTokenClient({ 
+                    client_id: appConfig.clientId, 
+                    scope: SCOPES, 
+                    callback: async (resp) => { 
+                        if (resp.error !== undefined) { throw (resp); } 
+                        localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
+                        document.getElementById('auth-overlay').style.display = 'none'; 
+                        document.getElementById('authorize_button').style.display = 'none'; 
+                        document.getElementById('signout_button').style.display = 'inline-block'; 
+                        isGoogleSynced = true;
+                        if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
+                        loadCalendars(); 
+                        performBackgroundSync(); 
+                    }, 
+                }); 
+            }
+            if (!tokenClient) { showToast("Google services are still loading. Please wait a moment and try again."); return; }
+            tokenClient.requestAccessToken({prompt: 'consent'}); 
+        }
+        
+        function handleSignoutClick() { 
+            const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+            if (savedToken && savedToken.token && typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) { 
+                google.accounts.oauth2.revoke(savedToken.token, () => {}); 
+            } 
+            localStorage.removeItem('quadra_gapi_token_v2'); 
+            isGoogleSynced = false; 
+            document.getElementById('auth-overlay').style.display = 'flex'; 
+            document.getElementById('authorize_button').style.display = 'inline-block'; 
+            document.getElementById('signout_button').style.display = 'none'; 
+            document.getElementById('sidePanel').classList.remove('open'); 
+            document.getElementById('sidebarToggleBtn').classList.remove('open'); 
+            document.body.classList.remove('sidebar-open'); 
+            showToast("Signed out successfully.");
+        }
 
+        async function importCalendarEvents() {
+            const dateStr = document.getElementById('trackerDate').value;
+            const ignoreKeywords = (appConfig.ignoreKeywords || 'out of office, ooo, away, vacation, holiday')
+                .toLowerCase()
+                .split(',')
+                .map(k => k.trim())
+                .filter(k => k.length > 0);
+
+            let importedCount = 0;
+            let ignoredCount = 0;
+
+            try {
+                document.getElementById('sync-banner').style.display = 'block';
+
+                if (appConfig.calSource === 'outlook' && appConfig.icsUrl) {
+                    let fetchUrl = appConfig.icsUrl;
+                    
+                    const res = await fetch(fetchUrl);
+                    if (!res.ok) throw new Error("Failed to fetch ICS feed via Apps Script bridge");
+                    
+                    const icsText = await res.text();
+                    const icsEvents = parseICS(icsText, dateStr, ignoreKeywords);
+
+                    icsEvents.forEach(ev => {
+                        if (notes.find(n => n.eventId === ev.id)) return;
+                        notes.push({
+                            id: Date.now().toString() + Math.random(),
+                            eventId: ev.id,
+                            text: `${ev.summary} #meeting`,
+                            quadrant: 'q2',
+                            status: 'active',
+                            dirty: false,
+                            deleted: false,
+                            timeBlocks: [{
+                                id: Date.now().toString() + Math.random(),
+                                date: dateStr,
+                                startHour: ev.startHour,
+                                duration: ev.duration
+                            }]
+                        });
+                        importedCount++;
+                    });
+
+                } else {
+                    const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+                    if (!savedToken || !savedToken.token || savedToken.expires_at < Date.now()) {
+                        document.getElementById('sync-banner').style.display = 'none';
+                        return showToast("Please sign in to Google first.");
+                    }
+                    if (!appConfig.calendarId) {
+                        document.getElementById('sync-banner').style.display = 'none';
+                        return showToast("Please select a Google calendar in Settings first.");
+                    }
+                    
+                    const [y, m, day] = dateStr.split('-');
+                    const timeMin = new Date(y, m-1, day, 0, 0, 0).toISOString();
+                    const timeMax = new Date(y, m-1, day, 23, 59, 59).toISOString();
+
+                    const res = await fetch(`[https://www.googleapis.com/calendar/v3/calendars/$](https://www.googleapis.com/calendar/v3/calendars/$){encodeURIComponent(appConfig.calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
+                        headers: { 'Authorization': `Bearer ${savedToken.token}` }
+                    });
+                    const data = await res.json();
+                    if(data.error) throw new Error(data.error.message);
+
+                    const events = data.items || [];
+                    events.forEach(event => {
+                        if (!event.start.dateTime) return; // Skip all-day events
+
+                        const title = (event.summary || '').toLowerCase();
+                        const shouldIgnore = ignoreKeywords.some(keyword => title.includes(keyword));
+
+                        if (shouldIgnore) {
+                            ignoredCount++;
+                            return;
+                        }
+                        
+                        const start = new Date(event.start.dateTime);
+                        const end = new Date(event.end.dateTime);
+                        
+                        const rawStartHour = start.getHours() + (start.getMinutes() / 60);
+                        let rawEndHour = end.getHours() + (end.getMinutes() / 60);
+                        if (rawEndHour <= rawStartHour) rawEndHour += 24;
+                        const rawDuration = rawEndHour - rawStartHour;
+
+                        const startHour = roundToQuarterHour(rawStartHour);
+                        const duration = Math.max(0.25, roundToQuarterHour(rawDuration));
+                        
+                        if (notes.find(n => n.eventId === event.id)) return; 
+                        
+                        const newNote = {
+                            id: Date.now().toString() + Math.random(),
+                            eventId: event.id, 
+                            text: `${event.summary || 'Meeting'} #meeting`,
+                            quadrant: 'q2', 
+                            status: 'active',
+                            dirty: false, 
+                            deleted: false,
+                            timeBlocks: [{
+                                id: Date.now().toString() + Math.random(),
+                                date: dateStr,
+                                startHour: startHour,
+                                duration: duration
+                            }]
+                        };
+                        
+                        notes.push(newNote);
+                        importedCount++;
+                    });
+                }
+                
+                document.getElementById('sync-banner').style.display = 'none';
+                if (importedCount > 0 || ignoredCount > 0) {
+                    saveNotes();
+                    renderTrackerTimeline(); 
+                    showToast(`${importedCount} imported, ${ignoredCount} ignored.`);
+                } else {
+                    showToast("No new meetings found for this date.");
+                }
+                
+            } catch(e) {
+                console.error("Calendar Sync Error:", e);
+                document.getElementById('sync-banner').style.display = 'none';
+                showToast("Failed to fetch calendar events. Check your network or Apps Script Web App URL.");
+            }
+        }
+
+        async function performBackgroundSync() {
+            const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+            if (!savedToken || !savedToken.token) return showToast("Please sign in first to sync with Google Tasks.");
+            try {
+                document.getElementById('sync-banner').style.display = 'block';
+                if(typeof gapi !== 'undefined' && gapi.client && !gapi.client.getToken()) {
+                    gapi.client.setToken({ access_token: savedToken.token });
+                }
+                const response = await gapi.client.tasks.tasklists.list();
+                const remoteLists = response.result.items || [];
+                const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
+                let gapiListIds = { inbox: null, q1: null, q2: null, q3: null, q4: null, closed: null };
+                for (const quadKey of Object.keys(GAPI_LIST_NAMES)) { const existingList = remoteLists.find(l => l.title === GAPI_LIST_NAMES[quadKey]); if (existingList) { gapiListIds[quadKey] = existingList.id; } else { const newListReq = await gapi.client.tasks.tasklists.insert({ title: GAPI_LIST_NAMES[quadKey] }); gapiListIds[quadKey] = newListReq.result.id; } }
+                let remoteTaskMap = {};
+                for (const quadKey of Object.keys(gapiListIds)) { const listId = gapiListIds[quadKey]; const tasksReq = await gapi.client.tasks.tasks.list({ tasklist: listId, showHidden: true, maxResults: 100 }); const rTasks = tasksReq.result.items || []; rTasks.forEach(t => { remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; }); }
+                const syncSnapshot = JSON.parse(JSON.stringify(notes));
+                for (let sn of syncSnapshot) {
+                    if (sn.eventId) continue; 
+                    if (sn.deleted && sn.dirty) { if (remoteTaskMap[sn.id]) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); } catch(e){} } sn.dirty = false; continue; }
+                    if (sn.dirty && !sn.deleted) {
+                        const targetListId = gapiListIds[sn.quadrant]; const remoteObj = remoteTaskMap[sn.id]; const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; const payload = { tasklist: targetListId, title: sn.text, status: gStatus }; if (sn.dueDate) payload.due = sn.dueDate; else payload.due = null;
+                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} } else { try { payload.task = sn.id; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
+                        sn.dirty = false;
+                    } else if (!sn.dirty && !sn.deleted) { const remoteObj = remoteTaskMap[sn.id]; if (remoteObj) { sn.text = remoteObj.task.title || ''; sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; sn.quadrant = remoteObj.quadKey; sn.dueDate = remoteObj.task.due || null; delete remoteTaskMap[sn.id]; } }
+                }
+                Object.values(remoteTaskMap).forEach(remoteObj => { syncSnapshot.push({ id: remoteObj.task.id, text: remoteObj.task.title || '', quadrant: remoteObj.quadKey, status: remoteObj.task.status === 'completed' ? 'closed' : 'active', dueDate: remoteObj.task.due || null, timeBlocks: [], eventId: null, dirty: false, deleted: false }); });
+                let newNotesArray = []; let syncedIds = new Set();
+                syncSnapshot.forEach(sn => { if (sn.deleted && !sn.dirty) return; const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); if (liveNote) { sn.timeBlocks = liveNote.timeBlocks || []; sn.eventId = liveNote.eventId || null; if (liveNote.dirty) { if (sn.tempId) liveNote.id = sn.id; newNotesArray.push(liveNote); } else { newNotesArray.push(sn); } syncedIds.add(liveNote.id); if (sn.tempId) syncedIds.add(sn.tempId); } else { newNotesArray.push(sn); } });
+                notes = newNotesArray; saveNotes(); handleSearch(); 
+                document.getElementById('sync-banner').style.display = 'none';
+                showToast("Successfully synced with Google Tasks!");
+            } catch (e) {
+                document.getElementById('sync-banner').style.display = 'none';
+                console.error(e);
+                showToast("Tasks sync failed. Check your API configuration.");
+            }
+        }
+
+        setLayout(currentLayout); renderNotes();
     </script>
 </body>
 </html>
