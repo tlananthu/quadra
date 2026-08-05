@@ -280,7 +280,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.7</span></h1>
+                <h1>Quadra <span class="version-badge">v1.8</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -435,7 +435,7 @@
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <button class="btn btn-outline" style="padding: 8px 12px; font-size: 14px;" onclick="exportTimesheet()" title="Export Timesheet">📋</button>
                             <button class="btn btn-outline" style="padding: 8px 12px; font-size: 14px;" onclick="importCalendarEvents()" title="Sync Meetings">📥</button>
-                            <span id="trackerWeeklyTotal" style="font-weight: 600; color: var(--text-muted); font-size: 13px;">Weekly: 4.5h/18h</span>
+                            <span id="trackerWeeklyTotal" style="font-weight: 600; color: var(--text-muted); font-size: 13px;">Weekly: 0h/18h</span>
                             <span id="trackerDailyTotal" style="font-weight: 600; color: var(--brand-primary);">Total: 0h</span>
                         </div>
                     </div>
@@ -903,12 +903,10 @@
             let totalTimeRendered = 0;
             let weeklyTotalTime = 0;
 
-            // Calculate weekly hours across the current week view window
             let weekDatesSet = new Set();
             if (currentTrackerMode === 'week') {
                 datesToRender.forEach(dt => weekDatesSet.add(dt.date));
             } else {
-                // If in day mode, calculate weekly bounds for the week containing baseDate
                 const dayOfWeek = baseDate.getDay();
                 const startOfWeek = new Date(baseDate);
                 startOfWeek.setDate(baseDate.getDate() - dayOfWeek);
@@ -2102,7 +2100,7 @@
                     if (sn.deleted && sn.dirty) { if (remoteTaskMap[sn.id]) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); } catch(e){} } sn.dirty = false; continue; }
                     if (sn.dirty && !sn.deleted) {
                         const targetListId = gapiListIds[sn.quadrant]; const remoteObj = remoteTaskMap[sn.id]; const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; const payload = { tasklist: targetListId, title: sn.text, status: gStatus }; if (sn.dueDate) payload.due = sn.dueDate; else payload.due = null;
-                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} } else { try { payload.task = sn.id; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
+                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} } else { try { payload.task = sn.id; payload.tasklist = targetListId; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
                         sn.dirty = false;
                     } else if (!sn.dirty && !sn.deleted) { const remoteObj = remoteTaskMap[sn.id]; if (remoteObj) { sn.text = remoteObj.task.title || ''; sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; sn.quadrant = remoteObj.quadKey; sn.dueDate = remoteObj.task.due || null; delete remoteTaskMap[sn.id]; } }
                 }
