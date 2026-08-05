@@ -105,6 +105,17 @@
         .btn:hover { background-color: var(--brand-primary-hover); }
         .btn-outline { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
         .btn-outline:hover { background-color: var(--bg-main); }
+        .icon-button {
+            width: 38px;
+            height: 38px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            font-size: 16px;
+            line-height: 1;
+        }
         
         #backBtn, #signout_button, #authorize_button { display: none; }
 
@@ -387,7 +398,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.6</span></h1>
+                <h1>Quadra <span class="version-badge">v1.7</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -409,7 +420,7 @@
                 <button id="btnTracker" title="Tracker View" onclick="setLayout('tracker')">⏱️</button>
             </div>
             <button id="authorize_button" class="btn" onclick="handleAuthClick()">Sign In</button>
-            <button id="signout_button" class="btn btn-outline" onclick="handleSignoutClick()">Sign Out</button>
+            <button id="signout_button" class="btn btn-outline icon-button" onclick="handleSignoutClick()" title="Sign out of Google">↪</button>
             <button id="settingsNavBtn" class="btn btn-outline" onclick="openSettingsPage()">⚙️ Settings</button>
             <button id="backNavBtn" class="btn btn-outline" style="display: none;" onclick="closeSettingsPage()">← Back</button>
         </div>
@@ -561,7 +572,6 @@
                 <div class="settings-header">
                     <h2>Configuration Settings</h2>
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <button class="btn btn-outline" onclick="handleSignoutClick()">↪ Sign Out of Google</button>
                         <button class="btn" onclick="saveSettings()">Save Changes</button>
                     </div>
                 </div>
