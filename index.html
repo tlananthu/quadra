@@ -398,7 +398,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.7</span></h1>
+                <h1>Quadra <span class="version-badge">v1.8</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -2246,7 +2246,13 @@
             if (!savedToken || !savedToken.token) return showToast("Please sign in first to sync with Google Tasks.");
             try {
                 document.getElementById('sync-banner').style.display = 'block';
-                if(typeof gapi !== 'undefined' && gapi.client && !gapi.client.getToken()) {
+
+                if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks || !gapi.client.tasks.tasklists || !gapi.client.tasks.tasks) {
+                    document.getElementById('sync-banner').style.display = 'none';
+                    return showToast("Google Tasks is still loading. Please try again in a moment.");
+                }
+
+                if(typeof gapi !== 'undefined' && gapi.client && typeof gapi.client.setToken === 'function' && !gapi.client.getToken()) {
                     gapi.client.setToken({ access_token: savedToken.token });
                 }
                 const response = await gapi.client.tasks.tasklists.list();
