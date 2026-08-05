@@ -280,7 +280,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.1</span></h1>
+                <h1>Quadra <span class="version-badge">v1.2</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -530,7 +530,7 @@
             </div>
 
             <div class="form-group">
-                <textarea id="taskInfoInput" rows="6" placeholder="task info"></textarea>
+                <textarea id="taskInfoInput" rows="12" placeholder="Task info / Notes..."></textarea>
             </div>
 
             <div class="form-group form-row-inline">
@@ -540,27 +540,35 @@
 
             <hr style="border: none; border-top: 1px solid var(--border-color); margin: 8px 0;">
 
-            <div class="responsive-date-hours-grid">
-                <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                    <label>Selected Date</label>
-                    <input type="date" id="taskSelectedDate">
-                </div>
-
-                <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                    <label>Hours worked</label>
-                    <input type="number" id="taskHoursWorked" step="0.25" min="0" placeholder="0.5" style="width: 120px;" oninput="onHoursChanged()">
-                </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <button type="button" class="btn btn-outline" style="border: none; padding: 4px 8px; margin-left: -8px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 8px;" onclick="toggleTaskTracker()">
+                    <span id="trackerToggleChevron" style="font-size: 10px;">▶</span> ⏱️ Time Tracking Details
+                </button>
             </div>
 
-            <div class="responsive-date-hours-grid" style="margin-top: 12px;">
-                <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                    <label>Start Time</label>
-                    <input type="time" id="taskStartTime" oninput="onTimesChanged()">
+            <div id="timeTrackerSection" style="display: none;">
+                <div class="responsive-date-hours-grid">
+                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
+                        <label>Selected Date</label>
+                        <input type="date" id="taskSelectedDate">
+                    </div>
+
+                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
+                        <label>Hours worked</label>
+                        <input type="number" id="taskHoursWorked" step="0.25" min="0" placeholder="0.5" style="width: 120px;" oninput="onHoursChanged()">
+                    </div>
                 </div>
 
-                <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                    <label>End Time</label>
-                    <input type="time" id="taskEndTime" oninput="onTimesChanged()">
+                <div class="responsive-date-hours-grid" style="margin-top: 12px;">
+                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
+                        <label>Start Time</label>
+                        <input type="time" id="taskStartTime" oninput="onTimesChanged()">
+                    </div>
+
+                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
+                        <label>End Time</label>
+                        <input type="time" id="taskEndTime" oninput="onTimesChanged()">
+                    </div>
                 </div>
             </div>
 
@@ -1208,6 +1216,18 @@
             }
         }
 
+        function toggleTaskTracker() {
+            const section = document.getElementById('timeTrackerSection');
+            const chevron = document.getElementById('trackerToggleChevron');
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                chevron.innerText = '▼';
+            } else {
+                section.style.display = 'none';
+                chevron.innerText = '▶';
+            }
+        }
+
         function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
             if (event) event.stopPropagation();
             const modal = document.getElementById('taskModal');
@@ -1218,6 +1238,8 @@
             const hoursWorkedInput = document.getElementById('taskHoursWorked');
             const startTimeInput = document.getElementById('taskStartTime');
             const endTimeInput = document.getElementById('taskEndTime');
+
+            let hasTimeData = false;
 
             if (noteId) {
                 currentEditingId = noteId; 
@@ -1231,6 +1253,8 @@
                 dueDateInput.value = note.dueDate ? note.dueDate.split('T')[0] : '';
                 
                 let activeBlock = (note.timeBlocks && note.timeBlocks.length > 0) ? note.timeBlocks[0] : null;
+                if (activeBlock) hasTimeData = true;
+
                 selectedDateInput.value = activeBlock ? activeBlock.date : todayStr;
                 hoursWorkedInput.value = activeBlock ? roundToQuarterHour(activeBlock.duration) : '';
 
@@ -1249,6 +1273,9 @@
                 titleInput.value = '';
                 infoInput.value = '';
                 dueDateInput.value = timelineContext ? timelineContext.date : '';
+                
+                if (timelineContext) hasTimeData = true;
+
                 selectedDateInput.value = timelineContext ? timelineContext.date : todayStr;
                 hoursWorkedInput.value = timelineContext ? '1.0' : '';
                 
@@ -1262,6 +1289,17 @@
 
                 pendingTimelineContext = timelineContext || null;
             }
+
+            const trackerSection = document.getElementById('timeTrackerSection');
+            const trackerChevron = document.getElementById('trackerToggleChevron');
+            if (hasTimeData) {
+                trackerSection.style.display = 'block';
+                trackerChevron.innerText = '▼';
+            } else {
+                trackerSection.style.display = 'none';
+                trackerChevron.innerText = '▶';
+            }
+
             modal.style.display = 'flex'; 
             setTimeout(() => titleInput.focus(), 100);
         }
