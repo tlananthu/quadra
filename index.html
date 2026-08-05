@@ -63,14 +63,21 @@
         header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: baseline; gap: 8px; }
         .version-badge { font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--bg-main); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); letter-spacing: 0.5px; }
 
-        .search-container { flex: 1 1 320px; position: relative; max-width: 520px; }
+        .search-container { flex: 0 1 auto; position: relative; max-width: 520px; }
         .search-container input {
-            width: 100%; min-width: 240px; padding: 10px 36px 10px 40px; border-radius: 20px;
-            border: 1px solid var(--border-color); background: var(--bg-main);
+            width: 38px; min-width: 38px; padding: 10px 10px 10px 30px; border-radius: 20px;
+            border: 1px solid transparent; background: transparent;
             font-size: 14px; outline: none; transition: all 0.2s;
+            cursor: pointer; color: transparent;
         }
-        .search-container input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); background: #ffffff; }
-        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 16px; height: 16px; }
+        .search-container input:focus,
+        .search-container input:not(:placeholder-shown) {
+            width: 100%; min-width: 240px; padding: 10px 36px 10px 40px;
+            border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); background: #ffffff;
+            cursor: text; color: var(--text-main);
+        }
+        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 16px; height: 16px; pointer-events: none; }
+        
         .clear-search { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; display: none; line-height: 1; padding: 0 4px; }
         .clear-search:hover { color: var(--text-main); }
         .search-suggestions {
@@ -425,7 +432,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.9</span></h1>
+                <h1>Quadra <span class="version-badge">v2.0</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -1048,6 +1055,8 @@
 
             notes.forEach(note => {
                 if (note.deleted || !note.timeBlocks) return;
+                if (!matchesSearchQuery(note.text, query)) return;
+                
                 note.timeBlocks.forEach(tb => {
                     const duration = roundToQuarterHour(tb.duration);
                     if (!duration) return;
@@ -1125,6 +1134,8 @@
 
                 notes.forEach(note => {
                     if (note.deleted || !note.timeBlocks) return;
+                    if (!matchesSearchQuery(note.text, query)) return;
+
                     note.timeBlocks.forEach(tb => {
                         let blockStart = roundToQuarterHour(tb.startHour);
                         let duration = roundToQuarterHour(tb.duration);
