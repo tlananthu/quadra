@@ -405,7 +405,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.4</span></h1>
+                <h1>Quadra <span class="version-badge">v2.5</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -712,6 +712,46 @@
                 <button class="btn btn-outline" style="margin-right: auto; color: red;" onclick="deleteTimeBlock()">Delete Block</button>
                 <button class="btn btn-outline" onclick="closeEditBlockModal()">Cancel</button>
                 <button class="btn" onclick="saveTimeBlock()">Update</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcutsModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">Keyboard Shortcuts</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Focus Search Bar</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">/</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Show Keyboard Shortcuts</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Shift + /</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Focus Quick Tags Bar</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">↓ Arrow</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Navigate Quick Tags</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">← / → Arrow</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Select Quick Tag</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Enter</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Return to Search Input</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">↑ Arrow / Esc</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Close Open Modals</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Esc</kbd>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 16px;">
+                <button class="btn btn-outline" onclick="closeShortcutsModal()">Close</button>
             </div>
         </div>
     </div>
@@ -1327,18 +1367,46 @@
             }
         }
 
-        // --- Modals & Keyboard Escape Handler ---
+        // --- Modals & Keyboard Handler ---
         let currentEditingId = null; let currentAddingQuadrant = null;
         
+        function openShortcutsModal() {
+            const modal = document.getElementById('shortcutsModal');
+            if (modal) modal.style.display = 'flex';
+        }
+        
+        function closeShortcutsModal() {
+            const modal = document.getElementById('shortcutsModal');
+            if (modal) modal.style.display = 'none';
+        }
+
         document.addEventListener('keydown', (e) => {
+            const isEditingText = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
+
             if (e.key === 'Escape') {
                 const taskModal = document.getElementById('taskModal');
                 const editBlockModal = document.getElementById('editTimeBlockModal');
+                const shortcutsModal = document.getElementById('shortcutsModal');
                 if (taskModal && taskModal.style.display === 'flex') {
                     closeTaskModal();
                 }
                 if (editBlockModal && editBlockModal.style.display === 'flex') {
                     closeEditBlockModal();
+                }
+                if (shortcutsModal && shortcutsModal.style.display === 'flex') {
+                    closeShortcutsModal();
+                }
+            } else if (!isEditingText) {
+                if (e.shiftKey && (e.key === '?' || e.key === '/')) {
+                    e.preventDefault();
+                    openShortcutsModal();
+                } else if (e.key === '/') {
+                    e.preventDefault();
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.focus();
+                        searchInput.select();
+                    }
                 }
             }
         });
@@ -1719,7 +1787,7 @@
             return html;
         }
 
-        // Direct search substitution from note-cards (bypasses appending logic)
+        // Direct search substitution from note-cards
         function searchTag(tag, event) { 
             event.stopPropagation(); 
             document.getElementById('searchInput').value = tag; 
@@ -1749,11 +1817,11 @@
             }
             
             const suffix = ' ';
-            const cleanAfter = afterCursor.trimStart(); // Avoid double spaces
+            const cleanAfter = afterCursor.trimStart();
             const nextValue = `${newBefore}${replacement}${suffix}${cleanAfter}`;
 
             searchInput.value = nextValue;
-            handleSearch(); // Automatically updates the quick tags filtering
+            handleSearch();
             
             searchInput.focus();
             const nextCursor = (newBefore + replacement + suffix).length;
@@ -1912,7 +1980,7 @@
                     const actionsDiv = document.createElement('div'); actionsDiv.className = 'note-actions';
                     if (!note.eventId) {
                         if (note.status === 'active') actionsDiv.innerHTML = `<button class="action-btn complete-btn" onclick="completeTask('${note.id}')">✓</button>`;
-                        else actionsDiv.innerHTML = `<button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×</button>`;
+                        else actionsDiv.innerHTML = `<button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×`</button>;
                     } else {
                         actionsDiv.innerHTML = `<button class="action-btn delete-btn" onclick="deleteTask('${note.id}')" title="Remove event">×</button>`;
                     }
