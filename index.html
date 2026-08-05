@@ -73,6 +73,33 @@
         .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 16px; height: 16px; }
         .clear-search { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; display: none; line-height: 1; padding: 0 4px; }
         .clear-search:hover { color: var(--text-main); }
+        .search-suggestions {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            z-index: 30;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+            padding: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .search-suggestion {
+            border: 1px solid rgba(79, 70, 229, 0.15);
+            background: rgba(79, 70, 229, 0.06);
+            color: var(--brand-primary);
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .search-suggestion:hover { background: rgba(79, 70, 229, 0.12); }
 
         .header-actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
 
@@ -398,7 +425,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.8</span></h1>
+                <h1>Quadra <span class="version-badge">v1.9</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -406,8 +433,9 @@
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" id="searchInput" placeholder="Search tasks, #tags, @people, or use AND/OR" oninput="handleSearch()">
+                <input type="text" id="searchInput" placeholder="Search tasks, #tags, @people, or use AND/OR" oninput="handleSearch()" onfocus="updateSearchSuggestions()">
                 <button class="clear-search" id="clearSearchBtn" onclick="clearSearch()" title="Clear search">×</button>
+                <div id="searchSuggestions" class="search-suggestions"></div>
             </div>
         </div>
         
@@ -1743,7 +1771,92 @@
         }
 
         function searchTag(tag, event) { event.stopPropagation(); document.getElementById('searchInput').value = tag; handleSearch(); }
-        function clearSearch() { document.getElementById('searchInput').value = ''; handleSearch(); }
+        function clearSearch() { document.getElementById('searchInput').value = ''; handleSearch(); updateSearchSuggestions(); }
+
+        function getKnownSearchTags() {
+            const tagSet = new Set();
+            notes.forEach(note => {
+                if (note.deleted || !note.text) return;
+                const matches = note.text.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g) || [];
+                matches.forEach(match => tagSet.add(match.toLowerCase()));
+            });
+            return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+        }
+
+        function updateSearchSuggestions() {
+            const searchInput = document.getElementById('searchInput');
+            const suggestionsContainer = document.getElementById('searchSuggestions');
+            if (!searchInput || !suggestionsContainer) return;
+
+            const currentValue = searchInput.value || '';
+            const trimmedValue = currentValue.trim();
+            const lastToken = currentValue.split(/\s+/).filter(Boolean).pop() || '';
+            const suggestions = [];
+
+            if (!trimmedValue) {
+                suggestionsContainer.style.display = 'none';
+                suggestionsContainer.innerHTML = '';
+                return;
+            }
+
+            if (lastToken.startsWith('#')) {
+                const prefix = lastToken.slice(1).toLowerCase();
+                getKnownSearchTags().forEach(tag => {
+                    if (tag.startsWith('#') && tag.slice(1).startsWith(prefix)) suggestions.push(tag);
+                });
+            } else if (lastToken.startsWith('@')) {
+                const prefix = lastToken.slice(1).toLowerCase();
+                getKnownSearchTags().forEach(tag => {
+                    if (tag.startsWith('@') && tag.slice(1).startsWith(prefix)) suggestions.push(tag);
+                });
+            } else if (/\s$/.test(currentValue) || currentValue.endsWith(' ')) {
+                suggestions.push('AND', 'OR');
+            }
+
+            suggestionsContainer.innerHTML = '';
+            if (suggestions.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+
+            suggestions.forEach(suggestion => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'search-suggestion';
+                btn.innerText = suggestion;
+                btn.onclick = () => insertSearchSuggestion(suggestion);
+                suggestionsContainer.appendChild(btn);
+            });
+
+            suggestionsContainer.style.display = 'flex';
+        }
+
+        function insertSearchSuggestion(suggestion) {
+            const searchInput = document.getElementById('searchInput');
+            if (!searchInput) return;
+
+            const currentValue = searchInput.value || '';
+            const cursorPos = searchInput.selectionStart ?? currentValue.length;
+            const beforeCursor = currentValue.slice(0, cursorPos);
+            const afterCursor = currentValue.slice(cursorPos);
+            const currentTokenMatch = beforeCursor.match(/(?:^|\s)([^\s]*)$/);
+            const tokenStart = currentTokenMatch ? beforeCursor.length - currentTokenMatch[1].length : 0;
+            const newBefore = beforeCursor.slice(0, tokenStart);
+
+            let replacement = suggestion;
+            if (replacement !== 'AND' && replacement !== 'OR') {
+                replacement = replacement.toLowerCase();
+            }
+            const suffix = afterCursor.startsWith(' ') || afterCursor.startsWith('\t') ? '' : ' ';
+            const nextValue = `${newBefore}${replacement}${suffix}${afterCursor}`;
+
+            searchInput.value = nextValue;
+            handleSearch();
+            updateSearchSuggestions();
+            searchInput.focus();
+            const nextCursor = (newBefore + replacement).length;
+            searchInput.setSelectionRange(nextCursor, nextCursor);
+        }
 
         function matchesSearchQuery(noteText, query) {
             const normalizedText = (noteText || '').toLowerCase();
@@ -1790,6 +1903,7 @@
             const query = searchInput.value;
             document.getElementById('clearSearchBtn').style.display = query.length > 0 ? 'block' : 'none';
             renderNotes(query);
+            updateSearchSuggestions();
         }
 
         function renderNotes(searchQuery = '') {
