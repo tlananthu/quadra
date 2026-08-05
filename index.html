@@ -280,7 +280,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.6</span></h1>
+                <h1>Quadra <span class="version-badge">v1.7</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -416,13 +416,14 @@
                     <div class="tracker-toolbar">
                         <div style="display: flex; align-items: center; gap: 16px;">
                             <div class="view-toggle" style="margin:0;">
-                                <button id="btnTrackerDay" class="active" onclick="setTrackerMode('day')">Day</button>
-                                <button id="btnTrackerWeek" onclick="setTrackerMode('week')">Week</button>
+                                <button id="btnTrackerDay" class="active" onclick="setTrackerMode('day')" title="Day View">D</button>
+                                <button id="btnTrackerWeek" onclick="setTrackerMode('week')" title="Week View">W</button>
                             </div>
                             <h2>
                                 <button class="btn-outline" style="padding: 4px 8px;" onclick="changeTrackerDay(-1)">←</button>
                                 <input type="date" id="trackerDate" onchange="renderTrackerTimeline()">
                                 <button class="btn-outline" style="padding: 4px 8px;" onclick="changeTrackerDay(1)">→</button>
+                                <button class="btn btn-outline" style="padding: 8px 12px; font-size: 13px;" onclick="jumpToToday()" title="Jump to Today">Today</button>
                             </h2>
                             <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted);">
                                 🔍 Zoom: 
@@ -432,8 +433,9 @@
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <button class="btn btn-outline" style="padding: 8px 16px; font-size: 14px;" onclick="exportTimesheet()" title="Export Timesheet">📋 Export Timesheet</button>
-                            <button class="btn btn-outline" style="padding: 8px 16px; font-size: 14px;" onclick="importCalendarEvents()" title="Import meetings for this day">📥 Sync Meetings</button>
+                            <button class="btn btn-outline" style="padding: 8px 12px; font-size: 14px;" onclick="exportTimesheet()" title="Export Timesheet">📋</button>
+                            <button class="btn btn-outline" style="padding: 8px 12px; font-size: 14px;" onclick="importCalendarEvents()" title="Sync Meetings">📥</button>
+                            <span id="trackerWeeklyTotal" style="font-weight: 600; color: var(--text-muted); font-size: 13px;">Weekly: 4.5h/18h</span>
                             <span id="trackerDailyTotal" style="font-weight: 600; color: var(--brand-primary);">Total: 0h</span>
                         </div>
                     </div>
@@ -826,6 +828,11 @@
             renderTrackerTimeline();
         }
 
+        function jumpToToday() {
+            document.getElementById('trackerDate').value = todayStr;
+            renderTrackerTimeline();
+        }
+
         function renderTrackerTimeline() {
             const searchInput = document.getElementById('searchInput');
             const query = searchInput ? searchInput.value.toLowerCase() : '';
@@ -894,6 +901,32 @@
             canvas.appendChild(colsContainer);
 
             let totalTimeRendered = 0;
+            let weeklyTotalTime = 0;
+
+            // Calculate weekly hours across the current week view window
+            let weekDatesSet = new Set();
+            if (currentTrackerMode === 'week') {
+                datesToRender.forEach(dt => weekDatesSet.add(dt.date));
+            } else {
+                // If in day mode, calculate weekly bounds for the week containing baseDate
+                const dayOfWeek = baseDate.getDay();
+                const startOfWeek = new Date(baseDate);
+                startOfWeek.setDate(baseDate.getDate() - dayOfWeek);
+                for(let i=0; i<7; i++) {
+                    let dateIter = new Date(startOfWeek);
+                    dateIter.setDate(startOfWeek.getDate() + i);
+                    weekDatesSet.add(dateIter.toLocaleDateString('en-CA').split('T')[0]);
+                }
+            }
+
+            notes.forEach(note => {
+                if (note.deleted || !note.timeBlocks) return;
+                note.timeBlocks.forEach(tb => {
+                    if (weekDatesSet.has(tb.date)) {
+                        weeklyTotalTime += roundToQuarterHour(tb.duration);
+                    }
+                });
+            });
 
             datesToRender.forEach(dtObj => {
                 const dateStr = dtObj.date;
@@ -1042,6 +1075,7 @@
             });
 
             document.getElementById('trackerDailyTotal').innerText = `Total: ${roundToQuarterHour(totalTimeRendered)}h`;
+            document.getElementById('trackerWeeklyTotal').innerText = `Weekly: ${roundToQuarterHour(weeklyTotalTime)}h/18h`;
 
             const scrollArea = document.getElementById('timelineScrollArea');
             if (scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
@@ -1223,18 +1257,6 @@
             }
         }
 
-        function toggleTaskTracker() {
-            const section = document.getElementById('timeTrackerSection');
-            const chevron = document.getElementById('trackerToggleChevron');
-            if (section.style.display === 'none') {
-                section.style.display = 'block';
-                chevron.innerText = '▼';
-            } else {
-                section.style.display = 'none';
-                chevron.innerText = '▶';
-            }
-        }
-
         function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
             if (event) event.stopPropagation();
             const modal = document.getElementById('taskModal');
@@ -1289,18 +1311,6 @@
 
                 pendingTimelineContext = timelineContext || null;
             }
-
-            const trackerSection = document.getElementById('timeTrackerSection');
-            const trackerChevron = document.getElementById('trackerToggleChevron');
-            
-            if (currentLayout === 'tracker' || timelineContext) {
-                trackerSection.style.display = 'block';
-                trackerChevron.innerText = '▼';
-            } else {
-                trackerSection.style.display = 'none';
-                trackerChevron.innerText = '▶';
-            }
-
             modal.style.display = 'flex'; 
             setTimeout(() => titleInput.focus(), 100);
         }
@@ -1623,45 +1633,19 @@
         }
 
         function searchTag(tag, event) { event.stopPropagation(); document.getElementById('searchInput').value = tag; handleSearch(); }
-        clearSearch = function() { document.getElementById('searchInput').value = ''; handleSearch(); }
-
-        // --- Boolean Search Parser (AND / OR) ---
-        function matchSearchQuery(noteText, rawQuery) {
-            if (!rawQuery || rawQuery.trim() === '') return true;
-            let textLower = noteText.toLowerCase();
-            
-            let orGroups = rawQuery.split(/\s+or\s+/i);
-            for (let orGroup of orGroups) {
-                let andTerms = orGroup.split(/\s+(?:and\s+)?/i).map(t => t.trim()).filter(t => t.length > 0 && t !== 'and' && t !== 'or');
-                if (andTerms.length === 0) continue;
-                
-                let allMatch = true;
-                for (let term of andTerms) {
-                    if (!textLower.includes(term.toLowerCase())) {
-                        allMatch = false;
-                        break;
-                    }
-                }
-                if (allMatch) return true;
-            }
-            return false;
-        }
+        function clearSearch() { document.getElementById('searchInput').value = ''; handleSearch(); }
 
         function handleSearch() {
             const searchInput = document.getElementById('searchInput');
             if(!searchInput) return;
-            const query = searchInput.value;
-            localStorage.setItem('quadra_search_query', query);
+            const query = searchInput.value.toLowerCase();
             document.getElementById('clearSearchBtn').style.display = query.length > 0 ? 'block' : 'none';
-            renderNotes(query.toLowerCase());
+            renderNotes(query);
         }
 
         function renderNotes(searchQuery = '') {
             ['inbox', 'calendar', 'q1', 'q2', 'q3', 'q4', 'closed'].forEach(q => { const el = document.getElementById(`list-${q}`); if (el) el.innerHTML = ''; });
-            let filteredNotes = notes.notes ? notes : notes.filter(note => !note.deleted && matchSearchQuery(note.text, searchQuery));
-            
-            // Re-eval filtering safely
-            filteredNotes = notes.filter(note => !note.deleted && matchSearchQuery(note.text, searchQuery));
+            let filteredNotes = notes.filter(note => !note.deleted && note.text.toLowerCase().includes(searchQuery));
             filteredNotes.sort((a, b) => { if (!a.dueDate && !b.dueDate) return 0; if (!a.dueDate) return -1; if (!b.dueDate) return 1; return a.dueDate.localeCompare(b.dueDate); });
 
             let filteredCounts = { q1: 0, q2: 0, q3: 0, q4: 0, inbox: 0, calendar: 0, closed: 0 };
@@ -1930,9 +1914,6 @@
                 });
             }
             checkConfigState();
-            if (savedSearchQuery) {
-                handleSearch();
-            }
         });
         
         function handleAuthClick() { 
@@ -2121,7 +2102,7 @@
                     if (sn.deleted && sn.dirty) { if (remoteTaskMap[sn.id]) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); } catch(e){} } sn.dirty = false; continue; }
                     if (sn.dirty && !sn.deleted) {
                         const targetListId = gapiListIds[sn.quadrant]; const remoteObj = remoteTaskMap[sn.id]; const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; const payload = { tasklist: targetListId, title: sn.text, status: gStatus }; if (sn.dueDate) payload.due = sn.dueDate; else payload.due = null;
-                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} } else { try { payload.task = sn.id; payload.tasklist = targetListId; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
+                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} } else { try { payload.task = sn.id; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
                         sn.dirty = false;
                     } else if (!sn.dirty && !sn.deleted) { const remoteObj = remoteTaskMap[sn.id]; if (remoteObj) { sn.text = remoteObj.task.title || ''; sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; sn.quadrant = remoteObj.quadKey; sn.dueDate = remoteObj.task.due || null; delete remoteTaskMap[sn.id]; } }
                 }
