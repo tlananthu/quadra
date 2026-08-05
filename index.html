@@ -280,7 +280,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.2</span></h1>
+                <h1>Quadra <span class="version-badge">v1.3</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -1239,8 +1239,6 @@
             const startTimeInput = document.getElementById('taskStartTime');
             const endTimeInput = document.getElementById('taskEndTime');
 
-            let hasTimeData = false;
-
             if (noteId) {
                 currentEditingId = noteId; 
                 const note = notes.find(n => n.id === noteId); 
@@ -1253,7 +1251,6 @@
                 dueDateInput.value = note.dueDate ? note.dueDate.split('T')[0] : '';
                 
                 let activeBlock = (note.timeBlocks && note.timeBlocks.length > 0) ? note.timeBlocks[0] : null;
-                if (activeBlock) hasTimeData = true;
 
                 selectedDateInput.value = activeBlock ? activeBlock.date : todayStr;
                 hoursWorkedInput.value = activeBlock ? roundToQuarterHour(activeBlock.duration) : '';
@@ -1273,8 +1270,6 @@
                 titleInput.value = '';
                 infoInput.value = '';
                 dueDateInput.value = timelineContext ? timelineContext.date : '';
-                
-                if (timelineContext) hasTimeData = true;
 
                 selectedDateInput.value = timelineContext ? timelineContext.date : todayStr;
                 hoursWorkedInput.value = timelineContext ? '1.0' : '';
@@ -1292,7 +1287,8 @@
 
             const trackerSection = document.getElementById('timeTrackerSection');
             const trackerChevron = document.getElementById('trackerToggleChevron');
-            if (hasTimeData) {
+            
+            if (currentLayout === 'tracker') {
                 trackerSection.style.display = 'block';
                 trackerChevron.innerText = '▼';
             } else {
