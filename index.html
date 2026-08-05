@@ -280,7 +280,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.0</span></h1>
+                <h1>Quadra <span class="version-badge">v1.1</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -1706,10 +1706,11 @@
                     currentTzProp = line.includes('DAYLIGHT') ? 'DAYLIGHT' : 'STANDARD';
                 } else if (line.startsWith('TZOFFSETFROM:') || line.startsWith('TZOFFSETTO:')) {
                     if (currentTzId && currentTzProp) {
-                        let offsetStr = line.substring(13).trim();
+                        let offsetStr = line.substring(line.indexOf(':') + 1).trim(); 
                         let sign = offsetStr.startsWith('-') ? -1 : 1;
-                        let hrs = parseInt(offsetStr.substring(1, 3)) || 0;
-                        let mins = parseInt(offsetStr.substring(3, 5)) || 0;
+                        let cleanOffset = offsetStr.replace(/^[+-]/, '').replace(':', '');
+                        let hrs = parseInt(cleanOffset.substring(0, 2)) || 0;
+                        let mins = parseInt(cleanOffset.substring(2, 4)) || 0;
                         let totalHours = sign * (hrs + (mins / 60));
                         
                         if (!vTimezones[currentTzId][currentTzProp]) {
