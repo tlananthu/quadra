@@ -279,7 +279,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.2</span></h1>
+                <h1>Quadra <span class="version-badge">v1.3</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -852,18 +852,28 @@
             const baseDateStr = document.getElementById('trackerDate').value;
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
+            const weekStart = new Date(baseDate);
+            const dayOfWeek = baseDate.getDay();
+            weekStart.setDate(baseDate.getDate() - dayOfWeek);
+            const weekDateKeys = new Set();
+            for (let i = 0; i < 7; i++) {
+                const dateIter = new Date(weekStart);
+                dateIter.setDate(weekStart.getDate() + i);
+                const localY = dateIter.getFullYear();
+                const localM = String(dateIter.getMonth() + 1).padStart(2, '0');
+                const localD = String(dateIter.getDate()).padStart(2, '0');
+                weekDateKeys.add(`${localY}-${localM}-${localD}`);
+            }
+
             let datesToRender = [];
             
             if (currentTrackerMode === 'day') {
                 datesToRender.push({ date: baseDateStr, label: '' });
             } else {
-                const dayOfWeek = baseDate.getDay();
-                const startOfWeek = new Date(baseDate);
-                startOfWeek.setDate(baseDate.getDate() - dayOfWeek);
                 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 for(let i=0; i<7; i++) {
-                    let dateIter = new Date(startOfWeek);
-                    dateIter.setDate(startOfWeek.getDate() + i);
+                    let dateIter = new Date(weekStart);
+                    dateIter.setDate(weekStart.getDate() + i);
                     
                     const localY = dateIter.getFullYear();
                     const localM = String(dateIter.getMonth() + 1).padStart(2, '0');
@@ -882,7 +892,6 @@
 
             let totalTimeRendered = 0;
             let weeklyTotalRendered = 0;
-            const weekDateKeys = new Set(datesToRender.map(dtObj => dtObj.date));
 
             notes.forEach(note => {
                 if (note.deleted || !note.timeBlocks) return;
@@ -973,7 +982,6 @@
                         let actualDuration = roundToQuarterHour(blockEnd - blockStart);
 
                         if (tb.date === dateStr) {
-                            totalTimeRendered += duration; 
                             let renderStart = blockStart % 24;
                             let renderDuration = duration;
 
@@ -1018,7 +1026,6 @@
                         else if (tb.date === addDays(dateStr, -1)) {
                             if (blockStart < 24 && blockEnd > 24) {
                                 let overflowDuration = roundToQuarterHour(blockEnd - 24);
-                                totalTimeRendered += overflowDuration; 
                                 const blockEl = document.createElement('div');
                                 const isMeeting = note.eventId || note.text.includes('#meeting');
                                 const quadClass = note.quadrant || 'q2';
@@ -1053,7 +1060,7 @@
 
             const dayTotal = roundToQuarterHour(totalTimeRendered);
             const weekTotal = roundToQuarterHour(weeklyTotalRendered);
-            document.getElementById('trackerDailyTotal').innerText = `${dayTotal}h/${weekTotal}h`;
+            document.getElementById('trackerDailyTotal').innerText = `Total: ${dayTotal}h/${weekTotal}h`;
 
             const scrollArea = document.getElementById('timelineScrollArea');
             if (scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
