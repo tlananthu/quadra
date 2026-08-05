@@ -405,7 +405,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.5</span></h1>
+                <h1>Quadra <span class="version-badge">v2.6</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -744,6 +744,22 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
                     <span>Return to Search Input</span>
                     <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">↑ Arrow / Esc</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Quadrant View</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Q</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Kanban View</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">K</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Tracker View</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">T</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Overdue View</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">O</kbd>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span>Close Open Modals</span>
@@ -1407,6 +1423,18 @@
                         searchInput.focus();
                         searchInput.select();
                     }
+                } else if (e.key.toLowerCase() === 'q') {
+                    e.preventDefault();
+                    setLayout('grid');
+                } else if (e.key.toLowerCase() === 'k') {
+                    e.preventDefault();
+                    setLayout('kanban');
+                } else if (e.key.toLowerCase() === 't') {
+                    e.preventDefault();
+                    setLayout('tracker');
+                } else if (e.key.toLowerCase() === 'o') {
+                    e.preventDefault();
+                    setLayout('overdue');
                 }
             }
         });
@@ -1821,7 +1849,7 @@
             const nextValue = `${newBefore}${replacement}${suffix}${cleanAfter}`;
 
             searchInput.value = nextValue;
-            handleSearch();
+            handleSearch(); // Automatically updates the quick tags filtering
             
             searchInput.focus();
             const nextCursor = (newBefore + replacement + suffix).length;
@@ -1980,9 +2008,7 @@
                     const actionsDiv = document.createElement('div'); actionsDiv.className = 'note-actions';
                     if (!note.eventId) {
                         if (note.status === 'active') actionsDiv.innerHTML = `<button class="action-btn complete-btn" onclick="completeTask('${note.id}')">✓</button>`;
-                        else actionsDiv.innerHTML = `<button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×
-
-</button>`;
+                        else actionsDiv.innerHTML = `<button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×</button>`;
                     } else {
                         actionsDiv.innerHTML = `<button class="action-btn delete-btn" onclick="deleteTask('${note.id}')" title="Remove event">×</button>`;
                     }
