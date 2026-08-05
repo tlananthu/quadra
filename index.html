@@ -356,7 +356,7 @@
         .resize-handle::after { content: ''; width: 24px; height: 3px; background: rgba(0,0,0,0.3); border-radius: 2px; }
 
         /* --- Overdue Tasks Full Page View --- */
-        #overdue-view { display: none; flex-grow: 1; width: 100%; overflow: y: auto; background: #ffffff; padding: 40px; }
+        #overdue-view { display: none; flex-grow: 1; width: 100%; overflow-y: auto; background: #ffffff; padding: 40px; }
         .overdue-container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
         .overdue-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
         .overdue-header h2 { font-size: 22px; font-weight: 700; color: #9F1239; display: flex; align-items: center; gap: 8px; }
@@ -433,7 +433,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.1</span></h1>
+                <h1>Quadra <span class="version-badge">v2.2</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -1782,7 +1782,18 @@
             return html;
         }
 
-        function searchTag(tag, event) { event.stopPropagation(); document.getElementById('searchInput').value = tag; handleSearch(); }
+        function searchTag(tag, event) { 
+            event.stopPropagation(); 
+            document.getElementById('searchInput').value = tag; 
+            handleSearch(); 
+            
+            // Force the suggestions dropdown to stay hidden when clicking a quick tag
+            const suggestionsContainer = document.getElementById('searchSuggestions');
+            if (suggestionsContainer) {
+                suggestionsContainer.style.display = 'none';
+            }
+        }
+        
         function clearSearch() { document.getElementById('searchInput').value = ''; handleSearch(); updateSearchSuggestions(); }
 
         function getKnownSearchTags() {
@@ -1859,6 +1870,8 @@
             if (replacement !== 'AND' && replacement !== 'OR') {
                 replacement = replacement.toLowerCase();
             }
+            
+            // Add a space suffix if there isn't one immediately following
             const suffix = afterCursor.startsWith(' ') || afterCursor.startsWith('\t') ? '' : ' ';
             const nextValue = `${newBefore}${replacement}${suffix}${afterCursor}`;
 
@@ -1866,7 +1879,9 @@
             handleSearch();
             updateSearchSuggestions();
             searchInput.focus();
-            const nextCursor = (newBefore + replacement).length;
+            
+            // Fix: Move the cursor to AFTER the added space so you can keep typing seamlessly
+            const nextCursor = (newBefore + replacement + suffix).length;
             searchInput.setSelectionRange(nextCursor, nextCursor);
         }
 
