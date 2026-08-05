@@ -220,10 +220,28 @@
             font-family: inherit;
             color: var(--text-main);
         }
-        .tracker-toolbar .tracker-control-group .btn-outline { color: var(--text-main); }
-        .tracker-toolbar .tracker-control-group .btn-outline:hover { background: var(--bg-main); }
-        .tracker-toolbar .tracker-control-group .btn { color: white; }
-        .tracker-toolbar .tracker-control-group .btn:hover { background-color: var(--brand-primary-hover); }
+        .tracker-toolbar .tracker-control-group .btn-outline { color: var(--text-main); transition: all 0.2s ease; }
+        .tracker-toolbar .tracker-control-group .btn-outline:hover {
+            background: var(--bg-main);
+            color: var(--brand-primary);
+            border-color: var(--brand-primary);
+        }
+        .tracker-toolbar .tracker-control-group .btn {
+            color: white;
+            transition: all 0.2s ease;
+            background-color: var(--brand-primary);
+        }
+        .tracker-toolbar .tracker-control-group .btn:hover {
+            background-color: var(--brand-primary-hover);
+        }
+        .tracker-toolbar-right .btn.btn-outline {
+            transition: all 0.2s ease;
+        }
+        .tracker-toolbar-right .btn.btn-outline:hover {
+            background: var(--bg-main);
+            color: var(--brand-primary);
+            border-color: var(--brand-primary);
+        }
         .tracker-toolbar .tracker-control-group .tracker-zoom-value {
             min-width: 42px;
             font-weight: 700;
@@ -369,7 +387,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v1.5</span></h1>
+                <h1>Quadra <span class="version-badge">v1.6</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -385,10 +403,10 @@
         <div class="header-actions">
             <button class="btn btn-outline" onclick="performBackgroundSync()" title="Sync tasks with Google Tasks">🔄</button>
             <div class="view-toggle" id="viewToggleGroup">
-                <button id="btnGrid" onclick="setLayout('grid')">⊞</button>
-                <button id="btnKanban" onclick="setLayout('kanban')">⏸</button>
-                <button id="btnOverdue" onclick="setLayout('overdue')">⚠️</button>
-                <button id="btnTracker" onclick="setLayout('tracker')">⏱️</button>
+                <button id="btnGrid" title="Quadrant View" onclick="setLayout('grid')">⊞</button>
+                <button id="btnKanban" title="Kanban View" onclick="setLayout('kanban')">⏸</button>
+                <button id="btnOverdue" title="Overdue Tasks" onclick="setLayout('overdue')">⚠️</button>
+                <button id="btnTracker" title="Tracker View" onclick="setLayout('tracker')">⏱️</button>
             </div>
             <button id="authorize_button" class="btn" onclick="handleAuthClick()">Sign In</button>
             <button id="signout_button" class="btn btn-outline" onclick="handleSignoutClick()">Sign Out</button>
@@ -401,7 +419,7 @@
     <div id="toast-container"></div>
 
     <div class="main-wrapper">
-        <div id="auth-overlay" class="overlay">
+        <div id="auth-overlay" class="overlay" style="display: none;">
             <h3 id="overlay-title">Google Tasks & Calendar Sync</h3>
             <p id="overlay-text">Sync your Eisenhower Matrix and import meetings directly from Google Calendar or Outlook.</p>
             <div class="overlay-actions" id="overlay-actions"></div>
@@ -511,7 +529,7 @@
                             <div class="tracker-control-group tracker-nav-group">
                                 <button class="btn-outline" onclick="changeTrackerDay(-1)">←</button>
                                 <input type="date" id="trackerDate" onchange="renderTrackerTimeline()">
-                                <button class="btn btn-outline" onclick="goToToday()" title="Go to Today">📅</button>
+                                <button class="btn-outline" onclick="goToToday()" title="Go to Today">📅</button>
                                 <button class="btn-outline" onclick="changeTrackerDay(1)">→</button>
                             </div>
                             <div class="tracker-control-group zoom-controls">
@@ -1834,20 +1852,31 @@
         function toggleInboxTray() { const content = document.getElementById('inbox-tray-content'); const chevron = document.getElementById('inbox-chevron'); if (content.classList.contains('open')) { content.classList.remove('open'); chevron.innerText = '▼'; } else { content.classList.add('open'); chevron.innerText = '▲'; } }
 
         function checkConfigState() {
+            const overlay = document.getElementById('auth-overlay');
+            const overlayActions = document.getElementById('overlay-actions');
+            const authorizeButton = document.getElementById('authorize_button');
+            const signoutButton = document.getElementById('signout_button');
+
+            overlay.style.display = 'none';
+            authorizeButton.style.display = 'none';
+            signoutButton.style.display = 'none';
+
             if (!appConfig.clientId && appConfig.calSource === 'google') {
-                document.getElementById('overlay-actions').innerHTML = `<button class="btn" onclick="openSettingsPage()">Configure Keys</button><button class="btn btn-outline" onclick="dismissOverlay()">Use Offline (Local Storage)</button>`;
+                overlayActions.innerHTML = `<button class="btn" onclick="openSettingsPage()">Configure Keys</button><button class="btn btn-outline" onclick="dismissOverlay()">Use Offline (Local Storage)</button>`;
             } else {
-                document.getElementById('overlay-actions').innerHTML = `<button class="btn" onclick="handleAuthClick()">Sign In with Google</button><button class="btn btn-outline" onclick="dismissOverlay()">Use Offline</button>`;
+                overlayActions.innerHTML = `<button class="btn" onclick="handleAuthClick()">Sign In with Google</button><button class="btn btn-outline" onclick="dismissOverlay()">Use Offline</button>`;
                 
                 const savedTokenData = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
                 if (savedTokenData && savedTokenData.expires_at > Date.now()) {
-                    document.getElementById('auth-overlay').style.display = 'none';
-                    document.getElementById('authorize_button').style.display = 'none';
-                    document.getElementById('signout_button').style.display = 'inline-block';
+                    overlay.style.display = 'none';
+                    authorizeButton.style.display = 'none';
+                    signoutButton.style.display = 'inline-block';
                     isGoogleSynced = true;
                     if (typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: savedTokenData.token });
                     loadCalendars(); 
-                } else { if(appConfig.calSource === 'google') document.getElementById('authorize_button').style.display = 'inline-block'; else document.getElementById('auth-overlay').style.display = 'none'; }
+                } else if (appConfig.calSource === 'google') {
+                    authorizeButton.style.display = 'inline-block';
+                }
             }
         }
         function dismissOverlay() { document.getElementById('auth-overlay').style.display = 'none'; renderNotes(); }
@@ -2067,7 +2096,7 @@
             } 
             localStorage.removeItem('quadra_gapi_token_v2'); 
             isGoogleSynced = false; 
-            document.getElementById('auth-overlay').style.display = 'flex'; 
+            document.getElementById('auth-overlay').style.display = 'none'; 
             document.getElementById('authorize_button').style.display = 'inline-block'; 
             document.getElementById('signout_button').style.display = 'none'; 
             document.getElementById('sidePanel').classList.remove('open'); 
