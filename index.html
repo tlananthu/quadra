@@ -327,6 +327,14 @@
         .resize-handle:hover { opacity: 1; }
         .resize-handle::after { content: ''; width: 24px; height: 3px; background: rgba(0,0,0,0.3); border-radius: 2px; }
 
+        /* --- Overdue Tasks Full Page View --- */
+        #overdue-view { display: none; flex-grow: 1; width: 100%; overflow-y: auto; background: #ffffff; padding: 40px; }
+        .overdue-container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+        .overdue-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
+        .overdue-header h2 { font-size: 22px; font-weight: 700; color: #9F1239; display: flex; align-items: center; gap: 8px; }
+        .overdue-card { background: #FFF1F2; border: 1px solid #FECDD3; border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: transform 0.2s; }
+        .overdue-card:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+
         /* --- Sticky Sidebar & Trays --- */
         .toggle-sidebar-btn { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: var(--brand-primary); color: white; border: none; padding: 16px 8px; border-radius: 8px 0 0 8px; cursor: pointer; z-index: 91; display: flex; flex-direction: column; gap: 8px; align-items: center; box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .toggle-sidebar-btn.open { right: 350px; }
@@ -397,7 +405,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.7</span></h1>
+                <h1>Quadra <span class="version-badge">v2.9</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -1057,7 +1065,6 @@
 
             notes.forEach(note => {
                 if (note.deleted || !note.timeBlocks) return;
-                // Requirement 1: Calendar events should not be filtered out during search/filtering
                 const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
                 if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
                 
@@ -2193,6 +2200,7 @@
                     callback: async (resp) => { 
                         if (resp.error !== undefined) { throw (resp); } 
                         localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
+                        document.getElementById('auth-overlay').style.display = 'none'; 
                         document.getElementById('authorize_button').style.display = 'none'; 
                         document.getElementById('signout_button').style.display = 'inline-block'; 
                         isGoogleSynced = true;
@@ -2248,6 +2256,7 @@
                     callback: async (resp) => { 
                         if (resp.error !== undefined) { throw (resp); } 
                         localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
+                        document.getElementById('auth-overlay').style.display = 'none'; 
                         document.getElementById('authorize_button').style.display = 'none'; 
                         document.getElementById('signout_button').style.display = 'inline-block'; 
                         isGoogleSynced = true;
@@ -2268,6 +2277,7 @@
             } 
             localStorage.removeItem('quadra_gapi_token_v2'); 
             isGoogleSynced = false; 
+            document.getElementById('auth-overlay').style.display = 'none'; 
             document.getElementById('authorize_button').style.display = 'inline-block'; 
             document.getElementById('signout_button').style.display = 'none'; 
             document.getElementById('sidePanel').classList.remove('open'); 
