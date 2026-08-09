@@ -405,7 +405,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.11</span></h1>
+                <h1>Quadra <span class="version-badge">v2.12</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -517,7 +517,7 @@
             <div class="overdue-container">
                 <div class="overdue-header">
                     <h2>⚠️ Overdue Tasks (<span id="overdue-count-badge">0</span>)</h2>
-                    <button class="btn btn-outline" onclick="setLayout('grid')">← Back to Matrix</button>
+                    <button class="btn btn-outline" onclick="setLayout(appConfig.defaultView)">← Back to Default</button>
                 </div>
                 <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- Populated dynamically -->
@@ -547,6 +547,7 @@
                             </div>
                             <div class="tracker-control-group tracker-nav-group">
                                 <button class="btn-outline" onclick="changeTrackerDay(-1)">←</button>
+                                <span id="trackerDayOfWeek" style="font-weight: 600; color: var(--brand-primary); min-width: 90px; text-align: center;"></span>
                                 <input type="date" id="trackerDate" onchange="renderTrackerTimeline()">
                                 <button class="btn-outline" onclick="goToToday()" title="Go to Today">📅</button>
                                 <button class="btn-outline" onclick="changeTrackerDay(1)">→</button>
@@ -627,6 +628,28 @@
 
                 <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 8px;">
                     <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: #EF4444; border-color: #EF4444;" onclick="clearCalendarCache()">🗑️ Clear Calendar Cache</button>
+                </div>
+
+                <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">View Preferences</h4>
+                <div class="form-group form-row-inline">
+                    <label>Default View</label>
+                    <select id="configDefaultView" style="width: auto;">
+                        <option value="grid">Quadrant</option>
+                        <option value="kanban">Kanban</option>
+                        <option value="tracker">Tracker</option>
+                        <option value="overdue">Overdue</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Enabled Views</label>
+                    <div style="display: flex; gap: 16px; font-size: 13px; margin-top: 4px;">
+                        <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewGrid"> Quadrant</label>
+                        <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewKanban"> Kanban</label>
+                        <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewTracker"> Tracker</label>
+                        <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewOverdue"> Overdue</label>
+                    </div>
                 </div>
 
                 <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
@@ -809,6 +832,8 @@
         if (!appConfig.ignoreKeywords) appConfig.ignoreKeywords = 'out of office, ooo, away, vacation, holiday';
         if (!appConfig.calSource) appConfig.calSource = 'google';
         if (!appConfig.icsUrl) appConfig.icsUrl = '';
+        if (!appConfig.viewsEnabled) appConfig.viewsEnabled = { grid: true, kanban: true, overdue: true, tracker: true };
+        if (!appConfig.defaultView) appConfig.defaultView = 'grid';
         
         let tokenClient;
         let isGoogleSynced = false;
@@ -837,13 +862,37 @@
         });
 
         const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0]; 
-        document.getElementById('trackerDate').value = todayStr;
+        let savedDate = localStorage.getItem('quadra_tracker_date');
+        document.getElementById('trackerDate').value = savedDate || todayStr;
 
         // --- Layout Management ---
-        let currentLayout = localStorage.getItem('quadra_layout') || 'grid';
+        let currentLayout = localStorage.getItem('quadra_layout') || appConfig.defaultView;
         let currentTrackerMode = 'day'; 
         
+        // Safety check to ensure we don't load into a disabled layout
+        if (!appConfig.viewsEnabled[currentLayout]) {
+            currentLayout = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]) || 'grid';
+        }
+        
+        function applyViewVisibility() {
+            const btnGrid = document.getElementById('btnGrid');
+            const btnKanban = document.getElementById('btnKanban');
+            const btnTracker = document.getElementById('btnTracker');
+            const btnOverdue = document.getElementById('btnOverdue');
+            
+            if (btnGrid) btnGrid.style.display = appConfig.viewsEnabled.grid ? '' : 'none';
+            if (btnKanban) btnKanban.style.display = appConfig.viewsEnabled.kanban ? '' : 'none';
+            if (btnTracker) btnTracker.style.display = appConfig.viewsEnabled.tracker ? '' : 'none';
+            if (btnOverdue) btnOverdue.style.display = appConfig.viewsEnabled.overdue ? '' : 'none';
+            
+            if (!appConfig.viewsEnabled[currentLayout]) {
+                setLayout(appConfig.defaultView);
+            }
+        }
+
         function setLayout(layout) {
+            if (!appConfig.viewsEnabled[layout]) return; // Block setting disabled views
+            
             currentLayout = layout;
             localStorage.setItem('quadra_layout', layout);
             
@@ -919,6 +968,12 @@
             document.getElementById('configIgnoreKeywords').value = appConfig.ignoreKeywords || '';
             document.getElementById('configCalSource').value = appConfig.calSource || 'google';
             document.getElementById('configIcsUrl').value = appConfig.icsUrl || '';
+            
+            document.getElementById('configDefaultView').value = appConfig.defaultView || 'grid';
+            document.getElementById('configViewGrid').checked = appConfig.viewsEnabled.grid !== false;
+            document.getElementById('configViewKanban').checked = appConfig.viewsEnabled.kanban !== false;
+            document.getElementById('configViewTracker').checked = appConfig.viewsEnabled.tracker !== false;
+            document.getElementById('configViewOverdue').checked = appConfig.viewsEnabled.overdue !== false;
             
             toggleCalSourceFields(appConfig.calSource || 'google');
             loadCalendars();
@@ -1047,6 +1102,8 @@
             canvas.appendChild(bgLines);
 
             const baseDateStr = document.getElementById('trackerDate').value;
+            localStorage.setItem('quadra_tracker_date', baseDateStr);
+            
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
             
@@ -1442,21 +1499,24 @@
                         searchInput.focus();
                         searchInput.select();
                     }
-                } else if (e.key.toLowerCase() === 'q') {
+                } else if (e.key.toLowerCase() === 'q' && appConfig.viewsEnabled.grid) {
                     e.preventDefault();
                     setLayout('grid');
-                } else if (e.key.toLowerCase() === 'k') {
+                } else if (e.key.toLowerCase() === 'k' && appConfig.viewsEnabled.kanban) {
                     e.preventDefault();
                     setLayout('kanban');
-                } else if (e.key.toLowerCase() === 't') {
+                } else if (e.key.toLowerCase() === 't' && appConfig.viewsEnabled.tracker) {
                     e.preventDefault();
                     setLayout('tracker');
-                } else if (e.key.toLowerCase() === 'o') {
+                } else if (e.key.toLowerCase() === 'o' && appConfig.viewsEnabled.overdue) {
                     e.preventDefault();
                     setLayout('overdue');
                 } else if (e.key === '`' || e.key === '~') {
                     e.preventDefault();
-                    const views = ['grid', 'kanban', 'overdue', 'tracker'];
+                    const allViews = ['grid', 'kanban', 'overdue', 'tracker'];
+                    const views = allViews.filter(v => appConfig.viewsEnabled[v]);
+                    if (views.length === 0) return; // safeguard
+                    
                     let idx = views.indexOf(currentLayout);
                     if (idx === -1) idx = 0;
                     if (e.shiftKey) {
@@ -1809,6 +1869,19 @@
             if (calendarSelect && calendarSelect.value) {
                 appConfig.calendarId = calendarSelect.value;
             }
+
+            appConfig.defaultView = document.getElementById('configDefaultView').value;
+            appConfig.viewsEnabled = {
+                grid: document.getElementById('configViewGrid').checked,
+                kanban: document.getElementById('configViewKanban').checked,
+                tracker: document.getElementById('configViewTracker').checked,
+                overdue: document.getElementById('configViewOverdue').checked
+            };
+            
+            // Safeguard: Ensure default view is always activated
+            if (!appConfig.viewsEnabled[appConfig.defaultView]) {
+                appConfig.viewsEnabled[appConfig.defaultView] = true;
+            }
             
             localStorage.setItem('quadra_config', JSON.stringify(appConfig));
             
@@ -1832,6 +1905,7 @@
             });
             localStorage.setItem('quadra_schedule', JSON.stringify(appSchedule));
             
+            applyViewVisibility();
             closeSettingsPage(); 
             showToast("Configuration saved!");
             checkConfigState();
@@ -2171,7 +2245,6 @@
                 }
             }
 
-            // FIX: Added India Standard Time fallbacks
             const fallbackOffsets = {
                 'INDIA STANDARD TIME': 5.5,
                 'IST': 5.5,
@@ -2318,6 +2391,12 @@
 
         // --- Google API Initialization ---
         window.addEventListener('load', () => {
+            // --- Execute Initial Render logic with Config ---
+            if (!localStorage.getItem('quadra_layout')) {
+                currentLayout = appConfig.defaultView;
+            }
+            applyViewVisibility();
+
             if (typeof gapi !== 'undefined' && appConfig.apiKey) {
                 gapi.load('client', () => {
                     gapi.client.init({ apiKey: appConfig.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'] }).catch(() => {});
