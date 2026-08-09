@@ -305,7 +305,7 @@
         
         .current-time-line { position: absolute; left: 0; right: 0; height: 2px; background: #EF4444; z-index: 25; pointer-events: none; }
         .current-time-line::before { content: ''; position: absolute; left: -6px; top: -4px; width: 10px; height: 10px; background: #EF4444; border-radius: 50%; }
-        .current-time-badge { position: absolute; left: 6px; top: -14px; background: #EF4444; color: white; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px; letter-spacing: 0.5px; }
+        .current-time-badge { position: absolute; left: 6px; top: -14px; background: #EF4444; color: white; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px; letter-spacing: 0.5px; white-space: nowrap; }
 
         .logged-block { position: absolute; left: 6px; right: 6px; background: var(--brand-primary); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border: 1px solid rgba(255, 255, 255, 0.4); overflow: hidden; cursor: grab; transition: box-shadow 0.1s; user-select: none; display: flex; justify-content: space-between; align-items: flex-start; min-height: 24px; }
         
@@ -405,7 +405,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.12</span></h1>
+                <h1>Quadra <span class="version-badge">v2.13</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -632,6 +632,43 @@
 
                 <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
 
+                <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">Timezone Display</h4>
+                <div class="form-group form-row-inline">
+                    <label>Home Timezone</label>
+                    <select id="configPrimaryTz" style="width: auto;">
+                        <option value="local">Local Browser Time</option>
+                        <option value="UTC">UTC</option>
+                        <option value="Asia/Kolkata">India Standard Time (IST)</option>
+                        <option value="Australia/Sydney">Australian Eastern Time (AEST/AEDT)</option>
+                        <option value="Australia/Adelaide">Australian Central Time (ACST/ACDT)</option>
+                        <option value="Australia/Perth">Australian Western Time (AWST)</option>
+                        <option value="Europe/London">UK Time (GMT/BST)</option>
+                        <option value="America/New_York">Eastern Time (ET)</option>
+                        <option value="America/Chicago">Central Time (CT)</option>
+                        <option value="America/Denver">Mountain Time (MT)</option>
+                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                    </select>
+                </div>
+                <div class="form-group form-row-inline" style="margin-top: 8px;">
+                    <label>Secondary Timezone</label>
+                    <select id="configSecondaryTz" style="width: auto;">
+                        <option value="none">None</option>
+                        <option value="local">Local Browser Time</option>
+                        <option value="UTC">UTC</option>
+                        <option value="Asia/Kolkata">India Standard Time (IST)</option>
+                        <option value="Australia/Sydney">Australian Eastern Time (AEST/AEDT)</option>
+                        <option value="Australia/Adelaide">Australian Central Time (ACST/ACDT)</option>
+                        <option value="Australia/Perth">Australian Western Time (AWST)</option>
+                        <option value="Europe/London">UK Time (GMT/BST)</option>
+                        <option value="America/New_York">Eastern Time (ET)</option>
+                        <option value="America/Chicago">Central Time (CT)</option>
+                        <option value="America/Denver">Mountain Time (MT)</option>
+                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                    </select>
+                </div>
+
+                <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
+
                 <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">View Preferences</h4>
                 <div class="form-group form-row-inline">
                     <label>Default View</label>
@@ -834,6 +871,8 @@
         if (!appConfig.icsUrl) appConfig.icsUrl = '';
         if (!appConfig.viewsEnabled) appConfig.viewsEnabled = { grid: true, kanban: true, overdue: true, tracker: true };
         if (!appConfig.defaultView) appConfig.defaultView = 'grid';
+        if (!appConfig.primaryTz) appConfig.primaryTz = 'local';
+        if (!appConfig.secondaryTz) appConfig.secondaryTz = 'none';
         
         let tokenClient;
         let isGoogleSynced = false;
@@ -864,6 +903,47 @@
         const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0]; 
         let savedDate = localStorage.getItem('quadra_tracker_date');
         document.getElementById('trackerDate').value = savedDate || todayStr;
+
+        // --- Timezone Helper Functions ---
+        function getTzOffset(tzString) {
+            if(!tzString || tzString === 'local') return -new Date().getTimezoneOffset() / 60;
+            const d = new Date();
+            const utcStr = d.toLocaleString('en-US', { timeZone: 'UTC' });
+            const tzStr = d.toLocaleString('en-US', { timeZone: tzString });
+            return (new Date(tzStr) - new Date(utcStr)) / 3600000;
+        }
+
+        function getTzTime(date, tzString) {
+            if (!tzString || tzString === 'local') return { h: date.getHours(), m: date.getMinutes(), s: date.getSeconds() };
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: tzString,
+                hour: 'numeric', minute: 'numeric', second: 'numeric',
+                hour12: false
+            }).formatToParts(date);
+            
+            let h = 0, m = 0, s = 0;
+            for (let p of parts) {
+                if (p.type === 'hour') h = parseInt(p.value, 10);
+                if (p.type === 'minute') m = parseInt(p.value, 10);
+                if (p.type === 'second') s = parseInt(p.value, 10);
+            }
+            if (h === 24) h = 0;
+            return { h, m, s };
+        }
+
+        function formatCurrentTimeBadge(date) {
+            let primaryOpts = { hour: '2-digit', minute:'2-digit' };
+            if (appConfig.primaryTz !== 'local') primaryOpts.timeZone = appConfig.primaryTz;
+            let text = date.toLocaleTimeString([], primaryOpts);
+
+            if (appConfig.secondaryTz && appConfig.secondaryTz !== 'none') {
+                let secOpts = { hour: '2-digit', minute:'2-digit', timeZoneName: 'short' };
+                secOpts.timeZone = appConfig.secondaryTz;
+                let secText = date.toLocaleTimeString([], secOpts);
+                text += ` (${secText})`;
+            }
+            return text;
+        }
 
         // --- Layout Management ---
         let currentLayout = localStorage.getItem('quadra_layout') || appConfig.defaultView;
@@ -969,6 +1049,9 @@
             document.getElementById('configCalSource').value = appConfig.calSource || 'google';
             document.getElementById('configIcsUrl').value = appConfig.icsUrl || '';
             
+            document.getElementById('configPrimaryTz').value = appConfig.primaryTz || 'local';
+            document.getElementById('configSecondaryTz').value = appConfig.secondaryTz || 'none';
+            
             document.getElementById('configDefaultView').value = appConfig.defaultView || 'grid';
             document.getElementById('configViewGrid').checked = appConfig.viewsEnabled.grid !== false;
             document.getElementById('configViewKanban').checked = appConfig.viewsEnabled.kanban !== false;
@@ -1012,9 +1095,11 @@
                     if (line && badge) {
                         const hourPx = 60 * timelineZoom;
                         const now = new Date();
-                        const currentHour = now.getHours() + (now.getMinutes() / 60) + (now.getSeconds() / 3600);
+                        const primaryTime = getTzTime(now, appConfig.primaryTz);
+                        const currentHour = primaryTime.h + (primaryTime.m / 60) + (primaryTime.s / 3600);
+                        
                         line.style.top = `${currentHour * hourPx}px`;
-                        badge.innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        badge.innerText = formatCurrentTimeBadge(now);
                     }
                 }
             }, 30000); 
@@ -1199,11 +1284,13 @@
 
                 if (currentTrackerMode === 'day' && dateStr === todayStr) {
                     const now = new Date();
-                    const currentHour = now.getHours() + (now.getMinutes() / 60) + (now.getSeconds() / 3600);
+                    const primaryTime = getTzTime(now, appConfig.primaryTz);
+                    const currentHour = primaryTime.h + (primaryTime.m / 60) + (primaryTime.s / 3600);
+                    
                     const timeLine = document.createElement('div');
                     timeLine.className = 'current-time-line';
                     timeLine.style.top = `${currentHour * hourPx}px`;
-                    timeLine.innerHTML = `<span class="current-time-badge">${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+                    timeLine.innerHTML = `<span class="current-time-badge">${formatCurrentTimeBadge(now)}</span>`;
                     col.appendChild(timeLine);
                 }
 
@@ -1865,6 +1952,9 @@
             appConfig.calSource = document.getElementById('configCalSource').value;
             appConfig.icsUrl = document.getElementById('configIcsUrl').value.trim();
             
+            appConfig.primaryTz = document.getElementById('configPrimaryTz').value;
+            appConfig.secondaryTz = document.getElementById('configSecondaryTz').value;
+            
             const calendarSelect = document.getElementById('configCalendar');
             if (calendarSelect && calendarSelect.value) {
                 appConfig.calendarId = calendarSelect.value;
@@ -1909,6 +1999,7 @@
             closeSettingsPage(); 
             showToast("Configuration saved!");
             checkConfigState();
+            if (currentLayout === 'tracker') renderTrackerTimeline();
         }
 
         function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); }
@@ -2339,21 +2430,17 @@
                             }
                             
                             if (sourceOffset === undefined) {
-                                let key = tzidKey.toUpperCase();
-                                if (key.includes('INDIA') || key.includes('IST')) sourceOffset = 5.5;
-                                else if (key.includes('AUS EASTERN')) sourceOffset = (m >= 3 && m <= 8) ? 10 : 11;
-                                else if (key.includes('AEST')) sourceOffset = 10;
-                                else if (key.includes('AEDT')) sourceOffset = 11;
-                                else if (key.includes('PACIFIC')) sourceOffset = (m >= 2 && m <= 9) ? -7 : -8;
-                                else if (key.includes('EASTERN')) sourceOffset = (m >= 2 && m <= 9) ? -4 : -5;
-                                else if (key.includes('CENTRAL')) sourceOffset = (m >= 2 && m <= 9) ? -5 : -6;
-                                else if (key.includes('GMT') || key.includes('UTC')) sourceOffset = 0;
+                                sourceOffset = fallbackOffsets[tzidKey.toUpperCase()];
                             }
                         }
 
                         if (sourceOffset !== undefined) {
+                            // Map sourceOffset relative to Primary Timezone logic
+                            let baseOffsetHours = getTzOffset(appConfig.primaryTz);
+                            let netOffsetDiff = baseOffsetHours - sourceOffset;
+                            
                             let eventUTC = Date.UTC(y, m, d, h, min, s);
-                            let actualUTC = eventUTC - (sourceOffset * 3600000);
+                            let actualUTC = eventUTC + (netOffsetDiff * 3600000);
                             dateObj = new Date(actualUTC);
                         } else {
                             dateObj = new Date(y, m, d, h, min, s);
