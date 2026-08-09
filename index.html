@@ -397,7 +397,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.8</span></h1>
+                <h1>Quadra <span class="version-badge">v2.7</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -525,6 +525,7 @@
                             </div>
                             <div class="tracker-control-group tracker-nav-group">
                                 <button class="btn-outline" onclick="changeTrackerDay(-1)">←</button>
+                                <span id="trackerDayOfWeek" style="font-weight: 600; color: var(--brand-primary); min-width: 90px;"></span>
                                 <input type="date" id="trackerDate" onchange="renderTrackerTimeline()">
                                 <button class="btn-outline" onclick="goToToday()" title="Go to Today">📅</button>
                                 <button class="btn-outline" onclick="changeTrackerDay(1)">→</button>
@@ -1005,6 +1006,14 @@
             const baseDateStr = document.getElementById('trackerDate').value;
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
+            
+            // UI Update for Day of Week
+            const daySpan = document.getElementById('trackerDayOfWeek');
+            if (daySpan) {
+                const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                daySpan.innerText = dayNames[baseDate.getDay()];
+            }
+
             const weekStart = new Date(baseDate);
             const dayOfWeek = baseDate.getDay();
             weekStart.setDate(baseDate.getDate() - dayOfWeek);
@@ -2011,7 +2020,6 @@
         function triggerImport() { document.getElementById('importFile').click(); }
         function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const importedNotes = JSON.parse(e.target.result); if (Array.isArray(importedNotes)) { const noteMap = new Map(notes.map(n => [n.id, n])); importedNotes.forEach(inNote => { inNote.dirty = true; noteMap.set(inNote.id, inNote); }); notes = Array.from(noteMap.values()); saveNotes(); handleSearch(); showToast("Tasks merged!"); closeSettingsPage(); } else showToast("Invalid format."); } catch (err) { showToast("Error reading file."); } event.target.value = ''; }; reader.readAsText(file); }
 
-        // --- Robust Universal Timezone ICS Parser ---
         // --- Robust Universal Timezone ICS Parser ---
         function parseICS(icsText, targetDateStr, ignoreKeywords) {
             let events = [];
