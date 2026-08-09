@@ -2012,6 +2012,7 @@
         function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const importedNotes = JSON.parse(e.target.result); if (Array.isArray(importedNotes)) { const noteMap = new Map(notes.map(n => [n.id, n])); importedNotes.forEach(inNote => { inNote.dirty = true; noteMap.set(inNote.id, inNote); }); notes = Array.from(noteMap.values()); saveNotes(); handleSearch(); showToast("Tasks merged!"); closeSettingsPage(); } else showToast("Invalid format."); } catch (err) { showToast("Error reading file."); } event.target.value = ''; }; reader.readAsText(file); }
 
         // --- Robust Universal Timezone ICS Parser ---
+        // --- Robust Universal Timezone ICS Parser ---
         function parseICS(icsText, targetDateStr, ignoreKeywords) {
             let events = [];
             let vTimezones = {};
@@ -2031,7 +2032,9 @@
                     currentTzProp = line.includes('DAYLIGHT') ? 'DAYLIGHT' : 'STANDARD';
                 } else if (line.startsWith('TZOFFSETFROM:') || line.startsWith('TZOFFSETTO:')) {
                     if (currentTzId && currentTzProp) {
-                        let offsetStr = line.substring(13).trim();
+                        // FIX: Use indexOf(':') to dynamically grab the offset regardless of property name length
+                        let colonIdx = line.indexOf(':');
+                        let offsetStr = line.substring(colonIdx + 1).trim();
                         let sign = offsetStr.startsWith('-') ? -1 : 1;
                         let hrs = parseInt(offsetStr.substring(1, 3)) || 0;
                         let mins = parseInt(offsetStr.substring(3, 5)) || 0;
@@ -2050,7 +2053,10 @@
                 }
             }
 
+            // FIX: Added India Standard Time fallbacks
             const fallbackOffsets = {
+                'INDIA STANDARD TIME': 5.5,
+                'IST': 5.5,
                 'AUS EASTERN STANDARD TIME': 10,
                 'E. AUSTRALIA STANDARD TIME': 10,
                 'AEST': 10,
@@ -2100,12 +2106,12 @@
                     let match = clean.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2}))?Z?$/);
                     if (!match) return null;
 
-                    let y = parseInt(match[1]);
-                    let m = parseInt(match[2]) - 1;
-                    let d = parseInt(match[3]);
-                    let h = match[4] ? parseInt(match[4]) : 0;
-                    let min = match[5] ? parseInt(match[5]) : 0;
-                    let s = match[6] ? parseInt(match[6]) : 0;
+                    let y = parseInt(match[1], 10);
+                    let m = parseInt(match[2], 10) - 1;
+                    let d = parseInt(match[3], 10);
+                    let h = match[4] ? parseInt(match[4], 10) : 0;
+                    let min = match[5] ? parseInt(match[5], 10) : 0;
+                    let s = match[6] ? parseInt(match[6], 10) : 0;
 
                     let dateObj;
                     if (clean.endsWith('Z')) {
