@@ -286,7 +286,7 @@
         .time-row { position: absolute; width: 100%; border-top: 1px dashed var(--border-color); box-sizing: border-box; display: flex; align-items: flex-start; padding-left: 0; }
         .time-label { color: var(--text-muted); font-size: 11px; font-weight: 500; position: absolute; left: 8px; top: -8px; background: #ffffff; padding: 0 4px; line-height: 1; z-index: 5; }
         
-        .timeline-cols-container { position: absolute; left: 55px; right: 0; top: 0; bottom: 0; display: flex; z-index: 2; }
+        .timeline-cols-container { position: absolute; left: 100px; right: 0; top: 0; bottom: 0; display: flex; z-index: 2; }
         .time-col { flex: 1; position: relative; border-left: 1px solid var(--border-color); height: 100%; cursor: crosshair; }
         .time-col:first-child { border-left: none; }
         .time-col.drag-over { background: rgba(79, 70, 229, 0.03); box-shadow: inset 0 0 0 2px var(--brand-primary); }
@@ -295,11 +295,11 @@
         .col-header.today { color: var(--brand-primary); }
 
         .schedule-overlay { 
-            position: absolute; left: -55px; right: 0; 
+            position: absolute; left: -100px; right: 0; 
             background: repeating-linear-gradient( 45deg, rgba(0,0,0,0.04), rgba(0,0,0,0.04) 10px, rgba(0,0,0,0.08) 10px, rgba(0,0,0,0.08) 20px ); 
             pointer-events: none; z-index: 1; 
             border-top: 1px solid rgba(0,0,0,0.1); border-bottom: 1px solid rgba(0,0,0,0.1); 
-            display: flex; align-items: center; justify-content: flex-start; padding-left: 65px;
+            display: flex; align-items: center; justify-content: flex-start; padding-left: 110px;
             color: var(--text-main); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; 
         }
         
@@ -405,7 +405,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.13</span></h1>
+                <h1>Quadra <span class="version-badge">v2.14</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -682,7 +682,6 @@
                         <option value="Pacific/Apia">UTC+13:00 (Samoa / Tonga Time)</option>
                         <option value="Pacific/Kiritimati">UTC+14:00 (Line Islands Time)</option>
                     </select>
-
                 </div>
                 <div class="form-group form-row-inline" style="margin-top: 8px;">
                     <label>Secondary Timezone</label>
@@ -1213,10 +1212,32 @@
 
             const bgLines = document.createElement('div');
             bgLines.className = 'timeline-bg-lines';
+            
+            let hasSecTz = appConfig.secondaryTz && appConfig.secondaryTz !== 'none';
+            let secOffsetDiff = 0;
+            if (hasSecTz) {
+                let primOff = getTzOffset(appConfig.primaryTz);
+                let secOff = getTzOffset(appConfig.secondaryTz);
+                secOffsetDiff = secOff - primOff;
+            }
+
             for (let i = 0; i <= 24; i++) {
                 const row = document.createElement('div');
                 row.className = 'time-row'; row.style.top = `${i * hourPx}px`;
-                row.innerHTML = `<span class="time-label">${i.toString().padStart(2, '0')}:00</span>`;
+                
+                let labelText = `${i.toString().padStart(2, '0')}:00`;
+                if (hasSecTz) {
+                    let secHourRaw = i + secOffsetDiff;
+                    let sH = Math.floor(secHourRaw);
+                    let sM = Math.round((secHourRaw - sH) * 60);
+                    if (sM < 0) { sM += 60; sH -= 1; }
+                    if (sM === 60) { sH += 1; sM = 0; }
+                    let dispH = sH % 24;
+                    if (dispH < 0) dispH += 24;
+                    labelText += ` (${dispH.toString().padStart(2, '0')}:${sM.toString().padStart(2, '0')})`;
+                }
+                
+                row.innerHTML = `<span class="time-label">${labelText}</span>`;
                 bgLines.appendChild(row);
             }
             canvas.appendChild(bgLines);
