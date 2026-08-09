@@ -122,7 +122,7 @@
             line-height: 1;
         }
         
-        #backBtn { display: none; }
+        #backBtn, #signout_button, #authorize_button { display: none; }
 
         .tags-bar { display: flex; gap: 8px; padding: 12px 32px; background: #ffffff; border-bottom: 1px solid var(--border-color); overflow-x: auto; flex-shrink: 0; scrollbar-width: none; -ms-overflow-style: none; }
         .tags-bar::-webkit-scrollbar { display: none; }
@@ -405,7 +405,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.10</span></h1>
+                <h1>Quadra <span class="version-badge">v2.11</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -424,6 +424,7 @@
             <div class="view-toggle" id="viewToggleGroup">
                 <button id="btnGrid" title="Quadrant View" onclick="setLayout('grid')">⊞</button>
                 <button id="btnKanban" title="Kanban View" onclick="setLayout('kanban')">⏸</button>
+                <button id="btnOverdue" title="Overdue Tasks" onclick="setLayout('overdue')">⚠️</button>
                 <button id="btnTracker" title="Tracker View" onclick="setLayout('tracker')">⏱️</button>
             </div>
             <button id="authorize_button" class="btn" onclick="handleAuthClick()">Sign In</button>
@@ -511,6 +512,19 @@
             </div>
         </div>
 
+        <!-- Overdue Tasks Full Page View -->
+        <div id="overdue-view">
+            <div class="overdue-container">
+                <div class="overdue-header">
+                    <h2>⚠️ Overdue Tasks (<span id="overdue-count-badge">0</span>)</h2>
+                    <button class="btn btn-outline" onclick="setLayout('grid')">← Back to Matrix</button>
+                </div>
+                <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+
         <!-- Time Tracker View -->
         <div id="tracker-view">
             <div class="tracker-layout">
@@ -533,7 +547,6 @@
                             </div>
                             <div class="tracker-control-group tracker-nav-group">
                                 <button class="btn-outline" onclick="changeTrackerDay(-1)">←</button>
-                                <span id="trackerDayOfWeek" style="font-weight: 600; color: var(--brand-primary); min-width: 90px;"></span>
                                 <input type="date" id="trackerDate" onchange="renderTrackerTimeline()">
                                 <button class="btn-outline" onclick="goToToday()" title="Go to Today">📅</button>
                                 <button class="btn-outline" onclick="changeTrackerDay(1)">→</button>
@@ -744,6 +757,18 @@
                     <span>Tracker View</span>
                     <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">T</kbd>
                 </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Overdue View</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">O</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Cycle Views Forward</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">`</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Cycle Views Backward</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Shift + `</kbd>
+                </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span>Close Open Modals</span>
                     <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Esc</kbd>
@@ -824,18 +849,22 @@
             
             const matrix = document.getElementById('matrix');
             const tracker = document.getElementById('tracker-view');
+            const overdue = document.getElementById('overdue-view');
             const settingsView = document.getElementById('settings-view');
             const btnGrid = document.getElementById('btnGrid');
             const btnKanban = document.getElementById('btnKanban');
+            const btnOverdue = document.getElementById('btnOverdue');
             const btnTracker = document.getElementById('btnTracker');
 
             if (btnGrid) btnGrid.classList.toggle('active', layout === 'grid');
             if (btnKanban) btnKanban.classList.toggle('active', layout === 'kanban');
+            if (btnOverdue) btnOverdue.classList.toggle('active', layout === 'overdue');
             if (btnTracker) btnTracker.classList.toggle('active', layout === 'tracker');
             
             settingsView.style.display = 'none';
             matrix.style.display = 'none';
             tracker.style.display = 'none';
+            overdue.style.display = 'none';
 
             if (layout === 'tracker') {
                 tracker.style.display = 'block'; 
@@ -843,6 +872,11 @@
                 updateZoomDisplay();
                 renderTrackerTimeline();
                 startLiveClock();
+            } else if (layout === 'overdue') {
+                overdue.style.display = 'block';
+                document.body.classList.remove('sidebar-open');
+                renderOverdueTasksPage();
+                stopLiveClock();
             } else {
                 matrix.style.display = ''; 
                 matrix.classList.remove('layout-grid', 'layout-kanban');
@@ -871,6 +905,7 @@
         function openSettingsPage() {
             document.getElementById('matrix').style.display = 'none';
             document.getElementById('tracker-view').style.display = 'none';
+            document.getElementById('overdue-view').style.display = 'none';
             document.getElementById('settings-view').style.display = 'block';
             document.body.classList.remove('sidebar-open');
             document.getElementById('quick-tags-bar').style.display = 'none';
@@ -1015,6 +1050,7 @@
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
             
+            // UI Update for Day of Week
             const daySpan = document.getElementById('trackerDayOfWeek');
             if (daySpan) {
                 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -1064,6 +1100,7 @@
 
             notes.forEach(note => {
                 if (note.deleted || !note.timeBlocks) return;
+                // Requirement 1: Calendar events should not be filtered out during search/filtering
                 const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
                 if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
                 
@@ -1241,6 +1278,45 @@
             if (scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
         }
 
+        // --- Render Overdue Tasks Page ---
+        function renderOverdueTasksPage() {
+            const container = document.getElementById('overdue-list-container');
+            container.innerHTML = '';
+            
+            const overdueNotes = notes.filter(n => {
+                if (n.deleted || n.status === 'closed' || !n.dueDate || n.eventId) return false;
+                return n.dueDate.split('T')[0] < todayStr;
+            });
+
+            overdueNotes.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+            document.getElementById('overdue-count-badge').innerText = overdueNotes.length;
+
+            if (overdueNotes.length === 0) {
+                container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 40px;">🎉 No overdue tasks! All caught up.</p>`;
+                return;
+            }
+
+            overdueNotes.forEach(note => {
+                const card = document.createElement('div');
+                card.className = 'overdue-card';
+                card.onclick = (e) => openTaskModal(null, note.id, e);
+                card.style.cursor = 'pointer';
+
+                let title = note.text.split('\n')[0];
+                let dueDate = note.dueDate.split('T')[0];
+
+                card.innerHTML = `
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <strong style="font-size: 15px; color: #9F1239;">${parseTags(title)}</strong>
+                        <span style="font-size: 12px; color: var(--text-muted);">Due: ${dueDate} (${note.quadrant.toUpperCase()})</span>
+                    </div>
+                    <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="completeTask('${note.id}'); event.stopPropagation(); renderOverdueTasksPage();">Complete ✓</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
         // --- Drag & Resize Engine ---
         let dragState = null;
 
@@ -1375,6 +1451,20 @@
                 } else if (e.key.toLowerCase() === 't') {
                     e.preventDefault();
                     setLayout('tracker');
+                } else if (e.key.toLowerCase() === 'o') {
+                    e.preventDefault();
+                    setLayout('overdue');
+                } else if (e.key === '`' || e.key === '~') {
+                    e.preventDefault();
+                    const views = ['grid', 'kanban', 'overdue', 'tracker'];
+                    let idx = views.indexOf(currentLayout);
+                    if (idx === -1) idx = 0;
+                    if (e.shiftKey) {
+                        idx = (idx - 1 + views.length) % views.length;
+                    } else {
+                        idx = (idx + 1) % views.length;
+                    }
+                    setLayout(views[idx]);
                 }
             }
         });
@@ -2240,7 +2330,7 @@
                     callback: async (resp) => { 
                         if (resp.error !== undefined) { throw (resp); } 
                         localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
-                        document.getElementById('auth-overlay').style.display = 'none'; 
+                        document.getElementById('auth-overlay').style.display = 'none';
                         document.getElementById('authorize_button').style.display = 'none'; 
                         document.getElementById('signout_button').style.display = 'inline-block'; 
                         isGoogleSynced = true;
@@ -2317,7 +2407,7 @@
             } 
             localStorage.removeItem('quadra_gapi_token_v2'); 
             isGoogleSynced = false; 
-            document.getElementById('auth-overlay').style.display = 'none'; 
+            document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('authorize_button').style.display = 'inline-block'; 
             document.getElementById('signout_button').style.display = 'none'; 
             document.getElementById('sidePanel').classList.remove('open'); 
@@ -2479,7 +2569,7 @@
                     if (sn.deleted && sn.dirty) { if (remoteTaskMap[sn.id]) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); } catch(e){} } sn.dirty = false; continue; }
                     if (sn.dirty && !sn.deleted) {
                         const targetListId = gapiListIds[sn.quadrant]; const remoteObj = remoteTaskMap[sn.id]; const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; const payload = { tasklist: targetListId, title: sn.text, status: gStatus }; if (sn.dueDate) payload.due = sn.dueDate; else payload.due = null;
-                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} } else { try { payload.task = sn.id; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
+                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; res.result.id; } catch(e){} } else { try { payload.task = sn.id; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
                         sn.dirty = false;
                     } else if (!sn.dirty && !sn.deleted) { const remoteObj = remoteTaskMap[sn.id]; if (remoteObj) { sn.text = remoteObj.task.title || ''; sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; sn.quadrant = remoteObj.quadKey; sn.dueDate = remoteObj.task.due || null; delete remoteTaskMap[sn.id]; } }
                 }
