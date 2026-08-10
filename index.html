@@ -330,7 +330,7 @@
             background-color: var(--brand-primary);
         }
         .tracker-toolbar .tracker-control-group .btn:hover {
-            background-color: var(--brand-primary-hover);
+            background: var(--brand-primary-hover);
         }
         .tracker-toolbar-right .btn.btn-outline {
             transition: all 0.2s ease;
@@ -452,6 +452,77 @@
         .spin { animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
+        /* --- MOBILE RESPONSIVENESS OVERRIDES --- */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 16px;
+                gap: 16px;
+            }
+            .header-left {
+                flex-direction: column;
+                align-items: stretch;
+                max-width: 100%;
+            }
+            .search-container {
+                flex: 1;
+                width: 100%;
+            }
+            .search-container input {
+                width: 100%;
+            }
+            .header-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+            }
+            .matrix-container.layout-grid {
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+            }
+            .matrix-container.layout-grid > .quadrant {
+                width: 100% !important;
+                min-height: 300px;
+            }
+            .quadrant-resize-handle {
+                display: none !important;
+            }
+            .tracker-layout {
+                flex-direction: column;
+            }
+            .tracker-palette {
+                width: 100%;
+                height: 250px;
+                flex-shrink: 0;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .tracker-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .tracker-toolbar-left, .tracker-toolbar-right {
+                justify-content: center;
+                width: 100%;
+            }
+            .responsive-date-hours-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-row-inline {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .form-row-inline label {
+                width: 100%;
+            }
+            .modal-content {
+                padding: 20px;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -465,7 +536,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.17</span></h1>
+                <h1>Quadra <span class="version-badge">v2.18</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -1140,7 +1211,7 @@
         }
 
         function setLayout(layout) {
-            if (!appConfig.viewsEnabled[layout]) return; 
+            if (!appConfig.viewsEnabled[layout]) return; // Block setting disabled views
             
             currentLayout = layout;
             localStorage.setItem('quadra_layout', layout);
@@ -2429,6 +2500,7 @@
             let filteredNotes = notes.filter(note => {
                 if (note.deleted) return false;
                 const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
+                // Requirement 1: Calendar events should not be filtered out during search/filtering
                 if (isCalendarEvent) return true;
                 return matchesSearchQuery(note.text, searchQuery);
             });
@@ -2445,6 +2517,7 @@
                 const list = document.getElementById(targetListId);
                 if (list) {
                     const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
+                    // Only count towards badges if it matches search or is a calendar event exempt from search
                     const matchesSearch = matchesSearchQuery(note.text, searchQuery);
                     
                     if (note.status === 'active' && !note.eventId && filteredCounts[note.quadrant] !== undefined && matchesSearch) {
@@ -2468,6 +2541,7 @@
 
                     const contentWrapper = document.createElement('div'); contentWrapper.className = 'note-content-wrapper';
                     
+                    // Overdue Indicator Check
                     let overdueIndicator = '';
                     if (!isCalendarEvent && note.status === 'active' && note.dueDate) {
                         const dueDateStr = note.dueDate.split('T')[0];
