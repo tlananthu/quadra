@@ -128,7 +128,7 @@
         .filter-tag.person-filter:hover { background: var(--person-tag-hover); }
         .filter-tag.person-filter:focus { background: var(--person-tag-hover); outline-color: var(--person-tag); }
 
-        /* Unified Matrix & Kanban Layout System */
+        /* Unified Flexbox Matrix Layout */
         .matrix-container { 
             display: flex;
             gap: 24px; 
@@ -155,6 +155,7 @@
         }
         
         .quadrant { 
+            position: relative;
             border-radius: 16px; 
             padding: 20px; 
             display: flex; 
@@ -165,10 +166,42 @@
             transition: box-shadow 0.2s; 
             flex-shrink: 0;
             cursor: grab;
-            resize: horizontal; 
-            overflow: hidden; 
+            overflow: visible; 
+            min-width: 260px;
         }
         .quadrant:active { cursor: grabbing; }
+
+        /* Custom Vertical Resize Handle on Right Edge */
+        .quadrant-resize-handle {
+            position: absolute;
+            top: 0;
+            right: -12px;
+            width: 24px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .quadrant-resize-handle::after {
+            content: '';
+            width: 4px;
+            height: 40px;
+            background-color: var(--border-color);
+            border-radius: 2px;
+            transition: background-color 0.2s, height 0.2s, width 0.2s;
+        }
+
+        .quadrant-resize-handle:hover::after,
+        .quadrant-resize-handle.resizing::after {
+            background-color: var(--brand-primary);
+            height: 60px;
+            width: 6px;
+        }
 
         /* Layout Grid specific defaults */
         .matrix-container.layout-grid .quadrant { width: calc(50% - 12px); flex-grow: 1; }
@@ -432,7 +465,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.16</span></h1>
+                <h1>Quadra <span class="version-badge">v2.17</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -479,36 +512,43 @@
             <div class="quadrant" id="q1" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Do First <span class="q-badge" id="badge-q1">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q1')">+</button></div></div>
                 <div class="task-list" id="list-q1"></div>
+                <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q1')" title="Drag edge to resize width"></div>
             </div>
             
             <div class="quadrant" id="q2" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Schedule <span class="q-badge" id="badge-q2">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q2')">+</button></div></div>
                 <div class="task-list" id="list-q2"></div>
+                <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q2')" title="Drag edge to resize width"></div>
             </div>
             
             <div class="quadrant" id="q3" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Delegate <span class="q-badge" id="badge-q3">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q3')">+</button></div></div>
                 <div class="task-list" id="list-q3"></div>
+                <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q3')" title="Drag edge to resize width"></div>
             </div>
             
             <div class="quadrant" id="q4" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Later <span class="q-badge" id="badge-q4">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q4')">+</button></div></div>
                 <div class="task-list" id="list-q4"></div>
+                <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q4')" title="Drag edge to resize width"></div>
             </div>
 
             <div class="quadrant" id="tray-inbox" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Inbox <span class="q-badge" id="badge-inbox">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('inbox')">+</button></div></div>
                 <div class="task-list" id="list-inbox"></div>
+                <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-inbox')" title="Drag edge to resize width"></div>
             </div>
             
             <div class="quadrant" id="tray-calendar" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Calendar Events <span class="q-badge" id="badge-calendar">0</span></h2></div>
                 <div class="task-list" id="list-calendar"></div>
+                <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-calendar')" title="Drag edge to resize width"></div>
             </div>
             
             <div class="quadrant" id="tray-closed" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Completed <span class="q-badge" id="badge-closed">0</span></h2></div>
                 <div class="task-list" id="list-closed"></div>
+                <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-closed')" title="Drag edge to resize width"></div>
             </div>
             
         </div>
@@ -999,6 +1039,40 @@
             }, 500);
         });
 
+        // --- Edge Splitter Pull Resizing Engine ---
+        function initQuadResize(e, quadId) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const quadEl = document.getElementById(quadId);
+            if (!quadEl) return;
+            
+            const startX = e.clientX;
+            const startWidth = quadEl.getBoundingClientRect().width;
+            const handleEl = e.currentTarget;
+            handleEl.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            
+            function onMouseMove(e) {
+                e.preventDefault();
+                const deltaX = e.clientX - startX;
+                const newWidth = Math.max(260, Math.min(1000, Math.round(startWidth + deltaX)));
+                quadEl.style.width = newWidth + 'px';
+                appConfig.quadrantWidths[quadId] = newWidth + 'px';
+            }
+            
+            function onMouseUp(e) {
+                handleEl.classList.remove('resizing');
+                document.body.style.cursor = '';
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+            }
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+
         // --- Timezone Helper Functions ---
         function getTzOffset(tzString) {
             if(!tzString || tzString === 'local') return -new Date().getTimezoneOffset() / 60;
@@ -1206,7 +1280,6 @@
 
         // --- Drag/Drop Quadrants (Columns) Logic ---
         function dragStartQuad(e) {
-            // Ensure we are grabbing the quadrant and not an internal task
             if (e.target.classList.contains('quadrant')) {
                 e.dataTransfer.setData('quadrant_id', e.target.id);
                 e.dataTransfer.effectAllowed = 'move';
