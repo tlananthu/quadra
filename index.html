@@ -42,12 +42,6 @@
         .main-wrapper {
             display: flex; flex-direction: column; flex-grow: 1;
             position: relative; overflow: hidden;
-            transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @media (min-width: 769px) {
-            body.sidebar-open .main-wrapper { padding-right: 350px; }
-            body.sidebar-open #sync-banner { right: 374px; }
         }
 
         /* Header & Logo */
@@ -135,13 +129,54 @@
         .filter-tag.person-filter:focus { background: var(--person-tag-hover); outline-color: var(--person-tag); }
 
         /* Matrix Layout */
-        .matrix-container { display: grid; gap: 24px; padding: 24px; flex-grow: 1; transition: all 0.3s ease; max-width: 1600px; margin: 0 auto; width: 100%; position: relative; overflow-y: auto; overflow-x: auto; }
-        .matrix-container.layout-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; min-width: 700px; }
-        .matrix-container.layout-kanban { grid-template-columns: repeat(4, minmax(300px, 1fr)); grid-template-rows: 1fr; overflow-x: auto; }
+        .matrix-container { 
+            padding: 24px; 
+            flex-grow: 1; 
+            transition: all 0.3s ease; 
+            width: 100%; 
+            position: relative; 
+            overflow-y: auto; 
+            overflow-x: auto; 
+        }
         
-        .quadrant { border-radius: 16px; padding: 20px; display: flex; flex-direction: column; border: 1px solid rgba(0,0,0,0.05); min-height: 0; transition: box-shadow 0.2s; }
+        .matrix-container.layout-grid { 
+            display: grid; 
+            gap: 24px; 
+            grid-template-columns: repeat(6, 1fr); 
+            min-width: 900px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        .matrix-container.layout-grid > #q1,
+        .matrix-container.layout-grid > #q2,
+        .matrix-container.layout-grid > #q3,
+        .matrix-container.layout-grid > #q4 {
+            grid-column: span 3;
+        }
+        .matrix-container.layout-grid > #tray-inbox,
+        .matrix-container.layout-grid > #tray-calendar,
+        .matrix-container.layout-grid > #tray-closed {
+            grid-column: span 2;
+        }
+
+        .matrix-container.layout-kanban { 
+            display: grid; 
+            gap: 24px; 
+            grid-template-columns: repeat(7, minmax(300px, 1fr)); 
+            grid-template-rows: 1fr; 
+            overflow-x: auto; 
+            padding-bottom: 24px;
+        }
+        
+        .quadrant { border-radius: 16px; padding: 20px; display: flex; flex-direction: column; border: 1px solid rgba(0,0,0,0.05); min-height: 400px; transition: box-shadow 0.2s; }
         .quadrant.drag-over { box-shadow: 0 0 0 2px var(--brand-primary) inset; }
-        #q1 { background-color: var(--q1-bg); } #q2 { background-color: var(--q2-bg); } #q3 { background-color: var(--q3-bg); } #q4 { background-color: var(--q4-bg); }
+        #q1 { background-color: var(--q1-bg); } 
+        #q2 { background-color: var(--q2-bg); } 
+        #q3 { background-color: var(--q3-bg); } 
+        #q4 { background-color: var(--q4-bg); }
+        #tray-inbox { background-color: #F8FAFC; border-color: #E2E8F0; }
+        #tray-calendar { background-color: #F0FDF4; border-color: #BBF7D0; }
+        #tray-closed { background-color: #F3F4F6; border-color: #E5E7EB; }
 
         .q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .q-header h2 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
@@ -250,7 +285,7 @@
             background-color: var(--brand-primary);
         }
         .tracker-toolbar .tracker-control-group .btn:hover {
-            background: var(--brand-primary-hover);
+            background-color: var(--brand-primary-hover);
         }
         .tracker-toolbar-right .btn.btn-outline {
             transition: all 0.2s ease;
@@ -336,27 +371,6 @@
         .overdue-card { background: #FFF1F2; border: 1px solid #FECDD3; border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: transform 0.2s; }
         .overdue-card:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
 
-        /* --- Sticky Sidebar & Trays --- */
-        .toggle-sidebar-btn { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: var(--brand-primary); color: white; border: none; padding: 16px 8px; border-radius: 8px 0 0 8px; cursor: pointer; z-index: 91; display: flex; flex-direction: column; gap: 8px; align-items: center; box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .toggle-sidebar-btn.open { right: 350px; }
-        .toggle-sidebar-btn span { writing-mode: vertical-rl; text-orientation: mixed; font-weight: 600; letter-spacing: 1px; }
-
-        .side-panel { position: absolute; top: 0; right: -350px; width: 350px; height: 100%; background: #ffffff; z-index: 90; box-shadow: -5px 0 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; border-left: 1px solid var(--border-color); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .side-panel.open { right: 0; }
-        .side-panel-header { padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); background: #F8FAFC; flex-shrink: 0; }
-        .side-panel-header h2 { font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0; }
-        .close-sidebar-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); line-height: 1; }
-        
-        .inbox-tray, .calendar-tray, .closed-tray { display: flex; flex-direction: column; flex-shrink: 0; }
-        .calendar-tray, .closed-tray { border-top: 1px solid var(--border-color); }
-        
-        .tray-header { padding: 12px 24px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #ffffff; transition: background 0.2s; }
-        .tray-header:hover { background: #F9FAFB; }
-        .tray-header h3 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text-main); }
-        
-        .tray-content { height: 0; overflow: hidden; display: flex; flex-direction: column; transition: flex-grow 0.3s ease, padding 0.3s ease; background: #F8FAFC; }
-        .tray-content.open { flex-grow: 1; padding: 16px 24px; overflow-y: auto; height: auto; max-height: calc(33vh - 40px); border-bottom: 1px solid var(--border-color); }
-
         /* --- Settings Page View --- */
         #settings-view { display: none; flex-grow: 1; width: 100%; overflow-y: auto; background: #ffffff; padding: 40px; }
         .settings-container { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
@@ -406,7 +420,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.14</span></h1>
+                <h1>Quadra <span class="version-badge">v2.15</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -447,53 +461,7 @@
 
         <div id="quick-tags-bar" class="tags-bar"></div>
 
-        <button class="toggle-sidebar-btn" id="sidebarToggleBtn" onclick="toggleSidebar()">
-            <span>📥 Trays</span>
-        </button>
-
-        <!-- Trays -->
-        <div id="sidePanel" class="side-panel">
-            <div class="side-panel-header">
-                <h2>Trays</h2>
-                <button class="close-sidebar-btn" onclick="toggleSidebar()">×</button>
-            </div>
-            
-            <div class="inbox-tray">
-                <div class="tray-header" onclick="toggleInboxTray()">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <h3>Inbox (<span id="inbox-count">0</span>)</h3>
-                        <button class="icon-btn add-btn" onclick="openTaskModal('inbox', null, event)" title="Add Task">+</button>
-                    </div>
-                    <span id="inbox-chevron">▼</span>
-                </div>
-                <div class="tray-content open" id="inbox-tray-content" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'inbox')">
-                    <div class="task-list" id="list-inbox"></div>
-                </div>
-            </div>
-
-            <!-- Calendar Events Tray -->
-            <div class="calendar-tray">
-                <div class="tray-header" onclick="toggleCalendarTray()">
-                    <h3>Calendar Events (<span id="calendar-count">0</span>)</h3>
-                    <span id="calendar-chevron">▼</span>
-                </div>
-                <div class="tray-content" id="calendar-tray-content">
-                    <div class="task-list" id="list-calendar"></div>
-                </div>
-            </div>
-
-            <div class="closed-tray">
-                <div class="tray-header" onclick="toggleClosedTray()">
-                    <h3>Completed (<span id="closed-count">0</span>)</h3>
-                    <span id="closed-chevron">▲</span>
-                </div>
-                <div class="tray-content" id="closed-tray-content">
-                    <div class="task-list" id="list-closed"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Matrix View -->
+        <!-- Matrix View (Now Contains the Trays Native to the Flow) -->
         <div id="matrix" class="matrix-container layout-grid">
             <div class="quadrant" id="q1" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'q1')">
                 <div class="q-header"><h2>Do First <span class="q-badge" id="badge-q1">0</span></h2><button class="icon-btn add-btn" onclick="openTaskModal('q1')">+</button></div>
@@ -510,6 +478,20 @@
             <div class="quadrant" id="q4" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'q4')">
                 <div class="q-header"><h2>Later <span class="q-badge" id="badge-q4">0</span></h2><button class="icon-btn add-btn" onclick="openTaskModal('q4')">+</button></div>
                 <div class="task-list" id="list-q4"></div>
+            </div>
+
+            <!-- Integrated Trays -->
+            <div class="quadrant" id="tray-inbox" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'inbox')">
+                <div class="q-header"><h2>Inbox <span class="q-badge" id="badge-inbox">0</span></h2><button class="icon-btn add-btn" onclick="openTaskModal('inbox')">+</button></div>
+                <div class="task-list" id="list-inbox"></div>
+            </div>
+            <div class="quadrant" id="tray-calendar">
+                <div class="q-header"><h2>Calendar Events <span class="q-badge" id="badge-calendar">0</span></h2></div>
+                <div class="task-list" id="list-calendar"></div>
+            </div>
+            <div class="quadrant" id="tray-closed" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'closed')">
+                <div class="q-header"><h2>Completed <span class="q-badge" id="badge-closed">0</span></h2></div>
+                <div class="task-list" id="list-closed"></div>
             </div>
         </div>
 
@@ -1182,7 +1164,13 @@
         function drop(ev, quadrant) {
             ev.preventDefault(); ev.currentTarget.classList.remove('drag-over');
             const noteId = ev.dataTransfer.getData("text/plain"); const note = notes.find(n => n.id === noteId);
-            if (note && note.status === 'active' && note.quadrant !== quadrant) { note.quadrant = quadrant; note.dirty = true; saveNotes(); handleSearch(); }
+            if (note && note.status === 'active' && note.quadrant !== quadrant) { 
+                if (quadrant === 'closed') {
+                    note.status = 'closed';
+                }
+                note.quadrant = quadrant; 
+                note.dirty = true; saveNotes(); handleSearch(); 
+            }
         }
 
         function decToTime(dec) {
@@ -2265,7 +2253,11 @@
         }
 
         function renderNotes(searchQuery = '') {
-            ['inbox', 'calendar', 'q1', 'q2', 'q3', 'q4', 'closed'].forEach(q => { const el = document.getElementById(`list-${q}`); if (el) el.innerHTML = ''; });
+            ['inbox', 'calendar', 'q1', 'q2', 'q3', 'q4', 'closed'].forEach(q => { 
+                // The tray IDs are named list-inbox, list-calendar, list-closed.
+                const el = document.getElementById(`list-${q}`); 
+                if (el) el.innerHTML = ''; 
+            });
             
             let filteredNotes = notes.filter(note => {
                 if (note.deleted) return false;
@@ -2332,9 +2324,9 @@
                 }
             });
 
-            document.getElementById('closed-count').innerText = notes.filter(n => !n.deleted && n.status === 'closed' && !n.eventId).length;
-            document.getElementById('inbox-count').innerText = filteredCounts.inbox;
-            document.getElementById('calendar-count').innerText = filteredCounts.calendar;
+            document.getElementById('badge-closed').innerText = notes.filter(n => !n.deleted && n.status === 'closed' && !n.eventId).length;
+            document.getElementById('badge-inbox').innerText = filteredCounts.inbox;
+            document.getElementById('badge-calendar').innerText = filteredCounts.calendar;
             
             ['q1', 'q2', 'q3', 'q4'].forEach(q => {
                 const badge = document.getElementById(`badge-${q}`);
@@ -2348,11 +2340,6 @@
         function completeTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'closed'; note.quadrant = 'closed'; note.dirty = true; saveNotes(); handleSearch(); } }
         function restoreTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'active'; note.quadrant = 'inbox'; note.dirty = true; saveNotes(); handleSearch(); } }
         function deleteTask(id) { const note = notes.find(n => n.id === id); if (note) { note.deleted = true; note.dirty = true; saveNotes(); handleSearch(); } }
-
-        function toggleSidebar() { const panel = document.getElementById('sidePanel'); const btn = document.getElementById('sidebarToggleBtn'); panel.classList.toggle('open'); btn.classList.toggle('open'); document.body.classList.toggle('sidebar-open'); }
-        function toggleClosedTray() { const content = document.getElementById('closed-tray-content'); const chevron = document.getElementById('closed-chevron'); if (content.classList.contains('open')) { content.classList.remove('open'); chevron.innerText = '▼'; } else { content.classList.add('open'); chevron.innerText = '▲'; } }
-        function toggleCalendarTray() { const content = document.getElementById('calendar-tray-content'); const chevron = document.getElementById('calendar-chevron'); if (content.classList.contains('open')) { content.classList.remove('open'); chevron.innerText = '▼'; } else { content.classList.add('open'); chevron.innerText = '▲'; } }
-        function toggleInboxTray() { const content = document.getElementById('inbox-tray-content'); const chevron = document.getElementById('inbox-chevron'); if (content.classList.contains('open')) { content.classList.remove('open'); chevron.innerText = '▼'; } else { content.classList.add('open'); chevron.innerText = '▲'; } }
 
         function checkConfigState() {
             const authorizeButton = document.getElementById('authorize_button');
@@ -2573,7 +2560,6 @@
             return parsedEvents;
         }
 
-        // --- Google API Initialization ---
         window.addEventListener('load', () => {
             // --- Execute Initial Render logic with Config ---
             if (!localStorage.getItem('quadra_layout')) {
@@ -2673,8 +2659,6 @@
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('authorize_button').style.display = 'inline-block'; 
             document.getElementById('signout_button').style.display = 'none'; 
-            document.getElementById('sidePanel').classList.remove('open'); 
-            document.getElementById('sidebarToggleBtn').classList.remove('open'); 
             document.body.classList.remove('sidebar-open'); 
             showToast("Signed out successfully.");
         }
