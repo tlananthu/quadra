@@ -250,7 +250,7 @@
             background-color: var(--brand-primary);
         }
         .tracker-toolbar .tracker-control-group .btn:hover {
-            background-color: var(--brand-primary-hover);
+            background: var(--brand-primary-hover);
         }
         .tracker-toolbar-right .btn.btn-outline {
             transition: all 0.2s ease;
@@ -284,9 +284,9 @@
         
         .timeline-bg-lines { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; pointer-events: none; }
         .time-row { position: absolute; width: 100%; border-top: 1px dashed var(--border-color); box-sizing: border-box; display: flex; align-items: flex-start; padding-left: 0; }
-        .time-label { color: var(--text-muted); font-size: 11px; font-weight: 500; position: absolute; left: 8px; top: -8px; background: #ffffff; padding: 0 4px; line-height: 1; z-index: 5; }
+        .time-label { color: var(--text-muted); font-size: 11px; font-weight: 500; position: absolute; left: 8px; top: -8px; background: #ffffff; padding: 0 4px; line-height: 1; z-index: 5; white-space: nowrap; }
         
-        .timeline-cols-container { position: absolute; left: 100px; right: 0; top: 0; bottom: 0; display: flex; z-index: 2; }
+        .timeline-cols-container { position: absolute; left: 55px; right: 0; top: 0; bottom: 0; display: flex; z-index: 2; transition: left 0.2s; }
         .time-col { flex: 1; position: relative; border-left: 1px solid var(--border-color); height: 100%; cursor: crosshair; }
         .time-col:first-child { border-left: none; }
         .time-col.drag-over { background: rgba(79, 70, 229, 0.03); box-shadow: inset 0 0 0 2px var(--brand-primary); }
@@ -295,12 +295,13 @@
         .col-header.today { color: var(--brand-primary); }
 
         .schedule-overlay { 
-            position: absolute; left: -100px; right: 0; 
+            position: absolute; left: -55px; right: 0; 
             background: repeating-linear-gradient( 45deg, rgba(0,0,0,0.04), rgba(0,0,0,0.04) 10px, rgba(0,0,0,0.08) 10px, rgba(0,0,0,0.08) 20px ); 
             pointer-events: none; z-index: 1; 
             border-top: 1px solid rgba(0,0,0,0.1); border-bottom: 1px solid rgba(0,0,0,0.1); 
-            display: flex; align-items: center; justify-content: flex-start; padding-left: 110px;
+            display: flex; align-items: center; justify-content: flex-start; padding-left: 65px;
             color: var(--text-main); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; 
+            transition: left 0.2s, padding-left 0.2s;
         }
         
         .current-time-line { position: absolute; left: 0; right: 0; height: 2px; background: #EF4444; z-index: 25; pointer-events: none; }
@@ -1323,6 +1324,10 @@
 
             const colsContainer = document.createElement('div');
             colsContainer.className = 'timeline-cols-container';
+            const timeGutterWidth = hasSecTz ? 120 : 55;
+            const overlayPadding = hasSecTz ? 130 : 65;
+            
+            colsContainer.style.left = `${timeGutterWidth}px`;
             canvas.appendChild(colsContainer);
 
             let totalTimeRendered = 0;
@@ -1392,6 +1397,8 @@
                         overlay.className = 'schedule-overlay';
                         overlay.style.top = `${start * hourPx}px`;
                         overlay.style.height = `${(renderEnd - start) * hourPx}px`;
+                        overlay.style.left = `-${timeGutterWidth}px`;
+                        overlay.style.paddingLeft = `${overlayPadding}px`;
                         if (currentTrackerMode === 'day') overlay.innerText = block.title;
                         col.appendChild(overlay);
                     }
@@ -1404,6 +1411,8 @@
                                 overlay.className = 'schedule-overlay';
                                 overlay.style.top = `0px`;
                                 overlay.style.height = `${Math.min(wrappedSpan, 24) * hourPx}px`;
+                                overlay.style.left = `-${timeGutterWidth}px`;
+                                overlay.style.paddingLeft = `${overlayPadding}px`;
                                 if (currentTrackerMode === 'day') overlay.innerText = prevBlock.title;
                                 col.appendChild(overlay);
                             }
