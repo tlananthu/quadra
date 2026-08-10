@@ -128,48 +128,60 @@
         .filter-tag.person-filter:hover { background: var(--person-tag-hover); }
         .filter-tag.person-filter:focus { background: var(--person-tag-hover); outline-color: var(--person-tag); }
 
-        /* Matrix Layout */
+        /* Unified Matrix & Kanban Layout System */
         .matrix-container { 
+            display: flex;
+            gap: 24px; 
             padding: 24px; 
             flex-grow: 1; 
             transition: all 0.3s ease; 
+            max-width: 1800px; 
+            margin: 0 auto; 
             width: 100%; 
             position: relative; 
             overflow-y: auto; 
             overflow-x: auto; 
         }
-        
+
         .matrix-container.layout-grid { 
-            display: grid; 
-            gap: 24px; 
-            grid-template-columns: repeat(6, 1fr); 
-            min-width: 900px;
-            max-width: 1800px;
-            margin: 0 auto;
-        }
-        .matrix-container.layout-grid > #q1,
-        .matrix-container.layout-grid > #q2,
-        .matrix-container.layout-grid > #q3,
-        .matrix-container.layout-grid > #q4 {
-            grid-column: span 3;
-        }
-        .matrix-container.layout-grid > #tray-inbox,
-        .matrix-container.layout-grid > #tray-calendar,
-        .matrix-container.layout-grid > #tray-closed {
-            grid-column: span 2;
+            flex-wrap: wrap; 
+            align-content: flex-start;
         }
 
         .matrix-container.layout-kanban { 
-            display: grid; 
-            gap: 24px; 
-            grid-template-columns: repeat(7, minmax(300px, 1fr)); 
-            grid-template-rows: 1fr; 
-            overflow-x: auto; 
+            flex-wrap: nowrap; 
+            align-items: flex-start;
             padding-bottom: 24px;
         }
         
-        .quadrant { border-radius: 16px; padding: 20px; display: flex; flex-direction: column; border: 1px solid rgba(0,0,0,0.05); min-height: 400px; transition: box-shadow 0.2s; }
+        .quadrant { 
+            border-radius: 16px; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            border: 1px solid rgba(0,0,0,0.05); 
+            min-height: 400px; 
+            max-height: calc(100vh - 120px);
+            transition: box-shadow 0.2s; 
+            flex-shrink: 0;
+            cursor: grab;
+            resize: horizontal; 
+            overflow: hidden; 
+        }
+        .quadrant:active { cursor: grabbing; }
+
+        /* Layout Grid specific defaults */
+        .matrix-container.layout-grid .quadrant { width: calc(50% - 12px); flex-grow: 1; }
+        .matrix-container.layout-grid #tray-inbox,
+        .matrix-container.layout-grid #tray-calendar,
+        .matrix-container.layout-grid #tray-closed { width: calc(33.333% - 16px); }
+
+        /* Layout Kanban specific defaults */
+        .matrix-container.layout-kanban .quadrant { width: 350px; }
+
         .quadrant.drag-over { box-shadow: 0 0 0 2px var(--brand-primary) inset; }
+        .quadrant.quad-drag-over { box-shadow: 0 0 0 2px var(--brand-primary) inset, 0 0 20px rgba(79, 70, 229, 0.2); background-color: rgba(79, 70, 229, 0.05) !important; }
+
         #q1 { background-color: var(--q1-bg); } 
         #q2 { background-color: var(--q2-bg); } 
         #q3 { background-color: var(--q3-bg); } 
@@ -178,16 +190,16 @@
         #tray-calendar { background-color: #F0FDF4; border-color: #BBF7D0; }
         #tray-closed { background-color: #F3F4F6; border-color: #E5E7EB; }
 
-        .q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; pointer-events: none; }
         .q-header h2 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
         .q-badge { font-size: 12px; font-weight: 600; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 12px; color: var(--text-muted); }
         
-        .header-buttons { display: flex; gap: 8px; align-items: center; }
+        .header-buttons { display: flex; gap: 8px; align-items: center; pointer-events: auto; }
         .icon-btn { background: rgba(255,255,255,0.5); border: none; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.2s; font-size: 16px; font-weight: bold; }
         .icon-btn:hover { background: rgba(255,255,255,0.9); color: var(--brand-primary); }
         .add-btn { color: var(--brand-primary); font-size: 20px; padding: 0; }
 
-        .task-list { flex-grow: 1; overflow-y: auto; padding-bottom: 10px; scrollbar-width: thin; }
+        .task-list { flex-grow: 1; overflow-y: auto; padding-bottom: 10px; scrollbar-width: thin; cursor: default; }
         
         /* Note Styling */
         .note { background-color: #ffffff; border: 1px solid rgba(0,0,0,0.05); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: flex-start; font-size: 14px; line-height: 1.5; cursor: grab; transition: transform 0.2s, box-shadow 0.2s; }
@@ -420,7 +432,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.15</span></h1>
+                <h1>Quadra <span class="version-badge">v2.16</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -461,38 +473,44 @@
 
         <div id="quick-tags-bar" class="tags-bar"></div>
 
-        <!-- Matrix View (Now Contains the Trays Native to the Flow) -->
+        <!-- Unified Flexbox Matrix containing all Columns -->
         <div id="matrix" class="matrix-container layout-grid">
-            <div class="quadrant" id="q1" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'q1')">
-                <div class="q-header"><h2>Do First <span class="q-badge" id="badge-q1">0</span></h2><button class="icon-btn add-btn" onclick="openTaskModal('q1')">+</button></div>
+            
+            <div class="quadrant" id="q1" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
+                <div class="q-header"><h2>Do First <span class="q-badge" id="badge-q1">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q1')">+</button></div></div>
                 <div class="task-list" id="list-q1"></div>
             </div>
-            <div class="quadrant" id="q2" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'q2')">
-                <div class="q-header"><h2>Schedule <span class="q-badge" id="badge-q2">0</span></h2><button class="icon-btn add-btn" onclick="openTaskModal('q2')">+</button></div>
+            
+            <div class="quadrant" id="q2" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
+                <div class="q-header"><h2>Schedule <span class="q-badge" id="badge-q2">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q2')">+</button></div></div>
                 <div class="task-list" id="list-q2"></div>
             </div>
-            <div class="quadrant" id="q3" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'q3')">
-                <div class="q-header"><h2>Delegate <span class="q-badge" id="badge-q3">0</span></h2><button class="icon-btn add-btn" onclick="openTaskModal('q3')">+</button></div>
+            
+            <div class="quadrant" id="q3" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
+                <div class="q-header"><h2>Delegate <span class="q-badge" id="badge-q3">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q3')">+</button></div></div>
                 <div class="task-list" id="list-q3"></div>
             </div>
-            <div class="quadrant" id="q4" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'q4')">
-                <div class="q-header"><h2>Later <span class="q-badge" id="badge-q4">0</span></h2><button class="icon-btn add-btn" onclick="openTaskModal('q4')">+</button></div>
+            
+            <div class="quadrant" id="q4" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
+                <div class="q-header"><h2>Later <span class="q-badge" id="badge-q4">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q4')">+</button></div></div>
                 <div class="task-list" id="list-q4"></div>
             </div>
 
-            <!-- Integrated Trays -->
-            <div class="quadrant" id="tray-inbox" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'inbox')">
-                <div class="q-header"><h2>Inbox <span class="q-badge" id="badge-inbox">0</span></h2><button class="icon-btn add-btn" onclick="openTaskModal('inbox')">+</button></div>
+            <div class="quadrant" id="tray-inbox" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
+                <div class="q-header"><h2>Inbox <span class="q-badge" id="badge-inbox">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('inbox')">+</button></div></div>
                 <div class="task-list" id="list-inbox"></div>
             </div>
-            <div class="quadrant" id="tray-calendar">
+            
+            <div class="quadrant" id="tray-calendar" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Calendar Events <span class="q-badge" id="badge-calendar">0</span></h2></div>
                 <div class="task-list" id="list-calendar"></div>
             </div>
-            <div class="quadrant" id="tray-closed" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, 'closed')">
+            
+            <div class="quadrant" id="tray-closed" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Completed <span class="q-badge" id="badge-closed">0</span></h2></div>
                 <div class="task-list" id="list-closed"></div>
             </div>
+            
         </div>
 
         <!-- Overdue Tasks Full Page View -->
@@ -914,7 +932,7 @@
         }
 
         // --- Core Settings & Config ---
-        let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || { clientId: '', apiKey: '', calendarId: '', calSource: 'google', icsUrl: '', ignoreKeywords: 'out of office, ooo, away, vacation, holiday' };
+        let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
         if (!appConfig.ignoreKeywords) appConfig.ignoreKeywords = 'out of office, ooo, away, vacation, holiday';
         if (!appConfig.calSource) appConfig.calSource = 'google';
         if (!appConfig.icsUrl) appConfig.icsUrl = '';
@@ -922,6 +940,8 @@
         if (!appConfig.defaultView) appConfig.defaultView = 'grid';
         if (!appConfig.primaryTz) appConfig.primaryTz = 'local';
         if (!appConfig.secondaryTz) appConfig.secondaryTz = 'none';
+        if (!appConfig.quadrantOrder) appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'q4', 'tray-inbox', 'tray-calendar', 'tray-closed'];
+        if (!appConfig.quadrantWidths) appConfig.quadrantWidths = {};
         
         let tokenClient;
         let isGoogleSynced = false;
@@ -952,6 +972,32 @@
         const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0]; 
         let savedDate = localStorage.getItem('quadra_tracker_date');
         document.getElementById('trackerDate').value = savedDate || todayStr;
+
+        // --- Saving Quadrant Order and Width States ---
+        function saveQuadrantState() {
+            const container = document.getElementById('matrix');
+            const quads = [...container.querySelectorAll('.quadrant')];
+            appConfig.quadrantOrder = quads.map(q => q.id);
+            localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+        }
+
+        let quadResizeTimeout;
+        const quadResizeObserver = new ResizeObserver(entries => {
+            clearTimeout(quadResizeTimeout);
+            quadResizeTimeout = setTimeout(() => {
+                let changed = false;
+                entries.forEach(entry => {
+                    const el = entry.target;
+                    if (el.style.width && appConfig.quadrantWidths[el.id] !== el.style.width) {
+                        appConfig.quadrantWidths[el.id] = el.style.width;
+                        changed = true;
+                    }
+                });
+                if (changed) {
+                    localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+                }
+            }, 500);
+        });
 
         // --- Timezone Helper Functions ---
         function getTzOffset(tzString) {
@@ -1020,7 +1066,7 @@
         }
 
         function setLayout(layout) {
-            if (!appConfig.viewsEnabled[layout]) return; // Block setting disabled views
+            if (!appConfig.viewsEnabled[layout]) return; 
             
             currentLayout = layout;
             localStorage.setItem('quadra_layout', layout);
@@ -1158,18 +1204,67 @@
             if(clockIntervalId) { clearInterval(clockIntervalId); clockIntervalId = null; }
         }
 
-        // --- Drag/Drop Routing ---
-        function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add('drag-over'); }
-        function dragLeave(ev) { ev.currentTarget.classList.remove('drag-over'); }
-        function drop(ev, quadrant) {
-            ev.preventDefault(); ev.currentTarget.classList.remove('drag-over');
-            const noteId = ev.dataTransfer.getData("text/plain"); const note = notes.find(n => n.id === noteId);
-            if (note && note.status === 'active' && note.quadrant !== quadrant) { 
-                if (quadrant === 'closed') {
-                    note.status = 'closed';
+        // --- Drag/Drop Quadrants (Columns) Logic ---
+        function dragStartQuad(e) {
+            // Ensure we are grabbing the quadrant and not an internal task
+            if (e.target.classList.contains('quadrant')) {
+                e.dataTransfer.setData('quadrant_id', e.target.id);
+                e.dataTransfer.effectAllowed = 'move';
+                setTimeout(() => e.target.style.opacity = '0.5', 0);
+            }
+        }
+        function dragEndQuad(e) {
+            if (e.target.classList.contains('quadrant')) {
+                e.target.style.opacity = '1';
+                document.querySelectorAll('.quadrant').forEach(q => q.classList.remove('quad-drag-over', 'drag-over'));
+            }
+        }
+        function allowDropQuad(e) {
+            e.preventDefault();
+            if(e.dataTransfer.types.includes('quadrant_id')) {
+                e.currentTarget.classList.add('quad-drag-over');
+            } else {
+                e.currentTarget.classList.add('drag-over');
+            }
+        }
+        function dragLeaveQuad(e) {
+            e.currentTarget.classList.remove('quad-drag-over', 'drag-over');
+        }
+        function dropQuad(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('quad-drag-over', 'drag-over');
+            
+            const quadId = e.dataTransfer.getData('quadrant_id');
+            if (quadId) {
+                const draggedQuad = document.getElementById(quadId);
+                const targetQuad = e.currentTarget;
+                if (draggedQuad && targetQuad && draggedQuad !== targetQuad) {
+                    const container = document.getElementById('matrix');
+                    const allQuads = [...container.querySelectorAll('.quadrant')];
+                    const draggedIdx = allQuads.indexOf(draggedQuad);
+                    const targetIdx = allQuads.indexOf(targetQuad);
+                    
+                    if (draggedIdx < targetIdx) {
+                        targetQuad.parentNode.insertBefore(draggedQuad, targetQuad.nextSibling);
+                    } else {
+                        targetQuad.parentNode.insertBefore(draggedQuad, targetQuad);
+                    }
+                    saveQuadrantState();
                 }
-                note.quadrant = quadrant; 
-                note.dirty = true; saveNotes(); handleSearch(); 
+            } else {
+                const noteId = e.dataTransfer.getData("text/plain");
+                if(!noteId) return;
+                const note = notes.find(n => n.id === noteId);
+                let targetKey = e.currentTarget.id; 
+                if(targetKey.startsWith('tray-')) targetKey = targetKey.replace('tray-', '');
+                
+                if (note && note.status === 'active' && note.quadrant !== targetKey) { 
+                    if (targetKey === 'closed') note.status = 'closed';
+                    note.quadrant = targetKey; 
+                    note.dirty = true; 
+                    saveNotes(); 
+                    handleSearch(); 
+                }
             }
         }
 
@@ -2253,8 +2348,7 @@
         }
 
         function renderNotes(searchQuery = '') {
-            ['inbox', 'calendar', 'q1', 'q2', 'q3', 'q4', 'closed'].forEach(q => { 
-                // The tray IDs are named list-inbox, list-calendar, list-closed.
+            ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'closed'].forEach(q => { 
                 const el = document.getElementById(`list-${q}`); 
                 if (el) el.innerHTML = ''; 
             });
@@ -2262,7 +2356,6 @@
             let filteredNotes = notes.filter(note => {
                 if (note.deleted) return false;
                 const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-                // Requirement 1: Calendar events should not be filtered out during search/filtering
                 if (isCalendarEvent) return true;
                 return matchesSearchQuery(note.text, searchQuery);
             });
@@ -2279,7 +2372,6 @@
                 const list = document.getElementById(targetListId);
                 if (list) {
                     const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-                    // Only count towards badges if it matches search or is a calendar event exempt from search
                     const matchesSearch = matchesSearchQuery(note.text, searchQuery);
                     
                     if (note.status === 'active' && !note.eventId && filteredCounts[note.quadrant] !== undefined && matchesSearch) {
@@ -2293,11 +2385,16 @@
                     }
 
                     const noteEl = document.createElement('div'); noteEl.className = 'note' + (note.status === 'closed' ? ' closed-note' : '');
-                    if (note.status === 'active' && !note.eventId) { noteEl.draggable = true; noteEl.ondragstart = (e) => e.dataTransfer.setData('text/plain', note.id); }
+                    if (note.status === 'active' && !note.eventId) { 
+                        noteEl.draggable = true; 
+                        noteEl.ondragstart = (e) => {
+                            e.stopPropagation();
+                            e.dataTransfer.setData('text/plain', note.id);
+                        }; 
+                    }
 
                     const contentWrapper = document.createElement('div'); contentWrapper.className = 'note-content-wrapper';
                     
-                    // Overdue Indicator Check
                     let overdueIndicator = '';
                     if (!isCalendarEvent && note.status === 'active' && note.dueDate) {
                         const dueDateStr = note.dueDate.split('T')[0];
@@ -2561,6 +2658,23 @@
         }
 
         window.addEventListener('load', () => {
+            // Apply Saved Grid Widths and Orders First
+            const matrixContainer = document.getElementById('matrix');
+            
+            if (appConfig.quadrantOrder && appConfig.quadrantOrder.length > 0) {
+                appConfig.quadrantOrder.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) matrixContainer.appendChild(el);
+                });
+            }
+            
+            document.querySelectorAll('.quadrant').forEach(q => {
+                if (appConfig.quadrantWidths && appConfig.quadrantWidths[q.id]) {
+                    q.style.width = appConfig.quadrantWidths[q.id];
+                }
+                quadResizeObserver.observe(q);
+            });
+
             // --- Execute Initial Render logic with Config ---
             if (!localStorage.getItem('quadra_layout')) {
                 currentLayout = appConfig.defaultView;
@@ -2659,7 +2773,6 @@
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('authorize_button').style.display = 'inline-block'; 
             document.getElementById('signout_button').style.display = 'none'; 
-            document.body.classList.remove('sidebar-open'); 
             showToast("Signed out successfully.");
         }
 
