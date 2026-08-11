@@ -451,7 +451,7 @@
         }
 
         /* Toast Notification System */
-        #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+        #toast-container { fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
         .toast { background: var(--text-main); color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transform: translateY(10px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: auto; }
         .toast.show { opacity: 1; transform: translateY(0); }
 
@@ -461,75 +461,23 @@
 
         /* --- MOBILE RESPONSIVENESS OVERRIDES --- */
         @media (max-width: 768px) {
-            header {
-                flex-direction: column;
-                align-items: stretch;
-                padding: 16px;
-                gap: 16px;
-            }
-            .header-left {
-                flex-direction: column;
-                align-items: stretch;
-                max-width: 100%;
-            }
-            .search-container {
-                flex: 1;
-                width: 100%;
-            }
-            .search-container input {
-                width: 100%;
-            }
-            .header-actions {
-                flex-wrap: wrap;
-                justify-content: center;
-                width: 100%;
-            }
-            .matrix-container.layout-grid {
-                display: flex;
-                flex-direction: column;
-                min-width: 0;
-            }
-            .matrix-container.layout-grid > .quadrant {
-                width: 100% !important;
-                min-height: 300px;
-            }
-            .quadrant-resize-handle {
-                display: none !important;
-            }
-            .tracker-layout {
-                flex-direction: column;
-            }
-            .tracker-palette {
-                width: 100%;
-                height: 250px;
-                flex-shrink: 0;
-                border-right: none;
-                border-bottom: 1px solid var(--border-color);
-            }
-            .tracker-toolbar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .tracker-toolbar-left, .tracker-toolbar-right {
-                justify-content: center;
-                width: 100%;
-            }
-            .responsive-date-hours-grid {
-                grid-template-columns: 1fr;
-            }
-            .form-row-inline {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
-            .form-row-inline label {
-                width: 100%;
-            }
-            .modal-content {
-                padding: 20px;
-            }
+            header { flex-direction: column; align-items: stretch; padding: 16px; gap: 16px; }
+            .header-left { flex-direction: column; align-items: stretch; max-width: 100%; }
+            .search-container { flex: 1; width: 100%; }
+            .search-container input { width: 100%; }
+            .header-actions { flex-wrap: wrap; justify-content: center; width: 100%; }
+            .matrix-container.layout-grid { display: flex; flex-direction: column; min-width: 0; }
+            .matrix-container.layout-grid > .quadrant { width: 100% !important; min-height: 300px; }
+            .quadrant-resize-handle { display: none !important; }
+            .tracker-layout { flex-direction: column; }
+            .tracker-palette { width: 100%; height: 250px; flex-shrink: 0; border-right: none; border-bottom: 1px solid var(--border-color); }
+            .tracker-toolbar { flex-direction: column; align-items: stretch; }
+            .tracker-toolbar-left, .tracker-toolbar-right { justify-content: center; width: 100%; }
+            .responsive-date-hours-grid { grid-template-columns: 1fr; }
+            .form-row-inline { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .form-row-inline label { width: 100%; }
+            .modal-content { padding: 20px; }
         }
-
     </style>
 </head>
 <body>
@@ -543,7 +491,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.22</span></h1>
+                <h1>Quadra <span class="version-badge">v2.23</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -882,7 +830,6 @@
                         <option value="tracker">Tracker</option>
                         <option value="overdue">Overdue</option>
                         <option value="gcal">GCal</option>
-                        <option value="tracker">Tracker</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1097,7 +1044,7 @@
         let clockIntervalId = null;
         let timelineZoom = parseFloat(localStorage.getItem('quadra_zoom')) || 1;
         
-        // v2.22: Update scope to include full calendar access to permit writes to the new 'Quadra' calendar
+        // v2.23: Update scope to include full calendar access to permit writes to the new 'Quadra' calendar
         const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar';
 
         const defaultSchedule = [
@@ -2883,7 +2830,7 @@
 
                 if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks || !gapi.client.tasks.tasklists || !gapi.client.tasks.tasks) {
                     document.getElementById('sync-banner').style.display = 'none';
-                    return showToast("Google Tasks is still loading. Please try again in a moment.");
+                    return showToast("Google APIs are still loading. Please try again in a moment.");
                 }
 
                 if(typeof gapi !== 'undefined' && gapi.client && typeof gapi.client.setToken === 'function' && !gapi.client.getToken()) {
@@ -2971,64 +2918,66 @@
                 handleSearch(); 
 
                 // 2. TRACKER SYNC TO GOOGLE CALENDAR
-                let quadraCalId = null;
-                const calList = await gapi.client.calendar.calendarList.list();
-                const existingCal = calList.result.items.find(c => c.summary === 'Quadra');
-                if (existingCal) {
-                    quadraCalId = existingCal.id;
-                } else {
-                    const newCal = await gapi.client.calendar.calendars.insert({
-                        resource: { summary: 'Quadra', description: 'Synced time blocks from Quadra Tracker' }
-                    });
-                    quadraCalId = newCal.result.id;
-                }
-
                 let calSyncedCount = 0;
-                let activeTz = appConfig.primaryTz !== 'local' ? appConfig.primaryTz : Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (gapi.client.calendar) {
+                    let quadraCalId = null;
+                    const calList = await gapi.client.calendar.calendarList.list();
+                    const existingCal = calList.result.items.find(c => c.summary === 'Quadra');
+                    if (existingCal) {
+                        quadraCalId = existingCal.id;
+                    } else {
+                        const newCal = await gapi.client.calendar.calendars.insert({
+                            resource: { summary: 'Quadra', description: 'Synced time blocks from Quadra Tracker' }
+                        });
+                        quadraCalId = newCal.result.id;
+                    }
 
-                for (let note of notes) {
-                    if (note.deleted || !note.timeBlocks || note.eventId) continue; 
-                    for (let tb of note.timeBlocks) {
-                        const [y, m, d] = tb.date.split('-');
-                        let startH = Math.floor(tb.startHour);
-                        let startM = Math.round((tb.startHour - startH) * 60);
-                        let endHourDec = tb.startHour + tb.duration;
-                        let endH = Math.floor(endHourDec);
-                        let endM = Math.round((endHourDec - endH) * 60);
-                        
-                        let endDate = new Date(y, m - 1, d, endH, endM);
-                        if (endH >= 24) {
-                            endDate = new Date(y, m - 1, d, endH - 24, endM);
-                            endDate.setDate(endDate.getDate() + 1);
-                        }
-                        let startDate = new Date(y, m - 1, d, startH, startM);
-                        
-                        let displayTitle = note.text.split('\n')[0];
-                        const eventPayload = {
-                            summary: displayTitle,
-                            description: "Synced from Quadra Time Tracker",
-                            start: { dateTime: startDate.toISOString(), timeZone: activeTz },
-                            end: { dateTime: endDate.toISOString(), timeZone: activeTz }
-                        };
+                    let activeTz = appConfig.primaryTz !== 'local' ? appConfig.primaryTz : Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-                        if (tb.gcalEventId) {
-                            try {
-                                await gapi.client.calendar.events.update({ calendarId: quadraCalId, eventId: tb.gcalEventId, resource: eventPayload });
-                                calSyncedCount++;
-                            } catch(e) {
-                                // If the event was manually deleted from GCal, recreate it
+                    for (let note of notes) {
+                        if (note.deleted || !note.timeBlocks || note.eventId) continue; 
+                        for (let tb of note.timeBlocks) {
+                            const [y, m, d] = tb.date.split('-');
+                            let startH = Math.floor(tb.startHour);
+                            let startM = Math.round((tb.startHour - startH) * 60);
+                            let endHourDec = tb.startHour + tb.duration;
+                            let endH = Math.floor(endHourDec);
+                            let endM = Math.round((endHourDec - endH) * 60);
+                            
+                            let endDate = new Date(y, m - 1, d, endH, endM);
+                            if (endH >= 24) {
+                                endDate = new Date(y, m - 1, d, endH - 24, endM);
+                                endDate.setDate(endDate.getDate() + 1);
+                            }
+                            let startDate = new Date(y, m - 1, d, startH, startM);
+                            
+                            let displayTitle = (note.text || '').split('\n')[0];
+                            const eventPayload = {
+                                summary: displayTitle,
+                                description: "Synced from Quadra Time Tracker",
+                                start: { dateTime: startDate.toISOString(), timeZone: activeTz },
+                                end: { dateTime: endDate.toISOString(), timeZone: activeTz }
+                            };
+
+                            if (tb.gcalEventId) {
+                                try {
+                                    await gapi.client.calendar.events.update({ calendarId: quadraCalId, eventId: tb.gcalEventId, resource: eventPayload });
+                                    calSyncedCount++;
+                                } catch(e) {
+                                    // If the event was manually deleted from GCal, recreate it
+                                    const res = await gapi.client.calendar.events.insert({ calendarId: quadraCalId, resource: eventPayload });
+                                    tb.gcalEventId = res.result.id;
+                                    calSyncedCount++;
+                                }
+                            } else {
                                 const res = await gapi.client.calendar.events.insert({ calendarId: quadraCalId, resource: eventPayload });
                                 tb.gcalEventId = res.result.id;
                                 calSyncedCount++;
                             }
-                        } else {
-                            const res = await gapi.client.calendar.events.insert({ calendarId: quadraCalId, resource: eventPayload });
-                            tb.gcalEventId = res.result.id;
-                            calSyncedCount++;
                         }
                     }
+                    saveNotes(); // Save updated gcalEventIds
                 }
-                saveNotes(); // Save updated gcalEventIds
 
                 document.getElementById('sync-banner').style.display = 'none';
                 showToast(`Successfully synced Tasks & ${calSyncedCount} Tracker Blocks!`);
@@ -3038,309 +2987,6 @@
                 showToast("Sync failed. Ensure API scopes are updated.");
             }
         }
-
-        window.addEventListener('load', () => {
-            // Apply Saved Grid Widths and Orders First
-            const matrixContainer = document.getElementById('matrix');
-            
-            if (appConfig.quadrantOrder && appConfig.quadrantOrder.length > 0) {
-                appConfig.quadrantOrder.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) matrixContainer.appendChild(el);
-                });
-            }
-            
-            document.querySelectorAll('.quadrant').forEach(q => {
-                if (appConfig.quadrantWidths && appConfig.quadrantWidths[q.id]) {
-                    q.style.width = appConfig.quadrantWidths[q.id];
-                }
-                quadResizeObserver.observe(q);
-            });
-
-            // --- Execute Initial Render logic with Config ---
-            if (!localStorage.getItem('quadra_layout')) {
-                currentLayout = appConfig.defaultView;
-            }
-            applyViewVisibility();
-
-            if (typeof gapi !== 'undefined' && appConfig.apiKey) {
-                gapi.load('client', () => {
-                    gapi.client.init({ apiKey: appConfig.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'] }).catch(() => {});
-                });
-            }
-            if (typeof google !== 'undefined' && google.accounts && appConfig.clientId) {
-                tokenClient = google.accounts.oauth2.initTokenClient({ 
-                    client_id: appConfig.clientId, 
-                    scope: SCOPES, 
-                    callback: async (resp) => { 
-                        if (resp.error !== undefined) { throw (resp); } 
-                        localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
-                        document.getElementById('auth-overlay').style.display = 'none';
-                        document.getElementById('authorize_button').style.display = 'none'; 
-                        document.getElementById('signout_button').style.display = 'inline-block'; 
-                        isGoogleSynced = true;
-                        if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
-                        loadCalendars(); 
-                        performBackgroundSync(); 
-                    }, 
-                });
-            }
-            checkConfigState();
-
-            // Setup Keyboard Navigation for Search and Quick Tags Bar
-            const searchInput = document.getElementById('searchInput');
-            const tagsBar = document.getElementById('quick-tags-bar');
-
-            if (searchInput && tagsBar) {
-                searchInput.addEventListener('keydown', function(e) {
-                    if (e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        const firstTag = tagsBar.querySelector('.filter-tag');
-                        if (firstTag) firstTag.focus();
-                    }
-                });
-
-                tagsBar.addEventListener('keydown', function(e) {
-                    if (e.key === 'ArrowRight') {
-                        e.preventDefault();
-                        if (document.activeElement.nextElementSibling) {
-                            document.activeElement.nextElementSibling.focus();
-                        }
-                    } else if (e.key === 'ArrowLeft') {
-                        e.preventDefault();
-                        if (document.activeElement.previousElementSibling) {
-                            document.activeElement.previousElementSibling.focus();
-                        }
-                    } else if (e.key === 'ArrowUp' || e.key === 'Escape') {
-                        e.preventDefault();
-                        searchInput.focus();
-                    } else if (e.key === 'Enter') {
-                        e.preventDefault();
-                        document.activeElement.click();
-                    }
-                });
-            }
-        });
-        
-        function handleAuthClick() { 
-            if (!appConfig.clientId) return openSettingsPage(); 
-            if (!tokenClient && typeof google !== 'undefined' && google.accounts) { 
-                tokenClient = google.accounts.oauth2.initTokenClient({ 
-                    client_id: appConfig.clientId, 
-                    scope: SCOPES, 
-                    callback: async (resp) => { 
-                        if (resp.error !== undefined) { throw (resp); } 
-                        localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
-                        document.getElementById('auth-overlay').style.display = 'none'; 
-                        document.getElementById('authorize_button').style.display = 'none'; 
-                        document.getElementById('signout_button').style.display = 'inline-block'; 
-                        isGoogleSynced = true;
-                        if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
-                        loadCalendars(); 
-                        performBackgroundSync(); 
-                    }, 
-                }); 
-            }
-            if (!tokenClient) { showToast("Google services are still loading. Please wait a moment and try again."); return; }
-            tokenClient.requestAccessToken({prompt: 'consent'}); 
-        }
-        
-        function handleSignoutClick() { 
-            const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-            if (savedToken && savedToken.token && typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) { 
-                google.accounts.oauth2.revoke(savedToken.token, () => {}); 
-            } 
-            localStorage.removeItem('quadra_gapi_token_v2'); 
-            isGoogleSynced = false; 
-            document.getElementById('auth-overlay').style.display = 'none';
-            document.getElementById('authorize_button').style.display = 'inline-block'; 
-            document.getElementById('signout_button').style.display = 'none'; 
-            showToast("Signed out successfully.");
-        }
-
-        async function importCalendarEvents() {
-            const dateStr = document.getElementById('trackerDate').value;
-            const ignoreKeywords = (appConfig.ignoreKeywords || 'out of office, ooo, away, vacation, holiday')
-                .toLowerCase()
-                .split(',')
-                .map(k => k.trim())
-                .filter(k => k.length > 0);
-
-            let importedCount = 0;
-            let ignoredCount = 0;
-
-            try {
-                document.getElementById('sync-banner').style.display = 'block';
-
-                if (appConfig.calSource === 'outlook' && appConfig.icsUrl) {
-                    let fetchUrl = appConfig.icsUrl;
-                    
-                    const res = await fetch(fetchUrl);
-                    if (!res.ok) throw new Error("Failed to fetch ICS feed via Apps Script bridge");
-                    
-                    const icsText = await res.text();
-                    const icsEvents = parseICS(icsText, dateStr, ignoreKeywords);
-
-                    icsEvents.forEach(ev => {
-                        if (notes.find(n => n.eventId === ev.id)) return;
-                        notes.push({
-                            id: Date.now().toString() + Math.random(),
-                            eventId: ev.id,
-                            text: `${ev.summary} #meeting`,
-                            quadrant: 'q2',
-                            status: 'active',
-                            dirty: false,
-                            deleted: false,
-                            timeBlocks: [{
-                                id: Date.now().toString() + Math.random(),
-                                date: dateStr,
-                                startHour: ev.startHour,
-                                duration: ev.duration
-                            }]
-                        });
-                        importedCount++;
-                    });
-
-                } else {
-                    const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-                    if (!savedToken || !savedToken.token || savedToken.expires_at < Date.now()) {
-                        document.getElementById('sync-banner').style.display = 'none';
-                        return showToast("Please sign in to Google first.");
-                    }
-                    if (!appConfig.calendarId) {
-                        document.getElementById('sync-banner').style.display = 'none';
-                        return showToast("Please select a Google calendar in Settings first.");
-                    }
-                    
-                    const [y, m, day] = dateStr.split('-');
-                    const timeMin = new Date(y, m-1, day, 0, 0, 0).toISOString();
-                    const timeMax = new Date(y, m-1, day, 23, 59, 59).toISOString();
-
-                    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(appConfig.calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
-                        headers: { 'Authorization': `Bearer ${savedToken.token}` }
-                    });
-                    const data = await res.json();
-                    if(data.error) throw new Error(data.error.message);
-
-                    const events = data.items || [];
-                    events.forEach(event => {
-                        if (!event.start.dateTime) return; // Skip all-day events
-
-                        const title = (event.summary || '').toLowerCase();
-                        const shouldIgnore = ignoreKeywords.some(keyword => title.includes(keyword));
-
-                        if (shouldIgnore) {
-                            ignoredCount++;
-                            return;
-                        }
-                        
-                        const start = new Date(event.start.dateTime);
-                        const end = new Date(event.end.dateTime);
-                        
-                        const rawStartHour = start.getHours() + (start.getMinutes() / 60);
-                        let rawEndHour = end.getHours() + (end.getMinutes() / 60);
-                        if (rawEndHour <= rawStartHour) rawEndHour += 24;
-                        const rawDuration = rawEndHour - rawStartHour;
-
-                        const startHour = roundToQuarterHour(rawStartHour);
-                        const duration = Math.max(0.25, roundToQuarterHour(rawDuration));
-                        
-                        if (notes.find(n => n.eventId === event.id)) return; 
-                        
-                        const newNote = {
-                            id: Date.now().toString() + Math.random(),
-                            eventId: event.id, 
-                            text: `${event.summary || 'Meeting'} #meeting`,
-                            quadrant: 'q2', 
-                            status: 'active',
-                            dirty: false, 
-                            deleted: false,
-                            timeBlocks: [{
-                                id: Date.now().toString() + Math.random(),
-                                date: dateStr,
-                                startHour: startHour,
-                                duration: duration
-                            }]
-                        };
-                        
-                        notes.push(newNote);
-                        importedCount++;
-                    });
-                }
-                
-                document.getElementById('sync-banner').style.display = 'none';
-                if (importedCount > 0 || ignoredCount > 0) {
-                    saveNotes();
-                    renderTrackerTimeline(); 
-                    showToast(`${importedCount} imported, ${ignoredCount} ignored.`);
-                } else {
-                    showToast("No new meetings found for this date.");
-                }
-                
-            } catch(e) {
-                console.error("Calendar Sync Error:", e);
-                document.getElementById('sync-banner').style.display = 'none';
-                showToast("Failed to fetch calendar events. Check your network or Apps Script Web App URL.");
-            }
-        }
-
-        /*async function performBackgroundSync() {
-            const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-            if (!savedToken || !savedToken.token) return showToast("Please sign in first to sync with Google Tasks.");
-            try {
-                document.getElementById('sync-banner').style.display = 'block';
-
-                if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks || !gapi.client.tasks.tasklists || !gapi.client.tasks.tasks) {
-                    document.getElementById('sync-banner').style.display = 'none';
-                    return showToast("Google Tasks is still loading. Please try again in a moment.");
-                }
-
-                if(typeof gapi !== 'undefined' && gapi.client && typeof gapi.client.setToken === 'function' && !gapi.client.getToken()) {
-                    gapi.client.setToken({ access_token: savedToken.token });
-                }
-                
-                // 1. TASK SYNC LOGIC
-                const response = await gapi.client.tasks.tasklists.list();
-                const remoteLists = response.result.items || [];
-                const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
-                let gapiListIds = { inbox: null, q1: null, q2: null, q3: null, q4: null, closed: null };
-                for (const quadKey of Object.keys(GAPI_LIST_NAMES)) { const existingList = remoteLists.find(l => l.title === GAPI_LIST_NAMES[quadKey]); if (existingList) { gapiListIds[quadKey] = existingList.id; } else { const newListReq = await gapi.client.tasks.tasklists.insert({ title: GAPI_LIST_NAMES[quadKey] }); gapiListIds[quadKey] = newListReq.result.id; } }
-                let remoteTaskMap = {};
-                for (const quadKey of Object.keys(gapiListIds)) { const listId = gapiListIds[quadKey]; const tasksReq = await gapi.client.tasks.tasks.list({ tasklist: listId, showHidden: true, maxResults: 100 }); const rTasks = tasksReq.result.items || []; rTasks.forEach(t => { remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; }); }
-                const syncSnapshot = JSON.parse(JSON.stringify(notes));
-                for (let sn of syncSnapshot) {
-                    if (sn.eventId) continue; 
-                    if (sn.deleted && sn.dirty) { if (remoteTaskMap[sn.id]) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); } catch(e){} } sn.dirty = false; continue; }
-                    if (sn.dirty && !sn.deleted) {
-                        const targetListId = gapiListIds[sn.quadrant]; const remoteObj = remoteTaskMap[sn.id]; const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; const payload = { tasklist: targetListId, title: sn.text, status: gStatus }; if (sn.dueDate) payload.due = sn.dueDate; else payload.due = null;
-                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; res.result.id; } catch(e){} } else { try { payload.task = sn.id; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
-                        sn.dirty = false;
-                    } else if (!sn.dirty && !sn.deleted) { const remoteObj = remoteTaskMap[sn.id]; if (remoteObj) { sn.text = remoteObj.task.title || ''; sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; sn.quadrant = remoteObj.quadKey; sn.dueDate = remoteObj.task.due || null; delete remoteTaskMap[sn.id]; } }
-                }
-                Object.values(remoteTaskMap).forEach(remoteObj => { syncSnapshot.push({ id: remoteObj.task.id, text: remoteObj.task.title || '', quadrant: remoteObj.quadKey, status: remoteObj.task.status === 'completed' ? 'closed' : 'active', dueDate: remoteObj.task.due || null, timeBlocks: [], eventId: null, dirty: false, deleted: false }); });
-                let newNotesArray = []; let syncedIds = new Set();
-                syncSnapshot.forEach(sn => { if (sn.deleted && !sn.dirty) return; const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); if (liveNote) { sn.timeBlocks = liveNote.timeBlocks || []; sn.eventId = liveNote.eventId || null; if (liveNote.dirty) { if (sn.tempId) liveNote.id = sn.id; newNotesArray.push(liveNote); } else { newNotesArray.push(sn); } syncedIds.add(liveNote.id); if (sn.tempId) syncedIds.add(sn.tempId); } else { newNotesArray.push(sn); } });
-                notes = newNotesArray; saveNotes(); handleSearch(); 
-                document.getElementById('sync-banner').style.display = 'none';
-                showToast("Successfully synced with Google Tasks!");
-            } catch (e) {
-                document.getElementById('sync-banner').style.display = 'none';
-                console.error(e);
-                showToast("Tasks sync failed. Check your API configuration.");
-            }
-        }*/
-
-        // --- Execute Initial Render logic with Search Preservation ---
-        setLayout(currentLayout); 
-        
-        const savedSearch = localStorage.getItem('quadra_search') || '';
-        const searchInputEl = document.getElementById('searchInput');
-        if (searchInputEl && savedSearch) {
-            searchInputEl.value = savedSearch;
-            document.getElementById('clearSearchBtn').style.display = 'block';
-        }
-        
-        renderNotes(savedSearch);
     </script>
 </body>
 </html>
