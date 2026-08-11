@@ -3284,7 +3284,7 @@
             }
         }
 
-        async function performBackgroundSync() {
+        /*async function performBackgroundSync() {
             const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
             if (!savedToken || !savedToken.token) return showToast("Please sign in first to sync with Google Tasks.");
             try {
@@ -3328,7 +3328,7 @@
                 console.error(e);
                 showToast("Tasks sync failed. Check your API configuration.");
             }
-        }
+        }*/
 
         // --- Execute Initial Render logic with Search Preservation ---
         setLayout(currentLayout); 
