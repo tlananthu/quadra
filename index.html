@@ -465,7 +465,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.17</span></h1>
+                <h1>Quadra <span class="version-badge">v2.18</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -833,30 +833,32 @@
                 <label>Due Date</label>
                 <input type="date" id="taskDueDate">
             </div>
+            
+            <div id="trackerInputSection">
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 8px 0;">
 
-            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 8px 0;">
+                <div class="responsive-date-hours-grid">
+                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
+                        <label>Selected Date</label>
+                        <input type="date" id="taskSelectedDate">
+                    </div>
 
-            <div class="responsive-date-hours-grid">
-                <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                    <label>Selected Date</label>
-                    <input type="date" id="taskSelectedDate">
+                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
+                        <label>Hours worked</label>
+                        <input type="number" id="taskHoursWorked" step="0.25" min="0" placeholder="0.5" style="width: 120px;" oninput="onHoursChanged()">
+                    </div>
                 </div>
 
-                <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                    <label>Hours worked</label>
-                    <input type="number" id="taskHoursWorked" step="0.25" min="0" placeholder="0.5" style="width: 120px;" oninput="onHoursChanged()">
-                </div>
-            </div>
+                <div class="responsive-date-hours-grid" style="margin-top: 12px;">
+                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
+                        <label>Start Time</label>
+                        <input type="time" id="taskStartTime" oninput="onTimesChanged()">
+                    </div>
 
-            <div class="responsive-date-hours-grid" style="margin-top: 12px;">
-                <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                    <label>Start Time</label>
-                    <input type="time" id="taskStartTime" oninput="onTimesChanged()">
-                </div>
-
-                <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                    <label>End Time</label>
-                    <input type="time" id="taskEndTime" oninput="onTimesChanged()">
+                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
+                        <label>End Time</label>
+                        <input type="time" id="taskEndTime" oninput="onTimesChanged()">
+                    </div>
                 </div>
             </div>
 
@@ -1140,7 +1142,7 @@
         }
 
         function setLayout(layout) {
-            if (!appConfig.viewsEnabled[layout]) return; 
+            if (!appConfig.viewsEnabled[layout]) return; // Block setting disabled views
             
             currentLayout = layout;
             localStorage.setItem('quadra_layout', layout);
@@ -1916,6 +1918,11 @@
             const startTimeInput = document.getElementById('taskStartTime');
             const endTimeInput = document.getElementById('taskEndTime');
 
+            const trackerSection = document.getElementById('trackerInputSection');
+            if (trackerSection) {
+                trackerSection.style.display = (appConfig.viewsEnabled && appConfig.viewsEnabled.tracker === false) ? 'none' : 'block';
+            }
+
             if (noteId) {
                 currentEditingId = noteId; 
                 const note = notes.find(n => n.id === noteId); 
@@ -2429,6 +2436,7 @@
             let filteredNotes = notes.filter(note => {
                 if (note.deleted) return false;
                 const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
+                // Requirement 1: Calendar events should not be filtered out during search/filtering
                 if (isCalendarEvent) return true;
                 return matchesSearchQuery(note.text, searchQuery);
             });
@@ -2445,6 +2453,7 @@
                 const list = document.getElementById(targetListId);
                 if (list) {
                     const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
+                    // Only count towards badges if it matches search or is a calendar event exempt from search
                     const matchesSearch = matchesSearchQuery(note.text, searchQuery);
                     
                     if (note.status === 'active' && !note.eventId && filteredCounts[note.quadrant] !== undefined && matchesSearch) {
@@ -2468,6 +2477,7 @@
 
                     const contentWrapper = document.createElement('div'); contentWrapper.className = 'note-content-wrapper';
                     
+                    // Overdue Indicator Check
                     let overdueIndicator = '';
                     if (!isCalendarEvent && note.status === 'active' && note.dueDate) {
                         const dueDateStr = note.dueDate.split('T')[0];
