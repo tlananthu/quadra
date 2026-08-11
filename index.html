@@ -253,6 +253,9 @@
         .closed-note { opacity: 0.6; box-shadow: none; cursor: default; }
         .closed-note .note-text { text-decoration: line-through; cursor: default; overflow-y: hidden; }
 
+        /* --- GOOGLE CALENDAR VIEW --- */
+        #gcal-view { display: none; flex-grow: 1; width: 100%; overflow: hidden; background: #ffffff; }
+
         /* --- TIME TRACKER VIEW --- */
         #tracker-view { display: none; flex-grow: 1; width: 100%; overflow: hidden; background: #ffffff; }
         .tracker-layout { display: flex; height: 100%; }
@@ -540,7 +543,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.19</span></h1>
+                <h1>Quadra <span class="version-badge">v2.20</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -560,6 +563,14 @@
                 <button id="btnGrid" title="Quadrant View" onclick="setLayout('grid')">⊞</button>
                 <button id="btnKanban" title="Kanban View" onclick="setLayout('kanban')">⏸</button>
                 <button id="btnOverdue" title="Overdue Tasks" onclick="setLayout('overdue')">⚠️</button>
+                <button id="btnGcal" title="Google Calendar" onclick="setLayout('gcal')">
+                    <svg style="width:13px;height:13px;margin-right:2px;vertical-align:text-bottom;" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg> GCal
+                </button>
                 <button id="btnTracker" title="Tracker View" onclick="setLayout('tracker')">⏱️</button>
             </div>
             <button id="authorize_button" class="btn" onclick="handleAuthClick()">Sign In</button>
@@ -639,6 +650,11 @@
                     <!-- Populated dynamically -->
                 </div>
             </div>
+        </div>
+
+        <!-- Google Calendar Embed View -->
+        <div id="gcal-view">
+            <iframe id="gcal-iframe" style="border: 0; width: 100%; height: 100%;" frameborder="0" scrolling="no"></iframe>
         </div>
 
         <!-- Time Tracker View -->
@@ -734,6 +750,12 @@
                     <label>Google Apps Script Bridge Web App URL</label>
                     <input type="text" id="configIcsUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec" style="font-family: monospace;">
                     <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Paste your deployed Apps Script Web App URL (`/exec`).</p>
+                </div>
+
+                <div class="form-group" style="margin-top: 12px;">
+                    <label>Google Calendar Embed URL (for GCal View)</label>
+                    <input type="text" id="configGcalEmbedUrl" placeholder="https://calendar.google.com/calendar/embed?src=...">
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Paste your calendar embed link to view it directly in the app.</p>
                 </div>
 
                 <div class="form-group" style="margin-top: 12px;">
@@ -859,15 +881,19 @@
                         <option value="kanban">Kanban</option>
                         <option value="tracker">Tracker</option>
                         <option value="overdue">Overdue</option>
+                        <option value="gcal">GCal</option>
+                        <option value="tracker">Tracker</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Enabled Views</label>
-                    <div style="display: flex; gap: 16px; font-size: 13px; margin-top: 4px;">
+                    <div style="display: flex; gap: 16px; font-size: 13px; margin-top: 4px; flex-wrap: wrap;">
                         <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewGrid"> Quadrant</label>
                         <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewKanban"> Kanban</label>
                         <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewTracker"> Tracker</label>
                         <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewOverdue"> Overdue</label>
+                        <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewGcal"> GCal</label>
+                        <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewTracker"> Tracker</label>
                     </div>
                 </div>
 
@@ -998,12 +1024,16 @@
                     <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">K</kbd>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Tracker View</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">T</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
                     <span>Overdue View</span>
                     <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">O</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>GCal View</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">C</kbd>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                    <span>Tracker View</span>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">T</kbd>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
                     <span>Cycle Views Forward</span>
@@ -1053,7 +1083,9 @@
         if (!appConfig.ignoreKeywords) appConfig.ignoreKeywords = 'out of office, ooo, away, vacation, holiday';
         if (!appConfig.calSource) appConfig.calSource = 'google';
         if (!appConfig.icsUrl) appConfig.icsUrl = '';
-        if (!appConfig.viewsEnabled) appConfig.viewsEnabled = { grid: true, kanban: true, overdue: true, tracker: true };
+        if (!appConfig.gcalEmbedUrl) appConfig.gcalEmbedUrl = '';
+        if (!appConfig.viewsEnabled) appConfig.viewsEnabled = { grid: true, kanban: true, overdue: true, gcal: true, tracker: true };
+        if (appConfig.viewsEnabled.gcal === undefined) appConfig.viewsEnabled.gcal = true; // Fallback for older saves
         if (!appConfig.defaultView) appConfig.defaultView = 'grid';
         if (!appConfig.primaryTz) appConfig.primaryTz = 'local';
         if (!appConfig.secondaryTz) appConfig.secondaryTz = 'none';
@@ -1205,11 +1237,13 @@
             const btnKanban = document.getElementById('btnKanban');
             const btnTracker = document.getElementById('btnTracker');
             const btnOverdue = document.getElementById('btnOverdue');
+            const btnGcal = document.getElementById('btnGcal');
             
             if (btnGrid) btnGrid.style.display = appConfig.viewsEnabled.grid ? '' : 'none';
             if (btnKanban) btnKanban.style.display = appConfig.viewsEnabled.kanban ? '' : 'none';
             if (btnTracker) btnTracker.style.display = appConfig.viewsEnabled.tracker ? '' : 'none';
             if (btnOverdue) btnOverdue.style.display = appConfig.viewsEnabled.overdue ? '' : 'none';
+            if (btnGcal) btnGcal.style.display = appConfig.viewsEnabled.gcal ? '' : 'none';
             
             if (!appConfig.viewsEnabled[currentLayout]) {
                 setLayout(appConfig.defaultView);
@@ -1225,21 +1259,26 @@
             const matrix = document.getElementById('matrix');
             const tracker = document.getElementById('tracker-view');
             const overdue = document.getElementById('overdue-view');
+            const gcalView = document.getElementById('gcal-view');
             const settingsView = document.getElementById('settings-view');
+            
             const btnGrid = document.getElementById('btnGrid');
             const btnKanban = document.getElementById('btnKanban');
             const btnOverdue = document.getElementById('btnOverdue');
+            const btnGcal = document.getElementById('btnGcal');
             const btnTracker = document.getElementById('btnTracker');
 
             if (btnGrid) btnGrid.classList.toggle('active', layout === 'grid');
             if (btnKanban) btnKanban.classList.toggle('active', layout === 'kanban');
             if (btnOverdue) btnOverdue.classList.toggle('active', layout === 'overdue');
+            if (btnGcal) btnGcal.classList.toggle('active', layout === 'gcal');
             if (btnTracker) btnTracker.classList.toggle('active', layout === 'tracker');
             
             settingsView.style.display = 'none';
             matrix.style.display = 'none';
             tracker.style.display = 'none';
             overdue.style.display = 'none';
+            if(gcalView) gcalView.style.display = 'none';
 
             if (layout === 'tracker') {
                 tracker.style.display = 'block'; 
@@ -1252,6 +1291,18 @@
                 document.body.classList.remove('sidebar-open');
                 renderOverdueTasksPage();
                 stopLiveClock();
+            } else if (layout === 'gcal') {
+                gcalView.style.display = 'block';
+                document.body.classList.remove('sidebar-open');
+                stopLiveClock();
+                
+                const iframe = document.getElementById('gcal-iframe');
+                const defaultUrl = 'https://calendar.google.com/calendar/embed?src=primary';
+                const targetUrl = appConfig.gcalEmbedUrl || defaultUrl;
+                
+                if (iframe && iframe.src !== targetUrl) {
+                    iframe.src = targetUrl;
+                }
             } else {
                 matrix.style.display = ''; 
                 matrix.classList.remove('layout-grid', 'layout-kanban');
@@ -1281,6 +1332,7 @@
             document.getElementById('matrix').style.display = 'none';
             document.getElementById('tracker-view').style.display = 'none';
             document.getElementById('overdue-view').style.display = 'none';
+            document.getElementById('gcal-view').style.display = 'none';
             document.getElementById('settings-view').style.display = 'block';
             document.body.classList.remove('sidebar-open');
             document.getElementById('quick-tags-bar').style.display = 'none';
@@ -1294,6 +1346,7 @@
             document.getElementById('configIgnoreKeywords').value = appConfig.ignoreKeywords || '';
             document.getElementById('configCalSource').value = appConfig.calSource || 'google';
             document.getElementById('configIcsUrl').value = appConfig.icsUrl || '';
+            document.getElementById('configGcalEmbedUrl').value = appConfig.gcalEmbedUrl || '';
             
             document.getElementById('configPrimaryTz').value = appConfig.primaryTz || 'local';
             document.getElementById('configSecondaryTz').value = appConfig.secondaryTz || 'none';
@@ -1301,8 +1354,9 @@
             document.getElementById('configDefaultView').value = appConfig.defaultView || 'grid';
             document.getElementById('configViewGrid').checked = appConfig.viewsEnabled.grid !== false;
             document.getElementById('configViewKanban').checked = appConfig.viewsEnabled.kanban !== false;
-            document.getElementById('configViewTracker').checked = appConfig.viewsEnabled.tracker !== false;
             document.getElementById('configViewOverdue').checked = appConfig.viewsEnabled.overdue !== false;
+            document.getElementById('configViewGcal').checked = appConfig.viewsEnabled.gcal !== false;
+            document.getElementById('configViewTracker').checked = appConfig.viewsEnabled.tracker !== false;
             
             toggleCalSourceFields(appConfig.calSource || 'google');
             loadCalendars();
@@ -1928,9 +1982,12 @@
                 } else if (e.key.toLowerCase() === 'o' && appConfig.viewsEnabled.overdue) {
                     e.preventDefault();
                     setLayout('overdue');
+                } else if (e.key.toLowerCase() === 'c' && appConfig.viewsEnabled.gcal) {
+                    e.preventDefault();
+                    setLayout('gcal');
                 } else if (e.key === '`' || e.key === '~') {
                     e.preventDefault();
-                    const allViews = ['grid', 'kanban', 'overdue', 'tracker'];
+                    const allViews = ['grid', 'kanban', 'overdue', 'gcal', 'tracker'];
                     const views = allViews.filter(v => appConfig.viewsEnabled[v]);
                     if (views.length === 0) return; // safeguard
                     
@@ -2286,6 +2343,7 @@
             appConfig.ignoreKeywords = document.getElementById('configIgnoreKeywords').value.trim();
             appConfig.calSource = document.getElementById('configCalSource').value;
             appConfig.icsUrl = document.getElementById('configIcsUrl').value.trim();
+            appConfig.gcalEmbedUrl = document.getElementById('configGcalEmbedUrl').value.trim();
             
             appConfig.primaryTz = document.getElementById('configPrimaryTz').value;
             appConfig.secondaryTz = document.getElementById('configSecondaryTz').value;
@@ -2300,6 +2358,7 @@
                 grid: document.getElementById('configViewGrid').checked,
                 kanban: document.getElementById('configViewKanban').checked,
                 tracker: document.getElementById('configViewTracker').checked,
+                gcal: document.getElementById('configViewGcal').checked,
                 overdue: document.getElementById('configViewOverdue').checked
             };
             
