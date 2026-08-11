@@ -451,7 +451,7 @@
         }
 
         /* Toast Notification System */
-        #toast-container { position:fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+        #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
         .toast { background: var(--text-main); color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transform: translateY(10px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: auto; }
         .toast.show { opacity: 1; transform: translateY(0); }
 
@@ -830,6 +830,7 @@
                         <option value="tracker">Tracker</option>
                         <option value="overdue">Overdue</option>
                         <option value="gcal">GCal</option>
+                        <option value="tracker">Tracker</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -840,7 +841,6 @@
                         <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewTracker"> Tracker</label>
                         <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewOverdue"> Overdue</label>
                         <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewGcal"> GCal</label>
-                        <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewTracker"> Tracker</label>
                     </div>
                 </div>
 
@@ -2987,6 +2987,97 @@
                 showToast("Sync failed. Ensure API scopes are updated.");
             }
         }
+
+        window.addEventListener('load', () => {
+            // Apply Saved Grid Widths and Orders First
+            const matrixContainer = document.getElementById('matrix');
+            
+            if (appConfig.quadrantOrder && appConfig.quadrantOrder.length > 0) {
+                appConfig.quadrantOrder.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) matrixContainer.appendChild(el);
+                });
+            }
+            
+            document.querySelectorAll('.quadrant').forEach(q => {
+                if (appConfig.quadrantWidths && appConfig.quadrantWidths[q.id]) {
+                    q.style.width = appConfig.quadrantWidths[q.id];
+                }
+                quadResizeObserver.observe(q);
+            });
+
+            // --- Execute Initial Render logic with Config ---
+            if (!localStorage.getItem('quadra_layout')) {
+                currentLayout = appConfig.defaultView;
+            }
+            applyViewVisibility();
+
+            if (typeof gapi !== 'undefined') {
+                gapi.load('client', () => {
+                    let initArgs = { 
+                        discoveryDocs: [
+                            'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest',
+                            'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
+                        ] 
+                    };
+                    if (appConfig.apiKey) initArgs.apiKey = appConfig.apiKey;
+                    gapi.client.init(initArgs).catch(() => {});
+                });
+            }
+            
+            if (typeof google !== 'undefined' && google.accounts && appConfig.clientId) {
+                tokenClient = google.accounts.oauth2.initTokenClient({ 
+                    client_id: appConfig.clientId, 
+                    scope: SCOPES, 
+                    callback: async (resp) => { 
+                        if (resp.error !== undefined) { throw (resp); } 
+                        localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
+                        document.getElementById('auth-overlay').style.display = 'none';
+                        document.getElementById('authorize_button').style.display = 'none'; 
+                        document.getElementById('signout_button').style.display = 'inline-block'; 
+                        isGoogleSynced = true;
+                        if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
+                        loadCalendars(); 
+                        performBackgroundSync(); 
+                    }, 
+                });
+            }
+            checkConfigState();
+
+            // Setup Keyboard Navigation for Search and Quick Tags Bar
+            const searchInput = document.getElementById('searchInput');
+            const tagsBar = document.getElementById('quick-tags-bar');
+
+            if (searchInput && tagsBar) {
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const firstTag = tagsBar.querySelector('.filter-tag');
+                        if (firstTag) firstTag.focus();
+                    }
+                });
+
+                tagsBar.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        if (document.activeElement.nextElementSibling) {
+                            document.activeElement.nextElementSibling.focus();
+                        }
+                    } else if (e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        if (document.activeElement.previousElementSibling) {
+                            document.activeElement.previousElementSibling.focus();
+                        }
+                    } else if (e.key === 'ArrowUp' || e.key === 'Escape') {
+                        e.preventDefault();
+                        searchInput.focus();
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.activeElement.click();
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
