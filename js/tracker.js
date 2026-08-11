@@ -1,7 +1,7 @@
 import { state, saveNotes } from './state.js';
-import { roundToQuarterHour, getTzOffset, getTzTime, formatCurrentTimeBadge, decToTime, addDays, showToast } from './utils.js';
+import { roundToQuarterHour, getTzOffset, getTzTime, formatCurrentTimeBadge, decToTime, addDays, showToast, parseTags } from './utils.js';
 import { openTaskModal, openEditBlockModal } from './ui.js';
-import { matchesSearchQuery, parseTags } from './board.js';
+import { matchesSearchQuery } from './board.js';
 
 export function setTrackerMode(mode) {
     state.currentTrackerMode = mode;
@@ -483,7 +483,8 @@ export function renderTrackerTimeline() {
 
     const dayTotal = roundToQuarterHour(totalTimeRendered);
     const weekTotal = roundToQuarterHour(weeklyTotalRendered);
-    document.getElementById('trackerDailyTotal').innerText = `Total: ${dayTotal}h/${weekTotal}h`;
+    const dailyTotalEl = document.getElementById('trackerDailyTotal');
+    if(dailyTotalEl) dailyTotalEl.innerText = `Total: ${dayTotal}h/${weekTotal}h`;
 
     const scrollArea = document.getElementById('timelineScrollArea');
     if (scrollArea && scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
