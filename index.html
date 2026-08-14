@@ -458,75 +458,23 @@
 
         /* --- MOBILE RESPONSIVENESS OVERRIDES --- */
         @media (max-width: 768px) {
-            header {
-                flex-direction: column;
-                align-items: stretch;
-                padding: 16px;
-                gap: 16px;
-            }
-            .header-left {
-                flex-direction: column;
-                align-items: stretch;
-                max-width: 100%;
-            }
-            .search-container {
-                flex: 1;
-                width: 100%;
-            }
-            .search-container input {
-                width: 100%;
-            }
-            .header-actions {
-                flex-wrap: wrap;
-                justify-content: center;
-                width: 100%;
-            }
-            .matrix-container.layout-grid {
-                display: flex;
-                flex-direction: column;
-                min-width: 0;
-            }
-            .matrix-container.layout-grid > .quadrant {
-                width: 100% !important;
-                min-height: 300px;
-            }
-            .quadrant-resize-handle {
-                display: none !important;
-            }
-            .tracker-layout {
-                flex-direction: column;
-            }
-            .tracker-palette {
-                width: 100%;
-                height: 250px;
-                flex-shrink: 0;
-                border-right: none;
-                border-bottom: 1px solid var(--border-color);
-            }
-            .tracker-toolbar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .tracker-toolbar-left, .tracker-toolbar-right {
-                justify-content: center;
-                width: 100%;
-            }
-            .responsive-date-hours-grid {
-                grid-template-columns: 1fr;
-            }
-            .form-row-inline {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
-            .form-row-inline label {
-                width: 100%;
-            }
-            .modal-content {
-                padding: 20px;
-            }
+            header { flex-direction: column; align-items: stretch; padding: 16px; gap: 16px; }
+            .header-left { flex-direction: column; align-items: stretch; max-width: 100%; }
+            .search-container { flex: 1; width: 100%; }
+            .search-container input { width: 100%; }
+            .header-actions { flex-wrap: wrap; justify-content: center; width: 100%; }
+            .matrix-container.layout-grid { display: flex; flex-direction: column; min-width: 0; }
+            .matrix-container.layout-grid > .quadrant { width: 100% !important; min-height: 300px; }
+            .quadrant-resize-handle { display: none !important; }
+            .tracker-layout { flex-direction: column; }
+            .tracker-palette { width: 100%; height: 250px; flex-shrink: 0; border-right: none; border-bottom: 1px solid var(--border-color); }
+            .tracker-toolbar { flex-direction: column; align-items: stretch; }
+            .tracker-toolbar-left, .tracker-toolbar-right { justify-content: center; width: 100%; }
+            .responsive-date-hours-grid { grid-template-columns: 1fr; }
+            .form-row-inline { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .form-row-inline label { width: 100%; }
+            .modal-content { padding: 20px; }
         }
-
     </style>
 </head>
 <body>
@@ -540,7 +488,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.26</span></h1>
+                <h1>Quadra <span class="version-badge">v2.27</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -888,7 +836,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <!-- Modals -->
@@ -907,34 +854,6 @@
             <div class="form-group form-row-inline">
                 <label>Due Date</label>
                 <input type="date" id="taskDueDate">
-            </div>
-
-            <div id="trackerInputSection">
-                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 8px 0;">
-
-                <div class="responsive-date-hours-grid">
-                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                        <label>Selected Date</label>
-                        <input type="date" id="taskSelectedDate">
-                    </div>
-
-                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                        <label>Hours worked</label>
-                        <input type="number" id="taskHoursWorked" step="0.25" min="0" placeholder="0.5" style="width: 120px;" oninput="onHoursChanged()">
-                    </div>
-                </div>
-
-                <div class="responsive-date-hours-grid" style="margin-top: 12px;">
-                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                        <label>Start Time</label>
-                        <input type="time" id="taskStartTime" oninput="onTimesChanged()">
-                    </div>
-
-                    <div class="form-group form-row-inline" style="margin-bottom: 0;">
-                        <label>End Time</label>
-                        <input type="time" id="taskEndTime" oninput="onTimesChanged()">
-                    </div>
-                </div>
             </div>
 
             <div class="modal-actions">
@@ -960,7 +879,6 @@
         </div>
     </div>
 
-    <!-- Keyboard Shortcuts Modal -->
     <div id="shortcutsModal" class="modal">
         <div class="modal-content" style="max-width: 450px;">
             <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">Keyboard Shortcuts</h3>
@@ -1949,57 +1867,12 @@
             }
         });
 
-        function timeStrToDecimal(timeStr) {
-            if (!timeStr) return null;
-            const [h, m] = timeStr.split(':').map(Number);
-            return h + (m / 60);
-        }
-
-        function decimalToTimeStr(dec) {
-            let norm = dec % 24;
-            let h = Math.floor(norm);
-            let m = Math.round((norm - h) * 60);
-            if (m === 60) { h++; m = 0; }
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        }
-
-        function onTimesChanged() {
-            const startVal = document.getElementById('taskStartTime').value;
-            const endVal = document.getElementById('taskEndTime').value;
-            if (startVal && endVal) {
-                let startDec = timeStrToDecimal(startVal);
-                let endDec = timeStrToDecimal(endVal);
-                if (endDec <= startDec) endDec += 24;
-                let duration = roundToQuarterHour(endDec - startDec);
-                document.getElementById('taskHoursWorked').value = duration;
-            }
-        }
-
-        function onHoursChanged() {
-            const hoursVal = parseFloat(document.getElementById('taskHoursWorked').value);
-            const startVal = document.getElementById('taskStartTime').value;
-            if (!isNaN(hoursVal) && startVal) {
-                let startDec = timeStrToDecimal(startVal);
-                let endDec = startDec + hoursVal;
-                document.getElementById('taskEndTime').value = decimalToTimeStr(endDec);
-            }
-        }
-
         function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
             if (event) event.stopPropagation();
             const modal = document.getElementById('taskModal');
             const titleInput = document.getElementById('taskTitleInput');
             const infoInput = document.getElementById('taskInfoInput');
             const dueDateInput = document.getElementById('taskDueDate');
-            const selectedDateInput = document.getElementById('taskSelectedDate');
-            const hoursWorkedInput = document.getElementById('taskHoursWorked');
-            const startTimeInput = document.getElementById('taskStartTime');
-            const endTimeInput = document.getElementById('taskEndTime');
-
-            const trackerSection = document.getElementById('trackerInputSection');
-            if (trackerSection) {
-                trackerSection.style.display = (appConfig.viewsEnabled && appConfig.viewsEnabled.tracker === false) ? 'none' : 'block';
-            }
 
             if (noteId) {
                 currentEditingId = noteId; 
@@ -2011,19 +1884,6 @@
                 infoInput.value = lines.slice(1).join('\n') || '';
 
                 dueDateInput.value = note.dueDate ? note.dueDate.split('T')[0] : '';
-                
-                let activeBlock = (note.timeBlocks && note.timeBlocks.length > 0) ? note.timeBlocks[0] : null;
-                selectedDateInput.value = activeBlock ? activeBlock.date : todayStr;
-                hoursWorkedInput.value = activeBlock ? roundToQuarterHour(activeBlock.duration) : '';
-
-                if (activeBlock && activeBlock.startHour !== undefined) {
-                    startTimeInput.value = decimalToTimeStr(activeBlock.startHour);
-                    endTimeInput.value = decimalToTimeStr(activeBlock.startHour + activeBlock.duration);
-                } else {
-                    startTimeInput.value = '';
-                    endTimeInput.value = '';
-                }
-
             } else { 
                 currentEditingId = null; 
                 currentAddingQuadrant = quadrant || 'inbox'; 
@@ -2031,17 +1891,7 @@
                 titleInput.value = '';
                 infoInput.value = '';
                 dueDateInput.value = timelineContext ? timelineContext.date : '';
-                selectedDateInput.value = timelineContext ? timelineContext.date : todayStr;
-                hoursWorkedInput.value = timelineContext ? '1.0' : '';
                 
-                if (timelineContext && timelineContext.startHour !== undefined) {
-                    startTimeInput.value = decimalToTimeStr(timelineContext.startHour);
-                    endTimeInput.value = decimalToTimeStr(timelineContext.startHour + 1.0);
-                } else {
-                    startTimeInput.value = '';
-                    endTimeInput.value = '';
-                }
-
                 pendingTimelineContext = timelineContext || null;
             }
             modal.style.display = 'flex'; 
@@ -2059,45 +1909,16 @@
             const titleText = document.getElementById('taskTitleInput').value.trim(); 
             const infoText = document.getElementById('taskInfoInput').value.trim(); 
             const dueDate = document.getElementById('taskDueDate').value;
-            const selectedDate = document.getElementById('taskSelectedDate').value;
-            let hoursVal = parseFloat(document.getElementById('taskHoursWorked').value);
-            if (!isNaN(hoursVal)) hoursVal = roundToQuarterHour(hoursVal);
-            const startVal = document.getElementById('taskStartTime').value;
 
             if (!titleText && !infoText) return closeTaskModal();
 
             const fullText = titleText + (infoText ? ('\n' + infoText) : '');
-
-            let calculatedStartHour = 9;
-            if (startVal) {
-                calculatedStartHour = roundToQuarterHour(timeStrToDecimal(startVal));
-            } else if (pendingTimelineContext) {
-                calculatedStartHour = roundToQuarterHour(pendingTimelineContext.startHour);
-            }
 
             if (currentEditingId) { 
                 const note = notes.find(n => n.id === currentEditingId); 
                 if (note) { 
                     note.text = fullText; 
                     note.dueDate = dueDate || null;
-                    
-                    if (!isNaN(hoursVal) && hoursVal > 0) {
-                        let existingBlock = (note.timeBlocks && note.timeBlocks.length > 0) ? note.timeBlocks[0] : null;
-                        if (existingBlock) {
-                            existingBlock.date = selectedDate || todayStr;
-                            existingBlock.duration = hoursVal;
-                            existingBlock.startHour = calculatedStartHour;
-                        } else {
-                            if (!note.timeBlocks) note.timeBlocks = [];
-                            note.timeBlocks.push({
-                                id: Date.now().toString() + Math.random(),
-                                date: selectedDate || todayStr,
-                                startHour: calculatedStartHour,
-                                duration: hoursVal
-                            });
-                        }
-                    }
-
                     note.dirty = true; 
                     saveNotes(); 
                     handleSearch(); 
@@ -2106,12 +1927,12 @@
                 let newBlocks = [];
                 let targetQuad = currentAddingQuadrant || 'inbox';
                 
-                if (!isNaN(hoursVal) && hoursVal > 0) {
+                if (pendingTimelineContext) {
                     newBlocks.push({
                         id: Date.now().toString() + Math.random(),
-                        date: selectedDate || (pendingTimelineContext ? pendingTimelineContext.date : todayStr),
-                        startHour: calculatedStartHour,
-                        duration: hoursVal
+                        date: pendingTimelineContext.date,
+                        startHour: roundToQuarterHour(pendingTimelineContext.startHour),
+                        duration: 1.0
                     });
                 }
 
