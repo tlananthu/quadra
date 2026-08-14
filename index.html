@@ -375,7 +375,7 @@
         .current-time-line::before { content: ''; position: absolute; left: -6px; top: -4px; width: 10px; height: 10px; background: #EF4444; border-radius: 50%; }
         .current-time-badge { position: absolute; left: 6px; top: -14px; background: #EF4444; color: white; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px; letter-spacing: 0.5px; white-space: nowrap; }
 
-        .logged-block { position: absolute; left: 6px; right: 6px; background: var(--brand-primary); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border: 1px solid rgba(255, 255, 255, 0.4); overflow: hidden; cursor: grab; transition: box-shadow 0.1s; user-select: none; display: flex; justify-content: space-between; align-items: flex-start; min-height: 15px; }
+        .logged-block { position: absolute; left: 6px; right: 6px; background: var(--brand-primary); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border: 1px solid rgba(255, 255, 255, 0.4); overflow: hidden; cursor: pointer; transition: box-shadow 0.1s; user-select: none; display: flex; justify-content: space-between; align-items: flex-start; min-height: 15px; }
         
         .logged-block.q1 { background-color: var(--q1-bg); border-color: var(--q1-border); color: var(--q1-text); }
         .logged-block.q2 { background-color: var(--q2-bg); border-color: var(--q2-border); color: var(--q2-text); }
@@ -468,7 +468,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.33</span></h1>
+                <h1>Quadra <span class="version-badge">v2.34</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -569,7 +569,7 @@
             </div>
         </div>
 
-        <!-- Calendar View (formerly Tracker) -->
+        <!-- Calendar View -->
         <div id="tracker-view">
             <div class="tracker-layout">
                 <div class="tracker-palette">
@@ -681,7 +681,6 @@
                     <label>Home Timezone</label>
                     <select id="configPrimaryTz" style="width: auto;">
                         <option value="local">Local Browser Time</option>
-                        <!-- Negative Offsets (West of UTC) -->
                         <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
                         <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
                         <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
@@ -695,11 +694,7 @@
                         <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
                         <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
                         <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
-
-                        <!-- Zero Offset -->
                         <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
-
-                        <!-- Positive Offsets (East of UTC) -->
                         <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
                         <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
                         <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
@@ -731,7 +726,6 @@
                     <select id="configSecondaryTz" style="width: auto;">
                         <option value="none">None</option>
                         <option value="local">Local Browser Time</option>
-                        <!-- Negative Offsets (West of UTC) -->
                         <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
                         <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
                         <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
@@ -745,11 +739,7 @@
                         <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
                         <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
                         <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
-
-                        <!-- Zero Offset -->
                         <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
-
-                        <!-- Positive Offsets (East of UTC) -->
                         <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
                         <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
                         <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
@@ -960,7 +950,7 @@
         ];
         let appSchedule = JSON.parse(localStorage.getItem('quadra_schedule')) || defaultSchedule;
 
-        // Data Migration: Clean up old timeBlocks and initialize dueTime/dueDuration
+        // Data Migration
         let notes = JSON.parse(localStorage.getItem('quadra_notes')) || [];
         notes = notes.map(note => {
             if (note.timeBlocks && note.timeBlocks.length > 0 && !note.dueDate) {
@@ -1084,7 +1074,6 @@
         let currentLayout = localStorage.getItem('quadra_layout') || appConfig.defaultView;
         let currentTrackerMode = 'day'; 
         
-        // Safety check to ensure we don't load into a disabled layout
         if (!appConfig.viewsEnabled[currentLayout]) {
             const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
             currentLayout = firstEnabled || 'grid';
@@ -1408,7 +1397,6 @@
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
             
-            // UI Update for Day of Week
             const daySpan = document.getElementById('trackerDayOfWeek');
             if (daySpan) {
                 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -1460,7 +1448,7 @@
             let totalTimeRendered = 0;
             let weeklyTotalRendered = 0;
 
-            notes.forEach(note => {
+            /*notes.forEach(note => {
                 if (note.deleted) return;
                 const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
                 if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
@@ -1480,7 +1468,7 @@
                         totalTimeRendered += roundToQuarterHour(blockEnd - 24);
                     }
                 }
-            });
+            });*/
 
             datesToRender.forEach(dtObj => {
                 const dateStr = dtObj.date;
@@ -1544,6 +1532,9 @@
                     });
                 });
 
+                // Prepare layout blocks for current column
+                let dayBlocks = [];
+
                 notes.forEach(note => {
                     if (note.deleted) return; 
                     const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
@@ -1553,12 +1544,18 @@
                         let blockStart = roundToQuarterHour(note.dueTime !== undefined ? note.dueTime : 9.0);
                         let duration = roundToQuarterHour(note.dueDuration !== undefined ? note.dueDuration : 1.0);
                         let blockEnd = blockStart + duration;
-                        
-                        if (blockEnd < blockStart) {
-                            blockEnd += 24;
-                        }
-                        
+                        if (blockEnd < blockStart) { blockEnd += 24; }
                         let actualDuration = roundToQuarterHour(blockEnd - blockStart);
+
+                        // Totals calculations
+                        if (weekDateKeys.has(note.dueDate)) {
+                            weeklyTotalRendered += actualDuration;
+                        }
+                        if (note.dueDate === baseDateStr) {
+                            totalTimeRendered += actualDuration;
+                        } else if (note.dueDate === addDays(baseDateStr, -1) && blockStart < 24 && blockEnd > 24) {
+                            totalTimeRendered += roundToQuarterHour(blockEnd - 24);
+                        }
 
                         if (note.dueDate === dateStr) {
                             let renderStart = blockStart % 24;
@@ -1601,7 +1598,8 @@
                                     startBlockDrag(e, note.id, false);
                                 };
                             }
-                            col.appendChild(blockEl);
+                            
+                            dayBlocks.push({ el: blockEl, start: renderStart, end: renderStart + renderDuration, duration: renderDuration });
                         } 
                         else if (note.dueDate === addDays(dateStr, -1)) {
                             if (blockStart < 24 && blockEnd > 24) {
@@ -1627,10 +1625,60 @@
                                     if(isDraggingBlock) return;
                                     openTaskModal(null, note.id, e);
                                 };
-                                col.appendChild(blockEl);
+                                dayBlocks.push({ el: blockEl, start: 0, end: overflowDuration, duration: overflowDuration });
                             }
                         }
                     }
+                });
+
+                // Apply overlapping layout
+                let groups = [];
+                let currentGroup = [];
+                let currentGroupEnd = -1;
+
+                dayBlocks.sort((a, b) => a.start - b.start || b.duration - a.duration);
+
+                dayBlocks.forEach(block => {
+                    if (currentGroup.length === 0) {
+                        currentGroup.push(block);
+                        currentGroupEnd = block.end;
+                    } else if (block.start < currentGroupEnd) {
+                        currentGroup.push(block);
+                        currentGroupEnd = Math.max(currentGroupEnd, block.end);
+                    } else {
+                        groups.push(currentGroup);
+                        currentGroup = [block];
+                        currentGroupEnd = block.end;
+                    }
+                });
+                if (currentGroup.length > 0) groups.push(currentGroup);
+
+                groups.forEach(group => {
+                    let columns = [];
+                    group.forEach(block => {
+                        let placed = false;
+                        for (let i = 0; i < columns.length; i++) {
+                            let lastBlock = columns[i][columns[i].length - 1];
+                            if (block.start >= lastBlock.end) {
+                                columns[i].push(block);
+                                block.colIndex = i;
+                                placed = true;
+                                break;
+                            }
+                        }
+                        if (!placed) {
+                            block.colIndex = columns.length;
+                            columns.push([block]);
+                        }
+                    });
+
+                    let numCols = columns.length;
+                    group.forEach(block => {
+                        block.el.style.left = `calc(${block.colIndex} * (100% / ${numCols}) + 6px)`;
+                        block.el.style.width = `calc((100% / ${numCols}) - 12px)`;
+                        block.el.style.right = 'auto';
+                        col.appendChild(block.el);
+                    });
                 });
 
                 colsContainer.appendChild(col);
@@ -1638,8 +1686,28 @@
 
             const dayTotal = roundToQuarterHour(totalTimeRendered);
             const weekTotal = roundToQuarterHour(weeklyTotalRendered);
+
+            // Need to deduplicate because we iterate multiple days in week view
+            let actualWeekly = 0;
+            let countedIds = new Set();
+            notes.forEach(note => {
+                if (note.deleted || note.eventId) return;
+                if (note.dueDate && weekDateKeys.has(note.dueDate) && !countedIds.has(note.id)) {
+                    actualWeekly += roundToQuarterHour(note.dueDuration || 1.0);
+                    countedIds.add(note.id);
+                }
+            });
+
+            let actualDaily = 0;
+            notes.forEach(note => {
+                if (note.deleted || note.eventId) return;
+                if (note.dueDate && note.dueDate === baseDateStr) {
+                    actualDaily += roundToQuarterHour(note.dueDuration || 1.0);
+                }
+            });
+
             const dailyTotalEl = document.getElementById('trackerDailyTotal');
-            if(dailyTotalEl) dailyTotalEl.innerText = `Total: ${dayTotal}h/${weekTotal}h`;
+            if(dailyTotalEl) dailyTotalEl.innerText = `Total: ${actualDaily}h/${actualWeekly}h`;
 
             const scrollArea = document.getElementById('timelineScrollArea');
             if (scrollArea && scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
@@ -2143,7 +2211,6 @@
                 overdue: document.getElementById('configViewOverdue').checked
             };
             
-            // Safeguard: Ensure default view is always activated
             if (!appConfig.viewsEnabled[appConfig.defaultView]) {
                 const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
                 if (firstEnabled) {
@@ -2729,13 +2796,14 @@
             
                         // PROPER RESOURCE WRAPPER
                         const resourceBody = {
-                            title: sn.text,
+                            title: sn.text || 'Untitled Task',
                             status: gStatus
                         };
+                        
                         if (formattedDue) {
                             resourceBody.due = formattedDue;
-                        } else {
-                            resourceBody.due = null;
+                        } else if (remoteObj) {
+                            resourceBody.due = null; // Clear existing due date in Google Tasks if removed locally
                         }
             
                         if (remoteObj) { 
