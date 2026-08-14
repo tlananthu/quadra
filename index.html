@@ -2670,6 +2670,125 @@
             return parsedEvents;
         }
 
+        window.addEventListener('load', () => {
+            // Apply Saved Grid Widths and Orders First
+            const matrixContainer = document.getElementById('matrix');
+            
+            if (appConfig.quadrantOrder && appConfig.quadrantOrder.length > 0) {
+                appConfig.quadrantOrder.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) matrixContainer.appendChild(el);
+                });
+            }
+            
+            document.querySelectorAll('.quadrant').forEach(q => {
+                if (appConfig.quadrantWidths && appConfig.quadrantWidths[q.id]) {
+                    q.style.width = appConfig.quadrantWidths[q.id];
+                }
+                quadResizeObserver.observe(q);
+            });
+
+            // --- Execute Initial Render logic with Config ---
+            if (!localStorage.getItem('quadra_layout')) {
+                currentLayout = appConfig.defaultView;
+            }
+            applyViewVisibility();
+
+            if (typeof gapi !== 'undefined' && appConfig.apiKey) {
+                gapi.load('client', () => {
+                    gapi.client.init({ apiKey: appConfig.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'] }).catch(() => {});
+                });
+            }
+            if (typeof google !== 'undefined' && google.accounts && appConfig.clientId) {
+                tokenClient = google.accounts.oauth2.initTokenClient({ 
+                    client_id: appConfig.clientId, 
+                    scope: SCOPES, 
+                    callback: async (resp) => { 
+                        if (resp.error !== undefined) { throw (resp); } 
+                        localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
+                        document.getElementById('auth-overlay').style.display = 'none';
+                        document.getElementById('authorize_button').style.display = 'none'; 
+                        document.getElementById('signout_button').style.display = 'inline-block'; 
+                        isGoogleSynced = true;
+                        if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
+                        loadCalendars(); 
+                        performBackgroundSync(); 
+                    }, 
+                });
+            }
+            checkConfigState();
+
+            // Setup Keyboard Navigation for Search and Quick Tags Bar
+            const searchInput = document.getElementById('searchInput');
+            const tagsBar = document.getElementById('quick-tags-bar');
+
+            if (searchInput && tagsBar) {
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const firstTag = tagsBar.querySelector('.filter-tag');
+                        if (firstTag) firstTag.focus();
+                    }
+                });
+
+                tagsBar.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        if (document.activeElement.nextElementSibling) {
+                            document.activeElement.nextElementSibling.focus();
+                        }
+                    } else if (e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        if (document.activeElement.previousElementSibling) {
+                            document.activeElement.previousElementSibling.focus();
+                        }
+                    } else if (e.key === 'ArrowUp' || e.key === 'Escape') {
+                        e.preventDefault();
+                        searchInput.focus();
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.activeElement.click();
+                    }
+                });
+            }
+        });
+        
+        function handleAuthClick() { 
+            if (!appConfig.clientId) return openSettingsPage(); 
+            if (!tokenClient && typeof google !== 'undefined' && google.accounts) { 
+                tokenClient = google.accounts.oauth2.initTokenClient({ 
+                    client_id: appConfig.clientId, 
+                    scope: SCOPES, 
+                    callback: async (resp) => { 
+                        if (resp.error !== undefined) { throw (resp); } 
+                        localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
+                        document.getElementById('auth-overlay').style.display = 'none'; 
+                        document.getElementById('authorize_button').style.display = 'none'; 
+                        document.getElementById('signout_button').style.display = 'inline-block'; 
+                        isGoogleSynced = true;
+                        if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
+                        loadCalendars(); 
+                        performBackgroundSync(); 
+                    }, 
+                }); 
+            }
+            if (!tokenClient) { showToast("Google services are still loading. Please wait a moment and try again."); return; }
+            tokenClient.requestAccessToken({prompt: 'consent'}); 
+        }
+        
+        function handleSignoutClick() { 
+            const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+            if (savedToken && savedToken.token && typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) { 
+                google.accounts.oauth2.revoke(savedToken.token, () => {}); 
+            } 
+            localStorage.removeItem('quadra_gapi_token_v2'); 
+            isGoogleSynced = false; 
+            document.getElementById('auth-overlay').style.display = 'none';
+            document.getElementById('authorize_button').style.display = 'inline-block'; 
+            document.getElementById('signout_button').style.display = 'none'; 
+            showToast("Signed out successfully.");
+        }
+
         async function importCalendarEvents() {
             const dateStr = document.getElementById('trackerDate').value;
             const ignoreKeywords = (appConfig.ignoreKeywords || 'out of office, ooo, away, vacation, holiday')
