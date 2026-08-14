@@ -388,6 +388,9 @@
         .block-title { font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
         .block-meta { font-size: 11px; opacity: 0.9; line-height: 1; }
         
+        .block-edit-icon { background: rgba(0,0,0,0.08); border: none; color: inherit; width: 20px; height: 20px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.2s; flex-shrink: 0; z-index: 12; }
+        .block-edit-icon:hover { background: rgba(0,0,0,0.15); }
+
         .resize-handle { position: absolute; bottom: 0; left: 0; right: 0; height: 10px; cursor: ns-resize; display: flex; justify-content: center; align-items: center; z-index: 11; opacity: 0.7; transition: opacity 0.2s; }
         .resize-handle:hover { opacity: 1; }
         .resize-handle::after { content: ''; width: 24px; height: 3px; background: rgba(0,0,0,0.3); border-radius: 2px; }
@@ -465,7 +468,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.30</span></h1>
+                <h1>Quadra <span class="version-badge">v2.31</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -506,7 +509,9 @@
 
         <div id="quick-tags-bar" class="tags-bar"></div>
 
+        <!-- Unified Flexbox Matrix containing all Columns -->
         <div id="matrix" class="matrix-container layout-grid">
+            
             <div class="quadrant" id="q1" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Do First <span class="q-badge" id="badge-q1">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q1')">+</button></div></div>
                 <div class="task-list" id="list-q1"></div>
@@ -548,18 +553,23 @@
                 <div class="task-list" id="list-closed"></div>
                 <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-closed')" title="Drag edge to resize width"></div>
             </div>
+            
         </div>
 
+        <!-- Overdue Tasks Full Page View -->
         <div id="overdue-view">
             <div class="overdue-container">
                 <div class="overdue-header">
                     <h2>⚠️ Overdue Tasks (<span id="overdue-count-badge">0</span>)</h2>
                     <button class="btn btn-outline" onclick="setLayout(appConfig.defaultView)">← Back to Default</button>
                 </div>
-                <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Populated dynamically -->
+                </div>
             </div>
         </div>
 
+        <!-- Calendar View (formerly Tracker) -->
         <div id="tracker-view">
             <div class="tracker-layout">
                 <div class="tracker-palette">
@@ -567,7 +577,9 @@
                         <h3>Task Palette</h3>
                         <p>Click or drag tasks onto the calendar.</p>
                     </div>
-                    <div class="palette-list" id="tracker-palette-list"></div>
+                    <div class="palette-list" id="tracker-palette-list">
+                        <!-- Populated dynamically -->
+                    </div>
                 </div>
                 
                 <div class="tracker-canvas-wrapper">
@@ -592,17 +604,22 @@
                             </div>
                         </div>
                         <div class="tracker-toolbar-right">
-                            <button class="btn btn-outline" onclick="importCalendarEvents()" title="Import meetings for this day">📥 Import Calendar Events</button>
+                            <button class="btn btn-outline" onclick="exportTimesheet()" title="Export Schedule">📋</button>
+                            <button class="btn btn-outline" onclick="importCalendarEvents()" title="Import meetings for this day">📥</button>
+                            <span id="trackerDailyTotal" class="tracker-total-pill">Total: 0h</span>
                         </div>
                     </div>
                     
                     <div class="timeline-scroll-area" id="timelineScrollArea">
-                        <div class="timeline" id="timelineCanvas"></div>
+                        <div class="timeline" id="timelineCanvas">
+                            <!-- Background lines, columns, and blocks render here -->
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Settings Page View -->
         <div id="settings-view">
             <div class="settings-container">
                 <div class="settings-header">
@@ -664,6 +681,7 @@
                     <label>Home Timezone</label>
                     <select id="configPrimaryTz" style="width: auto;">
                         <option value="local">Local Browser Time</option>
+                        <!-- Negative Offsets (West of UTC) -->
                         <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
                         <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
                         <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
@@ -677,7 +695,11 @@
                         <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
                         <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
                         <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
+
+                        <!-- Zero Offset -->
                         <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
+
+                        <!-- Positive Offsets (East of UTC) -->
                         <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
                         <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
                         <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
@@ -709,6 +731,7 @@
                     <select id="configSecondaryTz" style="width: auto;">
                         <option value="none">None</option>
                         <option value="local">Local Browser Time</option>
+                        <!-- Negative Offsets (West of UTC) -->
                         <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
                         <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
                         <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
@@ -722,7 +745,11 @@
                         <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
                         <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
                         <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
+
+                        <!-- Zero Offset -->
                         <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
+
+                        <!-- Positive Offsets (East of UTC) -->
                         <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
                         <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
                         <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
@@ -1057,8 +1084,10 @@
         let currentLayout = localStorage.getItem('quadra_layout') || appConfig.defaultView;
         let currentTrackerMode = 'day'; 
         
+        // Safety check to ensure we don't load into a disabled layout
         if (!appConfig.viewsEnabled[currentLayout]) {
-            currentLayout = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]) || 'grid';
+            const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
+            currentLayout = firstEnabled || 'grid';
         }
         
         function applyViewVisibility() {
@@ -1073,12 +1102,13 @@
             if (btnOverdue) btnOverdue.style.display = appConfig.viewsEnabled.overdue ? '' : 'none';
             
             if (!appConfig.viewsEnabled[currentLayout]) {
-                setLayout(appConfig.defaultView);
+                const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
+                setLayout(firstEnabled || 'grid');
             }
         }
 
         function setLayout(layout) {
-            if (!appConfig.viewsEnabled[layout]) return;
+            if (!appConfig.viewsEnabled[layout]) return; 
             
             currentLayout = layout;
             localStorage.setItem('quadra_layout', layout);
@@ -1378,6 +1408,7 @@
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
             
+            // UI Update for Day of Week
             const daySpan = document.getElementById('trackerDayOfWeek');
             if (daySpan) {
                 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -1425,6 +1456,31 @@
             
             colsContainer.style.left = `${timeGutterWidth}px`;
             canvas.appendChild(colsContainer);
+
+            let totalTimeRendered = 0;
+            let weeklyTotalRendered = 0;
+
+            notes.forEach(note => {
+                if (note.deleted) return;
+                const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
+                if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
+                
+                if (note.dueDate) {
+                    let duration = roundToQuarterHour(note.dueDuration || 1.0);
+                    let blockStart = roundToQuarterHour(note.dueTime || 9.0);
+                    let blockEnd = blockStart + duration;
+
+                    if (weekDateKeys.has(note.dueDate)) {
+                        weeklyTotalRendered += duration;
+                    }
+
+                    if (note.dueDate === baseDateStr) {
+                        totalTimeRendered += duration;
+                    } else if (note.dueDate === addDays(baseDateStr, -1) && blockStart < 24 && blockEnd > 24) {
+                        totalTimeRendered += roundToQuarterHour(blockEnd - 24);
+                    }
+                }
+            });
 
             datesToRender.forEach(dtObj => {
                 const dateStr = dtObj.date;
@@ -1489,7 +1545,7 @@
                 });
 
                 notes.forEach(note => {
-                    if (note.deleted) return;
+                    if (note.deleted || note.status === 'closed') return; 
                     const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
                     if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
 
@@ -1497,9 +1553,12 @@
                         let blockStart = roundToQuarterHour(note.dueTime !== undefined ? note.dueTime : 9.0);
                         let duration = roundToQuarterHour(note.dueDuration !== undefined ? note.dueDuration : 1.0);
                         let blockEnd = blockStart + duration;
+                        
                         if (blockEnd < blockStart) {
                             blockEnd += 24;
                         }
+                        
+                        let actualDuration = roundToQuarterHour(blockEnd - blockStart);
 
                         if (note.dueDate === dateStr) {
                             let renderStart = blockStart % 24;
@@ -1519,7 +1578,7 @@
                             blockEl.style.height = `${Math.max(15, renderDuration * hourPx)}px`;
                             
                             let displayTitle = note.text.split('\n')[0].substring(0, 40);
-                            const actualEndHour = (blockStart + duration) % 24;
+                            const actualEndHour = (blockStart + actualDuration) % 24;
                             const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
                             blockEl.innerHTML = `
@@ -1527,6 +1586,7 @@
                                     <div class="block-title">${displayTitle}</div>
                                     <div class="block-meta">${timeStr}</div>
                                 </div>
+                                <button class="block-edit-icon" title="Edit Task">📝</button>
                                 ${isCalendarEvent ? '' : `<div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', true)"></div>`}
                             `;
                             
@@ -1539,6 +1599,7 @@
                             if(!isCalendarEvent) {
                                 blockEl.onmousedown = (e) => {
                                     if(e.target.closest('.resize-handle')) return;
+                                    if(e.target.closest('.block-edit-icon')) return; 
                                     startBlockDrag(e, note.id, false);
                                 };
                             }
@@ -1550,11 +1611,12 @@
                                 const blockEl = document.createElement('div');
                                 const quadClass = note.quadrant || 'q2';
                                 blockEl.className = 'logged-block' + (isCalendarEvent ? ' is-meeting' : ` ${quadClass}`);
+                                blockEl.id = `block-overflow-${note.id}`;
                                 blockEl.style.top = `0px`;
                                 blockEl.style.height = `${Math.max(15, overflowDuration * hourPx)}px`;
                                 
                                 let displayTitle = note.text.split('\n')[0].substring(0, 40);
-                                const actualEndHour = (blockStart + duration) % 24;
+                                const actualEndHour = (blockStart + actualDuration) % 24;
                                 const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
                                 blockEl.innerHTML = `
@@ -1562,6 +1624,7 @@
                                         <div class="block-title">${displayTitle} (cont.)</div>
                                         <div class="block-meta">${timeStr}</div>
                                     </div>
+                                    <button class="block-edit-icon" title="Edit Task">📝</button>
                                 `;
                                 blockEl.onclick = (e) => {
                                     if(isDraggingBlock) return;
@@ -1575,6 +1638,11 @@
 
                 colsContainer.appendChild(col);
             });
+
+            const dayTotal = roundToQuarterHour(totalTimeRendered);
+            const weekTotal = roundToQuarterHour(weeklyTotalRendered);
+            const dailyTotalEl = document.getElementById('trackerDailyTotal');
+            if(dailyTotalEl) dailyTotalEl.innerText = `Total: ${dayTotal}h/${weekTotal}h`;
 
             const scrollArea = document.getElementById('timelineScrollArea');
             if (scrollArea && scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
@@ -1758,13 +1826,9 @@
 
             if (e.key === 'Escape') {
                 const taskModal = document.getElementById('taskModal');
-                const editBlockModal = document.getElementById('editTimeBlockModal');
                 const shortcutsModal = document.getElementById('shortcutsModal');
                 if (taskModal && taskModal.style.display === 'flex') {
                     closeTaskModal();
-                }
-                if (editBlockModal && editBlockModal.style.display === 'flex') {
-                    closeEditBlockModal();
                 }
                 if (shortcutsModal && shortcutsModal.style.display === 'flex') {
                     closeShortcutsModal();
@@ -1796,7 +1860,7 @@
                     e.preventDefault();
                     const allViews = ['grid', 'kanban', 'overdue', 'tracker'];
                     const views = allViews.filter(v => appConfig.viewsEnabled[v]);
-                    if (views.length === 0) return; // safeguard
+                    if (views.length === 0) return; 
                     
                     let idx = views.indexOf(currentLayout);
                     if (idx === -1) idx = 0;
@@ -1958,7 +2022,6 @@
 
         // --- Export Engine ---
         function exportTimesheet() {
-            // Note: Since time tracking blocks were removed in v2.30, this now exports Due Date Tasks for the timeframe
             const baseDateStr = document.getElementById('trackerDate').value;
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
@@ -2083,8 +2146,21 @@
                 overdue: document.getElementById('configViewOverdue').checked
             };
             
+            // Safeguard: Ensure default view is always activated
             if (!appConfig.viewsEnabled[appConfig.defaultView]) {
-                appConfig.viewsEnabled[appConfig.defaultView] = true;
+                const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
+                if (firstEnabled) {
+                    appConfig.defaultView = firstEnabled;
+                    const selectEl = document.getElementById('configDefaultView');
+                    if (selectEl) selectEl.value = firstEnabled;
+                } else {
+                    appConfig.viewsEnabled.grid = true;
+                    appConfig.defaultView = 'grid';
+                    const selectEl = document.getElementById('configDefaultView');
+                    if (selectEl) selectEl.value = 'grid';
+                    const checkEl = document.getElementById('configViewGrid');
+                    if (checkEl) checkEl.checked = true;
+                }
             }
             
             localStorage.setItem('quadra_config', JSON.stringify(appConfig));
@@ -2290,6 +2366,7 @@
             let filteredNotes = notes.filter(note => {
                 if (note.deleted) return false;
                 const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
+                // Requirement 1: Calendar events should not be filtered out during search/filtering
                 if (isCalendarEvent) return true;
                 return matchesSearchQuery(note.text, searchQuery);
             });
@@ -2306,6 +2383,7 @@
                 const list = document.getElementById(targetListId);
                 if (list) {
                     const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
+                    // Only count towards badges if it matches search or is a calendar event exempt from search
                     const matchesSearch = matchesSearchQuery(note.text, searchQuery);
                     
                     if (note.status === 'active' && !note.eventId && filteredCounts[note.quadrant] !== undefined && matchesSearch) {
@@ -2551,6 +2629,7 @@
                         }
 
                         if (sourceOffset !== undefined) {
+                            // Map sourceOffset relative to Primary Timezone logic
                             let baseOffsetHours = getTzOffset(appConfig.primaryTz);
                             let netOffsetDiff = baseOffsetHours - sourceOffset;
                             
@@ -2589,6 +2668,126 @@
             });
 
             return parsedEvents;
+        }
+
+        async function importCalendarEvents() {
+            const dateStr = document.getElementById('trackerDate').value;
+            const ignoreKeywords = (appConfig.ignoreKeywords || 'out of office, ooo, away, vacation, holiday')
+                .toLowerCase()
+                .split(',')
+                .map(k => k.trim())
+                .filter(k => k.length > 0);
+
+            let importedCount = 0;
+            let ignoredCount = 0;
+
+            try {
+                document.getElementById('sync-banner').style.display = 'block';
+
+                if (appConfig.calSource === 'outlook' && appConfig.icsUrl) {
+                    let fetchUrl = appConfig.icsUrl;
+                    
+                    const res = await fetch(fetchUrl);
+                    if (!res.ok) throw new Error("Failed to fetch ICS feed via Apps Script bridge");
+                    
+                    const icsText = await res.text();
+                    const icsEvents = parseICS(icsText, dateStr, ignoreKeywords);
+
+                    icsEvents.forEach(ev => {
+                        if (notes.find(n => n.eventId === ev.id)) return;
+                        notes.push({
+                            id: Date.now().toString() + Math.random(),
+                            eventId: ev.id,
+                            text: `${ev.summary} #meeting`,
+                            quadrant: 'q2',
+                            status: 'active',
+                            dirty: false,
+                            deleted: false,
+                            dueDate: dateStr,
+                            dueTime: ev.startHour,
+                            dueDuration: ev.duration
+                        });
+                        importedCount++;
+                    });
+
+                } else {
+                    const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+                    if (!savedToken || !savedToken.token || savedToken.expires_at < Date.now()) {
+                        document.getElementById('sync-banner').style.display = 'none';
+                        return showToast("Please sign in to Google first.");
+                    }
+                    if (!appConfig.calendarId) {
+                        document.getElementById('sync-banner').style.display = 'none';
+                        return showToast("Please select a Google calendar in Settings first.");
+                    }
+                    
+                    const [y, m, day] = dateStr.split('-');
+                    const timeMin = new Date(y, m-1, day, 0, 0, 0).toISOString();
+                    const timeMax = new Date(y, m-1, day, 23, 59, 59).toISOString();
+
+                    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(appConfig.calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
+                        headers: { 'Authorization': `Bearer ${savedToken.token}` }
+                    });
+                    const data = await res.json();
+                    if(data.error) throw new Error(data.error.message);
+
+                    const events = data.items || [];
+                    events.forEach(event => {
+                        if (!event.start.dateTime) return; // Skip all-day events
+
+                        const title = (event.summary || '').toLowerCase();
+                        const shouldIgnore = ignoreKeywords.some(keyword => title.includes(keyword));
+
+                        if (shouldIgnore) {
+                            ignoredCount++;
+                            return;
+                        }
+                        
+                        const start = new Date(event.start.dateTime);
+                        const end = new Date(event.end.dateTime);
+                        
+                        const rawStartHour = start.getHours() + (start.getMinutes() / 60);
+                        let rawEndHour = end.getHours() + (end.getMinutes() / 60);
+                        if (rawEndHour <= rawStartHour) rawEndHour += 24;
+                        const rawDuration = rawEndHour - rawStartHour;
+
+                        const startHour = roundToQuarterHour(rawStartHour);
+                        const duration = Math.max(0.25, roundToQuarterHour(rawDuration));
+                        
+                        if (notes.find(n => n.eventId === event.id)) return; 
+                        
+                        const newNote = {
+                            id: Date.now().toString() + Math.random(),
+                            eventId: event.id, 
+                            text: `${event.summary || 'Meeting'} #meeting`,
+                            quadrant: 'q2', 
+                            status: 'active',
+                            dirty: false, 
+                            deleted: false,
+                            dueDate: dateStr,
+                            dueTime: startHour,
+                            dueDuration: duration
+                        };
+                        
+                        notes.push(newNote);
+                        importedCount++;
+                    });
+                }
+                
+                document.getElementById('sync-banner').style.display = 'none';
+                if (importedCount > 0 || ignoredCount > 0) {
+                    saveNotes();
+                    renderTrackerTimeline(); 
+                    showToast(`${importedCount} imported, ${ignoredCount} ignored.`);
+                } else {
+                    showToast("No new meetings found for this date.");
+                }
+                
+            } catch(e) {
+                console.error("Calendar Sync Error:", e);
+                document.getElementById('sync-banner').style.display = 'none';
+                showToast("Failed to fetch calendar events. Check your network or Apps Script Web App URL.");
+            }
         }
 
         async function performBackgroundSync() {
