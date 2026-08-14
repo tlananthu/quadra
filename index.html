@@ -252,7 +252,7 @@
         .closed-note { opacity: 0.6; box-shadow: none; cursor: default; }
         .closed-note .note-text { text-decoration: line-through; cursor: default; overflow-y: hidden; }
 
-        /* --- CALENDAR VIEW (formerly Tracker) --- */
+        /* --- CALENDAR VIEW --- */
         #tracker-view { display: none; flex-grow: 1; width: 100%; overflow: hidden; background: #ffffff; }
         .tracker-layout { display: flex; height: 100%; }
         
@@ -344,18 +344,6 @@
             font-weight: 700;
             color: var(--text-main);
         }
-        .tracker-toolbar .tracker-total-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 12px;
-            border: 1px solid rgba(79, 70, 229, 0.16);
-            border-radius: 999px;
-            background: rgba(79, 70, 229, 0.06);
-            color: var(--brand-primary);
-            font-weight: 600;
-            font-size: 13px;
-        }
         
         .timeline-scroll-area { flex-grow: 1; overflow-y: auto; overflow-x: hidden; position: relative; padding: 24px 0;}
         
@@ -387,7 +375,7 @@
         .current-time-line::before { content: ''; position: absolute; left: -6px; top: -4px; width: 10px; height: 10px; background: #EF4444; border-radius: 50%; }
         .current-time-badge { position: absolute; left: 6px; top: -14px; background: #EF4444; color: white; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px; letter-spacing: 0.5px; white-space: nowrap; }
 
-        .logged-block { position: absolute; left: 6px; right: 6px; background: var(--brand-primary); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border: 1px solid rgba(255, 255, 255, 0.4); overflow: hidden; cursor: grab; transition: box-shadow 0.1s; user-select: none; display: flex; justify-content: space-between; align-items: flex-start; min-height: 24px; }
+        .logged-block { position: absolute; left: 6px; right: 6px; background: var(--brand-primary); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border: 1px solid rgba(255, 255, 255, 0.4); overflow: hidden; cursor: grab; transition: box-shadow 0.1s; user-select: none; display: flex; justify-content: space-between; align-items: flex-start; min-height: 15px; }
         
         .logged-block.q1 { background-color: var(--q1-bg); border-color: var(--q1-border); color: var(--q1-text); }
         .logged-block.q2 { background-color: var(--q2-bg); border-color: var(--q2-border); color: var(--q2-text); }
@@ -431,17 +419,10 @@
         #taskInfoInput { resize: vertical; min-height: 120px; }
         @media (min-width: 769px) { #taskInfoInput { min-height: 380px; } }
 
-        .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+        .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
 
         .form-row-inline { display: flex; align-items: center; gap: 16px; }
         .form-row-inline label { width: 120px; font-size: 14px; font-weight: 600; color: var(--text-main); flex-shrink: 0; margin-bottom: 0; }
-
-        .responsive-date-hours-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 16px;
-            align-items: center;
-        }
 
         /* Toast Notification System */
         #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
@@ -466,7 +447,6 @@
             .tracker-palette { width: 100%; height: 250px; flex-shrink: 0; border-right: none; border-bottom: 1px solid var(--border-color); }
             .tracker-toolbar { flex-direction: column; align-items: stretch; }
             .tracker-toolbar-left, .tracker-toolbar-right { justify-content: center; width: 100%; }
-            .responsive-date-hours-grid { grid-template-columns: 1fr; }
             .form-row-inline { flex-direction: column; align-items: flex-start; gap: 8px; }
             .form-row-inline label { width: 100%; }
             .modal-content { padding: 20px; }
@@ -485,7 +465,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.29</span></h1>
+                <h1>Quadra <span class="version-badge">v2.30</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -505,7 +485,7 @@
                 <button id="btnGrid" title="Quadrant View" onclick="setLayout('grid')">⊞</button>
                 <button id="btnKanban" title="Kanban View" onclick="setLayout('kanban')">⏸</button>
                 <button id="btnOverdue" title="Overdue Tasks" onclick="setLayout('overdue')">⚠️</button>
-                <button id="btnTracker" title="Calendar View" onclick="setLayout('tracker')">📅</button>
+                <button id="btnTracker" title="Calendar View (C)" onclick="setLayout('tracker')">📅</button>
             </div>
             <button id="authorize_button" class="btn" onclick="handleAuthClick()">Sign In</button>
             <button id="signout_button" class="btn btn-outline icon-button" onclick="handleSignoutClick()" title="Sign out of Google">↪</button>
@@ -526,9 +506,7 @@
 
         <div id="quick-tags-bar" class="tags-bar"></div>
 
-        <!-- Unified Flexbox Matrix containing all Columns -->
         <div id="matrix" class="matrix-container layout-grid">
-            
             <div class="quadrant" id="q1" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Do First <span class="q-badge" id="badge-q1">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q1')">+</button></div></div>
                 <div class="task-list" id="list-q1"></div>
@@ -570,33 +548,26 @@
                 <div class="task-list" id="list-closed"></div>
                 <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-closed')" title="Drag edge to resize width"></div>
             </div>
-            
         </div>
 
-        <!-- Overdue Tasks Full Page View -->
         <div id="overdue-view">
             <div class="overdue-container">
                 <div class="overdue-header">
                     <h2>⚠️ Overdue Tasks (<span id="overdue-count-badge">0</span>)</h2>
                     <button class="btn btn-outline" onclick="setLayout(appConfig.defaultView)">← Back to Default</button>
                 </div>
-                <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;">
-                    <!-- Populated dynamically -->
-                </div>
+                <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
             </div>
         </div>
 
-        <!-- Calendar View (formerly Tracker) -->
         <div id="tracker-view">
             <div class="tracker-layout">
                 <div class="tracker-palette">
                     <div class="palette-header">
                         <h3>Task Palette</h3>
-                        <p>Click or drag tasks onto the timeline.</p>
+                        <p>Click or drag tasks onto the calendar.</p>
                     </div>
-                    <div class="palette-list" id="tracker-palette-list">
-                        <!-- Populated dynamically -->
-                    </div>
+                    <div class="palette-list" id="tracker-palette-list"></div>
                 </div>
                 
                 <div class="tracker-canvas-wrapper">
@@ -621,22 +592,17 @@
                             </div>
                         </div>
                         <div class="tracker-toolbar-right">
-                            <button class="btn btn-outline" onclick="exportTimesheet()" title="Export Timesheet">📋</button>
-                            <button class="btn btn-outline" onclick="importCalendarEvents()" title="Import meetings for this day">📥</button>
-                            <span id="trackerDailyTotal" class="tracker-total-pill">Total: 0h</span>
+                            <button class="btn btn-outline" onclick="importCalendarEvents()" title="Import meetings for this day">📥 Import Calendar Events</button>
                         </div>
                     </div>
                     
                     <div class="timeline-scroll-area" id="timelineScrollArea">
-                        <div class="timeline" id="timelineCanvas">
-                            <!-- Background lines, columns, and blocks render here -->
-                        </div>
+                        <div class="timeline" id="timelineCanvas"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Settings Page View -->
         <div id="settings-view">
             <div class="settings-container">
                 <div class="settings-header">
@@ -698,7 +664,6 @@
                     <label>Home Timezone</label>
                     <select id="configPrimaryTz" style="width: auto;">
                         <option value="local">Local Browser Time</option>
-                        <!-- Negative Offsets (West of UTC) -->
                         <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
                         <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
                         <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
@@ -712,11 +677,7 @@
                         <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
                         <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
                         <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
-
-                        <!-- Zero Offset -->
                         <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
-
-                        <!-- Positive Offsets (East of UTC) -->
                         <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
                         <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
                         <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
@@ -748,7 +709,6 @@
                     <select id="configSecondaryTz" style="width: auto;">
                         <option value="none">None</option>
                         <option value="local">Local Browser Time</option>
-                        <!-- Negative Offsets (West of UTC) -->
                         <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
                         <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
                         <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
@@ -762,11 +722,7 @@
                         <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
                         <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
                         <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
-
-                        <!-- Zero Offset -->
                         <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
-
-                        <!-- Positive Offsets (East of UTC) -->
                         <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
                         <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
                         <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
@@ -854,9 +810,12 @@
                 <input type="date" id="taskDueDate">
             </div>
 
-            <div class="modal-actions">
-                <button class="btn btn-outline" onclick="closeTaskModal()">Cancel</button>
-                <button class="btn" onclick="saveTaskModal()">Save Task</button>
+            <div class="modal-actions" style="justify-content: space-between; align-items: center;">
+                <button class="btn btn-outline" style="color: #10B981; border-color: #10B981; display: none;" id="taskModalCompleteBtn" onclick="toggleTaskCompleteFromModal()">✓ Mark Complete</button>
+                <div style="display: flex; gap: 12px; margin-left: auto;">
+                    <button class="btn btn-outline" onclick="closeTaskModal()">Cancel</button>
+                    <button class="btn" onclick="saveTaskModal()">Save Task</button>
+                </div>
             </div>
         </div>
     </div>
@@ -900,7 +859,7 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
                     <span>Calendar View</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">T</kbd>
+                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">C</kbd>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
                     <span>Overdue View</span>
@@ -974,17 +933,19 @@
         ];
         let appSchedule = JSON.parse(localStorage.getItem('quadra_schedule')) || defaultSchedule;
 
+        // Data Migration: Clean up old timeBlocks and initialize dueTime/dueDuration
         let notes = JSON.parse(localStorage.getItem('quadra_notes')) || [];
         notes = notes.map(note => {
-            let blocks = note.timeBlocks || [];
-            if (note.timeLogs && Object.keys(note.timeLogs).length > 0) {
-                Object.keys(note.timeLogs).forEach(date => {
-                    blocks.push({ id: Date.now().toString() + Math.random(), date: date, startHour: 9, duration: roundToQuarterHour(note.timeLogs[date]) });
-                });
-                delete note.timeLogs; 
+            if (note.timeBlocks && note.timeBlocks.length > 0 && !note.dueDate) {
+                note.dueDate = note.timeBlocks[0].date;
+                note.dueTime = note.timeBlocks[0].startHour;
+                note.dueDuration = note.timeBlocks[0].duration;
             }
-            blocks = blocks.map(b => ({ ...b, startHour: roundToQuarterHour(b.startHour), duration: roundToQuarterHour(b.duration) }));
-            return { ...note, status: note.status || 'active', dirty: note.dirty || false, deleted: note.deleted || false, timeBlocks: blocks, eventId: note.eventId || null, quadrant: note.quadrant || 'q2' };
+            if (note.dueDate && note.dueTime === undefined) note.dueTime = 9.0;
+            if (note.dueDate && note.dueDuration === undefined) note.dueDuration = 1.0;
+            delete note.timeBlocks;
+            delete note.timeLogs; 
+            return { ...note, status: note.status || 'active', dirty: note.dirty || false, deleted: note.deleted || false, eventId: note.eventId || null, quadrant: note.quadrant || 'q2' };
         });
 
         const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0]; 
@@ -1096,7 +1057,6 @@
         let currentLayout = localStorage.getItem('quadra_layout') || appConfig.defaultView;
         let currentTrackerMode = 'day'; 
         
-        // Safety check to ensure we don't load into a disabled layout
         if (!appConfig.viewsEnabled[currentLayout]) {
             currentLayout = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]) || 'grid';
         }
@@ -1118,7 +1078,7 @@
         }
 
         function setLayout(layout) {
-            if (!appConfig.viewsEnabled[layout]) return; // Block setting disabled views
+            if (!appConfig.viewsEnabled[layout]) return;
             
             currentLayout = layout;
             localStorage.setItem('quadra_layout', layout);
@@ -1418,7 +1378,6 @@
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
             
-            // UI Update for Day of Week
             const daySpan = document.getElementById('trackerDayOfWeek');
             if (daySpan) {
                 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -1466,37 +1425,6 @@
             
             colsContainer.style.left = `${timeGutterWidth}px`;
             canvas.appendChild(colsContainer);
-
-            let totalTimeRendered = 0;
-            let weeklyTotalRendered = 0;
-            
-            let dueOffset = 0;
-
-            notes.forEach(note => {
-                if (note.deleted) return;
-                const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-                if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
-                
-                if (note.timeBlocks) {
-                    note.timeBlocks.forEach(tb => {
-                        const duration = roundToQuarterHour(tb.duration);
-                        if (!duration) return;
-
-                        const blockStart = roundToQuarterHour(tb.startHour);
-                        const blockEnd = blockStart + duration;
-
-                        if (weekDateKeys.has(tb.date)) {
-                            weeklyTotalRendered += duration;
-                        }
-
-                        if (tb.date === baseDateStr) {
-                            totalTimeRendered += duration;
-                        } else if (tb.date === addDays(baseDateStr, -1) && blockStart < 24 && blockEnd > 24) {
-                            totalTimeRendered += roundToQuarterHour(blockEnd - 24);
-                        }
-                    });
-                }
-            });
 
             datesToRender.forEach(dtObj => {
                 const dateStr = dtObj.date;
@@ -1560,131 +1488,93 @@
                     });
                 });
 
-                dueOffset = 0;
-
                 notes.forEach(note => {
                     if (note.deleted) return;
                     const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
                     if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
 
-                    if (note.timeBlocks) {
-                        note.timeBlocks.forEach(tb => {
-                            let blockStart = roundToQuarterHour(tb.startHour);
-                            let duration = roundToQuarterHour(tb.duration);
-                            let blockEnd = blockStart + duration;
-                            if (blockEnd < blockStart) {
-                                blockEnd += 24;
+                    if (note.dueDate) {
+                        let blockStart = roundToQuarterHour(note.dueTime !== undefined ? note.dueTime : 9.0);
+                        let duration = roundToQuarterHour(note.dueDuration !== undefined ? note.dueDuration : 1.0);
+                        let blockEnd = blockStart + duration;
+                        if (blockEnd < blockStart) {
+                            blockEnd += 24;
+                        }
+
+                        if (note.dueDate === dateStr) {
+                            let renderStart = blockStart % 24;
+                            let renderDuration = duration;
+
+                            if (blockStart < 24 && blockEnd > 24) {
+                                renderDuration = 24 - blockStart; 
+                            } else if (blockStart >= 24) {
+                                return; 
                             }
-                            let actualDuration = roundToQuarterHour(blockEnd - blockStart);
 
-                            if (tb.date === dateStr) {
-                                let renderStart = blockStart % 24;
-                                let renderDuration = duration;
+                            const blockEl = document.createElement('div');
+                            const quadClass = note.quadrant || 'q2';
+                            blockEl.className = 'logged-block' + (isCalendarEvent ? ' is-meeting' : ` ${quadClass}`);
+                            blockEl.id = `block-${note.id}`;
+                            blockEl.style.top = `${renderStart * hourPx}px`;
+                            blockEl.style.height = `${Math.max(15, renderDuration * hourPx)}px`;
+                            
+                            let displayTitle = note.text.split('\n')[0].substring(0, 40);
+                            const actualEndHour = (blockStart + duration) % 24;
+                            const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
-                                if (blockStart < 24 && blockEnd > 24) {
-                                    renderDuration = 24 - blockStart; 
-                                } else if (blockStart >= 24) {
-                                    return; 
-                                }
+                            blockEl.innerHTML = `
+                                <div class="block-info">
+                                    <div class="block-title">${displayTitle}</div>
+                                    <div class="block-meta">${timeStr}</div>
+                                </div>
+                                ${isCalendarEvent ? '' : `<div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', true)"></div>`}
+                            `;
+                            
+                            blockEl.onclick = (e) => {
+                                if(isDraggingBlock) return;
+                                if(e.target.closest('.resize-handle')) return;
+                                openTaskModal(null, note.id, e);
+                            };
 
+                            if(!isCalendarEvent) {
+                                blockEl.onmousedown = (e) => {
+                                    if(e.target.closest('.resize-handle')) return;
+                                    startBlockDrag(e, note.id, false);
+                                };
+                            }
+                            col.appendChild(blockEl);
+                        } 
+                        else if (note.dueDate === addDays(dateStr, -1)) {
+                            if (blockStart < 24 && blockEnd > 24) {
+                                let overflowDuration = roundToQuarterHour(blockEnd - 24);
                                 const blockEl = document.createElement('div');
                                 const quadClass = note.quadrant || 'q2';
                                 blockEl.className = 'logged-block' + (isCalendarEvent ? ' is-meeting' : ` ${quadClass}`);
-                                blockEl.id = `block-${tb.id}`;
-                                blockEl.style.top = `${renderStart * hourPx}px`;
-                                blockEl.style.height = `${Math.max(15, renderDuration * hourPx)}px`;
+                                blockEl.style.top = `0px`;
+                                blockEl.style.height = `${Math.max(15, overflowDuration * hourPx)}px`;
                                 
                                 let displayTitle = note.text.split('\n')[0].substring(0, 40);
-                                const actualEndHour = (blockStart + actualDuration) % 24;
-                                const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)} (${actualDuration}h)`;
+                                const actualEndHour = (blockStart + duration) % 24;
+                                const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
                                 blockEl.innerHTML = `
                                     <div class="block-info">
-                                        <div class="block-title">${displayTitle}</div>
+                                        <div class="block-title">${displayTitle} (cont.)</div>
                                         <div class="block-meta">${timeStr}</div>
                                     </div>
-                                    ${isCalendarEvent ? '' : `<div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', '${tb.id}', true)"></div>`}
                                 `;
-                                
                                 blockEl.onclick = (e) => {
                                     if(isDraggingBlock) return;
-                                    if(e.target.closest('.resize-handle')) return;
                                     openTaskModal(null, note.id, e);
                                 };
-
-                                if(!isCalendarEvent) {
-                                    blockEl.onmousedown = (e) => {
-                                        if(e.target.closest('.resize-handle')) return;
-                                        startBlockDrag(e, note.id, tb.id, false);
-                                    };
-                                }
                                 col.appendChild(blockEl);
-                            } 
-                            else if (tb.date === addDays(dateStr, -1)) {
-                                if (blockStart < 24 && blockEnd > 24) {
-                                    let overflowDuration = roundToQuarterHour(blockEnd - 24);
-                                    const blockEl = document.createElement('div');
-                                    const quadClass = note.quadrant || 'q2';
-                                    blockEl.className = 'logged-block' + (isCalendarEvent ? ' is-meeting' : ` ${quadClass}`);
-                                    blockEl.id = `block-overflow-${tb.id}`;
-                                    blockEl.style.top = `0px`;
-                                    blockEl.style.height = `${Math.max(15, overflowDuration * hourPx)}px`;
-                                    
-                                    let displayTitle = note.text.split('\n')[0].substring(0, 40);
-                                    const actualEndHour = (blockStart + actualDuration) % 24;
-                                    const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)} (${actualDuration}h)`;
-
-                                    blockEl.innerHTML = `
-                                        <div class="block-info">
-                                            <div class="block-title">${displayTitle} (cont.)</div>
-                                            <div class="block-meta">${timeStr}</div>
-                                        </div>
-                                    `;
-                                    blockEl.onclick = (e) => {
-                                        openTaskModal(null, note.id, e);
-                                    };
-                                    col.appendChild(blockEl);
-                                }
                             }
-                        });
-                    }
-
-                    if (note.dueDate && note.dueDate.split('T')[0] === dateStr && !isCalendarEvent && note.status === 'active') {
-                        let blockStart = 7 + (dueOffset * 0.75);
-                        let renderDuration = 0.75; 
-                        dueOffset++;
-                        
-                        const blockEl = document.createElement('div');
-                        const quadClass = note.quadrant || 'q2';
-                        blockEl.className = 'logged-block ' + quadClass;
-                        blockEl.style.top = `${blockStart * hourPx}px`;
-                        blockEl.style.height = `${renderDuration * hourPx}px`;
-                        blockEl.style.border = '2px dashed rgba(255,255,255,0.9)';
-                        blockEl.style.zIndex = '9'; 
-                        
-                        let displayTitle = note.text.split('\n')[0].substring(0, 40);
-                        
-                        blockEl.innerHTML = `
-                            <div class="block-info">
-                                <div class="block-title">📅 DUE: ${displayTitle}</div>
-                                <div class="block-meta">Action Required</div>
-                            </div>
-                        `;
-                        
-                        blockEl.onclick = (e) => {
-                            openTaskModal(null, note.id, e);
-                        };
-                        
-                        col.appendChild(blockEl);
+                        }
                     }
                 });
 
                 colsContainer.appendChild(col);
             });
-
-            const dayTotal = roundToQuarterHour(totalTimeRendered);
-            const weekTotal = roundToQuarterHour(weeklyTotalRendered);
-            document.getElementById('trackerDailyTotal').innerText = `Total: ${dayTotal}h/${weekTotal}h`;
 
             const scrollArea = document.getElementById('timelineScrollArea');
             if (scrollArea && scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
@@ -1732,22 +1622,20 @@
         let dragState = null;
         let isDraggingBlock = false;
 
-        function startBlockDrag(e, noteId, blockId, isResize) {
+        function startBlockDrag(e, noteId, isResize) {
             e.stopPropagation();
             const note = notes.find(n => n.id === noteId);
             if (!note) return;
-            const block = note.timeBlocks.find(b => b.id === blockId);
-            if (!block) return;
             
             isDraggingBlock = true;
 
             dragState = {
-                noteId, blockId, isResize,
+                noteId, isResize,
                 startY: e.clientY,
-                originalStart: roundToQuarterHour(block.startHour),
-                originalDuration: roundToQuarterHour(block.duration),
+                originalStart: note.dueTime !== undefined ? roundToQuarterHour(note.dueTime) : 9.0,
+                originalDuration: note.dueDuration !== undefined ? roundToQuarterHour(note.dueDuration) : 1.0,
                 hasMoved: false,
-                el: document.getElementById(`block-${blockId}`)
+                el: document.getElementById(`block-${noteId}`)
             };
 
             if (dragState.el) {
@@ -1767,25 +1655,25 @@
             const dHours = roundToQuarterHour(dy / hourPx); 
             
             const note = notes.find(n => n.id === dragState.noteId);
-            const block = note.timeBlocks.find(b => b.id === dragState.blockId);
+            if (!note) return;
             
             if (dragState.isResize) {
                 let newDuration = Math.max(0.25, dragState.originalDuration + dHours);
-                block.duration = newDuration;
+                note.dueDuration = newDuration;
                 if (dragState.el) {
                     dragState.el.style.height = `${newDuration * hourPx}px`;
-                    const actualEndHour = (block.startHour + newDuration) % 24;
-                    const timeStr = `${decToTime(block.startHour)} - ${decToTime(actualEndHour)} (${newDuration}h)`;
+                    const actualEndHour = (note.dueTime + newDuration) % 24;
+                    const timeStr = `${decToTime(note.dueTime)} - ${decToTime(actualEndHour)}`;
                     const metaEl = dragState.el.querySelector('.block-meta');
                     if (metaEl) metaEl.innerText = timeStr;
                 }
             } else {
-                let newStart = Math.max(0, Math.min(30 - block.duration, dragState.originalStart + dHours));
-                block.startHour = newStart;
+                let newStart = Math.max(0, Math.min(30 - note.dueDuration, dragState.originalStart + dHours));
+                note.dueTime = newStart;
                 if (dragState.el) {
                     dragState.el.style.top = `${(newStart % 24) * hourPx}px`;
-                    const actualEndHour = (newStart + block.duration) % 24;
-                    const timeStr = `${decToTime(newStart)} - ${decToTime(actualEndHour)} (${block.duration}h)`;
+                    const actualEndHour = (newStart + note.dueDuration) % 24;
+                    const timeStr = `${decToTime(newStart)} - ${decToTime(actualEndHour)}`;
                     const metaEl = dragState.el.querySelector('.block-meta');
                     if (metaEl) metaEl.innerText = timeStr;
                 }
@@ -1843,9 +1731,12 @@
                 const y = ev.clientY - rect.top; 
                 let dropHour = roundToQuarterHour(y / hourPx);
 
-                if (!note.timeBlocks) note.timeBlocks = [];
-                note.timeBlocks.push({ id: Date.now().toString(), date: dateStr, startHour: dropHour, duration: 1.0 });
-                note.dirty = true; saveNotes(); handleSearch(); 
+                note.dueDate = dateStr;
+                note.dueTime = dropHour;
+                note.dueDuration = 1.0;
+                note.dirty = true; 
+                saveNotes(); 
+                handleSearch(); 
             }
         }
 
@@ -1867,9 +1758,13 @@
 
             if (e.key === 'Escape') {
                 const taskModal = document.getElementById('taskModal');
+                const editBlockModal = document.getElementById('editTimeBlockModal');
                 const shortcutsModal = document.getElementById('shortcutsModal');
                 if (taskModal && taskModal.style.display === 'flex') {
                     closeTaskModal();
+                }
+                if (editBlockModal && editBlockModal.style.display === 'flex') {
+                    closeEditBlockModal();
                 }
                 if (shortcutsModal && shortcutsModal.style.display === 'flex') {
                     closeShortcutsModal();
@@ -1891,7 +1786,7 @@
                 } else if (e.key.toLowerCase() === 'k' && appConfig.viewsEnabled.kanban) {
                     e.preventDefault();
                     setLayout('kanban');
-                } else if (e.key.toLowerCase() === 't' && appConfig.viewsEnabled.tracker) {
+                } else if (e.key.toLowerCase() === 'c' && appConfig.viewsEnabled.tracker) {
                     e.preventDefault();
                     setLayout('tracker');
                 } else if (e.key.toLowerCase() === 'o' && appConfig.viewsEnabled.overdue) {
@@ -1929,12 +1824,31 @@
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
 
+        function toggleTaskCompleteFromModal() {
+            if (!currentEditingId) return;
+            const note = notes.find(n => n.id === currentEditingId);
+            if (note) {
+                if (note.status === 'closed') {
+                    note.status = 'active';
+                    note.quadrant = note.quadrant === 'closed' ? 'inbox' : note.quadrant;
+                } else {
+                    note.status = 'closed';
+                    note.quadrant = 'closed';
+                }
+                note.dirty = true;
+                saveNotes();
+                handleSearch();
+                closeTaskModal();
+            }
+        }
+
         function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
             if (event) event.stopPropagation();
             const modal = document.getElementById('taskModal');
             const titleInput = document.getElementById('taskTitleInput');
             const infoInput = document.getElementById('taskInfoInput');
             const dueDateInput = document.getElementById('taskDueDate');
+            const completeBtn = document.getElementById('taskModalCompleteBtn');
 
             if (noteId) {
                 currentEditingId = noteId; 
@@ -1944,8 +1858,19 @@
                 let lines = note.text.split('\n');
                 titleInput.value = lines[0] || '';
                 infoInput.value = lines.slice(1).join('\n') || '';
+                dueDateInput.value = note.dueDate || '';
 
-                dueDateInput.value = note.dueDate ? note.dueDate.split('T')[0] : '';
+                completeBtn.style.display = 'inline-block';
+                if (note.status === 'closed') {
+                    completeBtn.innerHTML = '↺ Restore Task';
+                    completeBtn.style.color = '#3B82F6';
+                    completeBtn.style.borderColor = '#3B82F6';
+                } else {
+                    completeBtn.innerHTML = '✓ Mark Complete';
+                    completeBtn.style.color = '#10B981';
+                    completeBtn.style.borderColor = '#10B981';
+                }
+
             } else { 
                 currentEditingId = null; 
                 currentAddingQuadrant = quadrant || 'inbox'; 
@@ -1953,6 +1878,7 @@
                 titleInput.value = '';
                 infoInput.value = '';
                 dueDateInput.value = timelineContext ? timelineContext.date : '';
+                completeBtn.style.display = 'none';
                 
                 pendingTimelineContext = timelineContext || null;
             }
@@ -1976,35 +1902,40 @@
 
             const fullText = titleText + (infoText ? ('\n' + infoText) : '');
 
+            let calculatedStartHour = 9.0;
+            if (pendingTimelineContext && pendingTimelineContext.startHour !== undefined) {
+                calculatedStartHour = roundToQuarterHour(pendingTimelineContext.startHour);
+            }
+
             if (currentEditingId) { 
                 const note = notes.find(n => n.id === currentEditingId); 
                 if (note) { 
                     note.text = fullText; 
-                    note.dueDate = dueDate || null;
+                    
+                    if (dueDate) {
+                        if (!note.dueDate || note.dueDate !== dueDate) {
+                            note.dueDate = dueDate;
+                            if (note.dueTime === undefined) note.dueTime = 9.0;
+                            if (note.dueDuration === undefined) note.dueDuration = 1.0;
+                        }
+                    } else {
+                        note.dueDate = null;
+                    }
+                    
                     note.dirty = true; 
                     saveNotes(); 
                     handleSearch(); 
                 } 
             } else { 
-                let newBlocks = [];
                 let targetQuad = currentAddingQuadrant || 'inbox';
-                
-                if (pendingTimelineContext) {
-                    newBlocks.push({
-                        id: Date.now().toString() + Math.random(),
-                        date: pendingTimelineContext.date,
-                        startHour: roundToQuarterHour(pendingTimelineContext.startHour),
-                        duration: 1.0
-                    });
-                }
-
                 notes.push({ 
                     id: Date.now().toString(), 
                     text: fullText, 
                     quadrant: targetQuad, 
                     status: 'active', 
                     dueDate: dueDate || null,
-                    timeBlocks: newBlocks, 
+                    dueTime: dueDate ? calculatedStartHour : undefined,
+                    dueDuration: dueDate ? 1.0 : undefined,
                     dirty: true, 
                     deleted: false, 
                     eventId: null 
@@ -2015,8 +1946,19 @@
             closeTaskModal();
         }
 
+        // --- Clear Calendar Cache from Settings ---
+        function clearCalendarCache() {
+            if (confirm("Are you sure you want to clear the calendar event cache? This will allow re-importing all meetings when you click Sync Meetings.")) {
+                notes = notes.filter(n => !n.eventId);
+                saveNotes();
+                handleSearch();
+                showToast("Calendar event cache cleared!");
+            }
+        }
+
         // --- Export Engine ---
         function exportTimesheet() {
+            // Note: Since time tracking blocks were removed in v2.30, this now exports Due Date Tasks for the timeframe
             const baseDateStr = document.getElementById('trackerDate').value;
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
@@ -2040,39 +1982,29 @@
                 }
             }
 
-            let plainTextLog = `Timesheet Report\n`;
-            let overallTotal = 0;
-
+            let plainTextLog = `Calendar Report\n`;
+            
             datesToExport.forEach(dateStr => {
-                let dailyHrs = 0;
                 let dailyLog = "";
+                let itemFound = false;
                 notes.forEach(note => {
-                    if (note.deleted || !note.timeBlocks) return;
-                    note.timeBlocks.forEach(tb => { 
-                        if(tb.date === dateStr) {
-                            let dur = roundToQuarterHour(tb.duration);
-                            dailyHrs += dur;
-                            const tags = note.text.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
-                            let identifier = tags ? tags.join(' ') : note.text.substring(0, 40).replace(/\n/g, ' ') + '...';
-                            dailyLog += `- [${identifier}] ${dur}h\n`;
-                        }
-                    });
+                    if (note.deleted || note.status === 'closed') return;
+                    if (note.dueDate === dateStr) {
+                        itemFound = true;
+                        const tags = note.text.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
+                        let identifier = tags ? tags.join(' ') : note.text.substring(0, 40).replace(/\n/g, ' ') + '...';
+                        dailyLog += `- [${identifier}] ${decToTime(note.dueTime)} (${note.dueDuration}h)\n`;
+                    }
                 });
                 
-                if (dailyHrs > 0 || currentTrackerMode === 'day') {
+                if (itemFound || currentTrackerMode === 'day') {
                      plainTextLog += `\nDate: ${dateStr}\n------------------------\n`;
-                     if(dailyHrs > 0) plainTextLog += dailyLog;
-                     else plainTextLog += "No time logged.\n";
-                     plainTextLog += `Total: ${roundToQuarterHour(dailyHrs)}h\n`;
+                     if(itemFound) plainTextLog += dailyLog;
+                     else plainTextLog += "No tasks scheduled.\n";
                 }
-                overallTotal += dailyHrs;
             });
-            
-            if (currentTrackerMode === 'week') {
-                 plainTextLog += `\n========================\nWeekly Total: ${roundToQuarterHour(overallTotal)}h\n`;
-            }
 
-            navigator.clipboard.writeText(plainTextLog).then(() => showToast("Timesheet copied to clipboard!")).catch(err => showToast("Copy failed"));
+            navigator.clipboard.writeText(plainTextLog).then(() => showToast("Calendar copied to clipboard!")).catch(err => showToast("Copy failed"));
         }
 
         // --- Config Settings & UI ---
@@ -2151,7 +2083,6 @@
                 overdue: document.getElementById('configViewOverdue').checked
             };
             
-            // Safeguard: Ensure default view is always activated
             if (!appConfig.viewsEnabled[appConfig.defaultView]) {
                 appConfig.viewsEnabled[appConfig.defaultView] = true;
             }
@@ -2359,7 +2290,6 @@
             let filteredNotes = notes.filter(note => {
                 if (note.deleted) return false;
                 const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-                // Requirement 1: Calendar events should not be filtered out during search/filtering
                 if (isCalendarEvent) return true;
                 return matchesSearchQuery(note.text, searchQuery);
             });
@@ -2376,7 +2306,6 @@
                 const list = document.getElementById(targetListId);
                 if (list) {
                     const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-                    // Only count towards badges if it matches search or is a calendar event exempt from search
                     const matchesSearch = matchesSearchQuery(note.text, searchQuery);
                     
                     if (note.status === 'active' && !note.eventId && filteredCounts[note.quadrant] !== undefined && matchesSearch) {
@@ -2622,7 +2551,6 @@
                         }
 
                         if (sourceOffset !== undefined) {
-                            // Map sourceOffset relative to Primary Timezone logic
                             let baseOffsetHours = getTzOffset(appConfig.primaryTz);
                             let netOffsetDiff = baseOffsetHours - sourceOffset;
                             
@@ -2694,298 +2622,9 @@
                         sn.dirty = false;
                     } else if (!sn.dirty && !sn.deleted) { const remoteObj = remoteTaskMap[sn.id]; if (remoteObj) { sn.text = remoteObj.task.title || ''; sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; sn.quadrant = remoteObj.quadKey; sn.dueDate = remoteObj.task.due || null; delete remoteTaskMap[sn.id]; } }
                 }
-                Object.values(remoteTaskMap).forEach(remoteObj => { syncSnapshot.push({ id: remoteObj.task.id, text: remoteObj.task.title || '', quadrant: remoteObj.quadKey, status: remoteObj.task.status === 'completed' ? 'closed' : 'active', dueDate: remoteObj.task.due || null, timeBlocks: [], eventId: null, dirty: false, deleted: false }); });
+                Object.values(remoteTaskMap).forEach(remoteObj => { syncSnapshot.push({ id: remoteObj.task.id, text: remoteObj.task.title || '', quadrant: remoteObj.quadKey, status: remoteObj.task.status === 'completed' ? 'closed' : 'active', dueDate: remoteObj.task.due || null, eventId: null, dirty: false, deleted: false }); });
                 let newNotesArray = []; let syncedIds = new Set();
-                syncSnapshot.forEach(sn => { if (sn.deleted && !sn.dirty) return; const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); if (liveNote) { sn.timeBlocks = liveNote.timeBlocks || []; sn.eventId = liveNote.eventId || null; if (liveNote.dirty) { if (sn.tempId) liveNote.id = sn.id; newNotesArray.push(liveNote); } else { newNotesArray.push(sn); } syncedIds.add(liveNote.id); if (sn.tempId) syncedIds.add(sn.tempId); } else { newNotesArray.push(sn); } });
-                notes = newNotesArray; saveNotes(); handleSearch(); 
-                document.getElementById('sync-banner').style.display = 'none';
-                showToast("Successfully synced with Google Tasks!");
-            } catch (e) {
-                document.getElementById('sync-banner').style.display = 'none';
-                console.error(e);
-                showToast("Tasks sync failed. Check your API configuration.");
-            }
-        }
-
-        window.addEventListener('load', () => {
-            // Apply Saved Grid Widths and Orders First
-            const matrixContainer = document.getElementById('matrix');
-            
-            if (appConfig.quadrantOrder && appConfig.quadrantOrder.length > 0) {
-                appConfig.quadrantOrder.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) matrixContainer.appendChild(el);
-                });
-            }
-            
-            document.querySelectorAll('.quadrant').forEach(q => {
-                if (appConfig.quadrantWidths && appConfig.quadrantWidths[q.id]) {
-                    q.style.width = appConfig.quadrantWidths[q.id];
-                }
-                quadResizeObserver.observe(q);
-            });
-
-            // --- Execute Initial Render logic with Config ---
-            if (!localStorage.getItem('quadra_layout')) {
-                currentLayout = appConfig.defaultView;
-            }
-            applyViewVisibility();
-
-            if (typeof gapi !== 'undefined' && appConfig.apiKey) {
-                gapi.load('client', () => {
-                    gapi.client.init({ apiKey: appConfig.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'] }).catch(() => {});
-                });
-            }
-            if (typeof google !== 'undefined' && google.accounts && appConfig.clientId) {
-                tokenClient = google.accounts.oauth2.initTokenClient({ 
-                    client_id: appConfig.clientId, 
-                    scope: SCOPES, 
-                    callback: async (resp) => { 
-                        if (resp.error !== undefined) { throw (resp); } 
-                        localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
-                        document.getElementById('auth-overlay').style.display = 'none';
-                        document.getElementById('authorize_button').style.display = 'none'; 
-                        document.getElementById('signout_button').style.display = 'inline-block'; 
-                        isGoogleSynced = true;
-                        if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
-                        loadCalendars(); 
-                        performBackgroundSync(); 
-                    }, 
-                });
-            }
-            checkConfigState();
-
-            // Setup Keyboard Navigation for Search and Quick Tags Bar
-            const searchInput = document.getElementById('searchInput');
-            const tagsBar = document.getElementById('quick-tags-bar');
-
-            if (searchInput && tagsBar) {
-                searchInput.addEventListener('keydown', function(e) {
-                    if (e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        const firstTag = tagsBar.querySelector('.filter-tag');
-                        if (firstTag) firstTag.focus();
-                    }
-                });
-
-                tagsBar.addEventListener('keydown', function(e) {
-                    if (e.key === 'ArrowRight') {
-                        e.preventDefault();
-                        if (document.activeElement.nextElementSibling) {
-                            document.activeElement.nextElementSibling.focus();
-                        }
-                    } else if (e.key === 'ArrowLeft') {
-                        e.preventDefault();
-                        if (document.activeElement.previousElementSibling) {
-                            document.activeElement.previousElementSibling.focus();
-                        }
-                    } else if (e.key === 'ArrowUp' || e.key === 'Escape') {
-                        e.preventDefault();
-                        searchInput.focus();
-                    } else if (e.key === 'Enter') {
-                        e.preventDefault();
-                        document.activeElement.click();
-                    }
-                });
-            }
-        });
-        
-        function handleAuthClick() { 
-            if (!appConfig.clientId) return openSettingsPage(); 
-            if (!tokenClient && typeof google !== 'undefined' && google.accounts) { 
-                tokenClient = google.accounts.oauth2.initTokenClient({ 
-                    client_id: appConfig.clientId, 
-                    scope: SCOPES, 
-                    callback: async (resp) => { 
-                        if (resp.error !== undefined) { throw (resp); } 
-                        localStorage.setItem('quadra_gapi_token_v2', JSON.stringify({ token: resp.access_token, expires_at: Date.now() + (resp.expires_in * 1000) })); 
-                        document.getElementById('auth-overlay').style.display = 'none'; 
-                        document.getElementById('authorize_button').style.display = 'none'; 
-                        document.getElementById('signout_button').style.display = 'inline-block'; 
-                        isGoogleSynced = true;
-                        if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
-                        loadCalendars(); 
-                        performBackgroundSync(); 
-                    }, 
-                }); 
-            }
-            if (!tokenClient) { showToast("Google services are still loading. Please wait a moment and try again."); return; }
-            tokenClient.requestAccessToken({prompt: 'consent'}); 
-        }
-        
-        function handleSignoutClick() { 
-            const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-            if (savedToken && savedToken.token && typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) { 
-                google.accounts.oauth2.revoke(savedToken.token, () => {}); 
-            } 
-            localStorage.removeItem('quadra_gapi_token_v2'); 
-            isGoogleSynced = false; 
-            document.getElementById('auth-overlay').style.display = 'none';
-            document.getElementById('authorize_button').style.display = 'inline-block'; 
-            document.getElementById('signout_button').style.display = 'none'; 
-            showToast("Signed out successfully.");
-        }
-
-        async function importCalendarEvents() {
-            const dateStr = document.getElementById('trackerDate').value;
-            const ignoreKeywords = (appConfig.ignoreKeywords || 'out of office, ooo, away, vacation, holiday')
-                .toLowerCase()
-                .split(',')
-                .map(k => k.trim())
-                .filter(k => k.length > 0);
-
-            let importedCount = 0;
-            let ignoredCount = 0;
-
-            try {
-                document.getElementById('sync-banner').style.display = 'block';
-
-                if (appConfig.calSource === 'outlook' && appConfig.icsUrl) {
-                    let fetchUrl = appConfig.icsUrl;
-                    
-                    const res = await fetch(fetchUrl);
-                    if (!res.ok) throw new Error("Failed to fetch ICS feed via Apps Script bridge");
-                    
-                    const icsText = await res.text();
-                    const icsEvents = parseICS(icsText, dateStr, ignoreKeywords);
-
-                    icsEvents.forEach(ev => {
-                        if (notes.find(n => n.eventId === ev.id)) return;
-                        notes.push({
-                            id: Date.now().toString() + Math.random(),
-                            eventId: ev.id,
-                            text: `${ev.summary} #meeting`,
-                            quadrant: 'q2',
-                            status: 'active',
-                            dirty: false,
-                            deleted: false,
-                            timeBlocks: [{
-                                id: Date.now().toString() + Math.random(),
-                                date: dateStr,
-                                startHour: ev.startHour,
-                                duration: ev.duration
-                            }]
-                        });
-                        importedCount++;
-                    });
-
-                } else {
-                    const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-                    if (!savedToken || !savedToken.token || savedToken.expires_at < Date.now()) {
-                        document.getElementById('sync-banner').style.display = 'none';
-                        return showToast("Please sign in to Google first.");
-                    }
-                    if (!appConfig.calendarId) {
-                        document.getElementById('sync-banner').style.display = 'none';
-                        return showToast("Please select a Google calendar in Settings first.");
-                    }
-                    
-                    const [y, m, day] = dateStr.split('-');
-                    const timeMin = new Date(y, m-1, day, 0, 0, 0).toISOString();
-                    const timeMax = new Date(y, m-1, day, 23, 59, 59).toISOString();
-
-                    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(appConfig.calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
-                        headers: { 'Authorization': `Bearer ${savedToken.token}` }
-                    });
-                    const data = await res.json();
-                    if(data.error) throw new Error(data.error.message);
-
-                    const events = data.items || [];
-                    events.forEach(event => {
-                        if (!event.start.dateTime) return; // Skip all-day events
-
-                        const title = (event.summary || '').toLowerCase();
-                        const shouldIgnore = ignoreKeywords.some(keyword => title.includes(keyword));
-
-                        if (shouldIgnore) {
-                            ignoredCount++;
-                            return;
-                        }
-                        
-                        const start = new Date(event.start.dateTime);
-                        const end = new Date(event.end.dateTime);
-                        
-                        const rawStartHour = start.getHours() + (start.getMinutes() / 60);
-                        let rawEndHour = end.getHours() + (end.getMinutes() / 60);
-                        if (rawEndHour <= rawStartHour) rawEndHour += 24;
-                        const rawDuration = rawEndHour - rawStartHour;
-
-                        const startHour = roundToQuarterHour(rawStartHour);
-                        const duration = Math.max(0.25, roundToQuarterHour(rawDuration));
-                        
-                        if (notes.find(n => n.eventId === event.id)) return; 
-                        
-                        const newNote = {
-                            id: Date.now().toString() + Math.random(),
-                            eventId: event.id, 
-                            text: `${event.summary || 'Meeting'} #meeting`,
-                            quadrant: 'q2', 
-                            status: 'active',
-                            dirty: false, 
-                            deleted: false,
-                            timeBlocks: [{
-                                id: Date.now().toString() + Math.random(),
-                                date: dateStr,
-                                startHour: startHour,
-                                duration: duration
-                            }]
-                        };
-                        
-                        notes.push(newNote);
-                        importedCount++;
-                    });
-                }
-                
-                document.getElementById('sync-banner').style.display = 'none';
-                if (importedCount > 0 || ignoredCount > 0) {
-                    saveNotes();
-                    renderTrackerTimeline(); 
-                    showToast(`${importedCount} imported, ${ignoredCount} ignored.`);
-                } else {
-                    showToast("No new meetings found for this date.");
-                }
-                
-            } catch(e) {
-                console.error("Calendar Sync Error:", e);
-                document.getElementById('sync-banner').style.display = 'none';
-                showToast("Failed to fetch calendar events. Check your network or Apps Script Web App URL.");
-            }
-        }
-
-        async function performBackgroundSync() {
-            const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-            if (!savedToken || !savedToken.token) return showToast("Please sign in first to sync with Google Tasks.");
-            try {
-                document.getElementById('sync-banner').style.display = 'block';
-
-                if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks || !gapi.client.tasks.tasklists || !gapi.client.tasks.tasks) {
-                    document.getElementById('sync-banner').style.display = 'none';
-                    return showToast("Google Tasks is still loading. Please try again in a moment.");
-                }
-
-                if(typeof gapi !== 'undefined' && gapi.client && typeof gapi.client.setToken === 'function' && !gapi.client.getToken()) {
-                    gapi.client.setToken({ access_token: savedToken.token });
-                }
-                const response = await gapi.client.tasks.tasklists.list();
-                const remoteLists = response.result.items || [];
-                const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
-                let gapiListIds = { inbox: null, q1: null, q2: null, q3: null, q4: null, closed: null };
-                for (const quadKey of Object.keys(GAPI_LIST_NAMES)) { const existingList = remoteLists.find(l => l.title === GAPI_LIST_NAMES[quadKey]); if (existingList) { gapiListIds[quadKey] = existingList.id; } else { const newListReq = await gapi.client.tasks.tasklists.insert({ title: GAPI_LIST_NAMES[quadKey] }); gapiListIds[quadKey] = newListReq.result.id; } }
-                let remoteTaskMap = {};
-                for (const quadKey of Object.keys(gapiListIds)) { const listId = gapiListIds[quadKey]; const tasksReq = await gapi.client.tasks.tasks.list({ tasklist: listId, showHidden: true, maxResults: 100 }); const rTasks = tasksReq.result.items || []; rTasks.forEach(t => { remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; }); }
-                const syncSnapshot = JSON.parse(JSON.stringify(notes));
-                for (let sn of syncSnapshot) {
-                    if (sn.eventId) continue; 
-                    if (sn.deleted && sn.dirty) { if (remoteTaskMap[sn.id]) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); } catch(e){} } sn.dirty = false; continue; }
-                    if (sn.dirty && !sn.deleted) {
-                        const targetListId = gapiListIds[sn.quadrant]; const remoteObj = remoteTaskMap[sn.id]; const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; const payload = { tasklist: targetListId, title: sn.text, status: gStatus }; if (sn.dueDate) payload.due = sn.dueDate; else payload.due = null;
-                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; res.result.id; } catch(e){} } else { try { payload.task = sn.id; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
-                        sn.dirty = false;
-                    } else if (!sn.dirty && !sn.deleted) { const remoteObj = remoteTaskMap[sn.id]; if (remoteObj) { sn.text = remoteObj.task.title || ''; sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; sn.quadrant = remoteObj.quadKey; sn.dueDate = remoteObj.task.due || null; delete remoteTaskMap[sn.id]; } }
-                }
-                Object.values(remoteTaskMap).forEach(remoteObj => { syncSnapshot.push({ id: remoteObj.task.id, text: remoteObj.task.title || '', quadrant: remoteObj.quadKey, status: remoteObj.task.status === 'completed' ? 'closed' : 'active', dueDate: remoteObj.task.due || null, timeBlocks: [], eventId: null, dirty: false, deleted: false }); });
-                let newNotesArray = []; let syncedIds = new Set();
-                syncSnapshot.forEach(sn => { if (sn.deleted && !sn.dirty) return; const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); if (liveNote) { sn.timeBlocks = liveNote.timeBlocks || []; sn.eventId = liveNote.eventId || null; if (liveNote.dirty) { if (sn.tempId) liveNote.id = sn.id; newNotesArray.push(liveNote); } else { newNotesArray.push(sn); } syncedIds.add(liveNote.id); if (sn.tempId) syncedIds.add(sn.tempId); } else { newNotesArray.push(sn); } });
+                syncSnapshot.forEach(sn => { if (sn.deleted && !sn.dirty) return; const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); if (liveNote) { sn.eventId = liveNote.eventId || null; if (liveNote.dirty) { if (sn.tempId) liveNote.id = sn.id; newNotesArray.push(liveNote); } else { newNotesArray.push(sn); } syncedIds.add(liveNote.id); if (sn.tempId) syncedIds.add(sn.tempId); } else { newNotesArray.push(sn); } });
                 notes = newNotesArray; saveNotes(); handleSearch(); 
                 document.getElementById('sync-banner').style.display = 'none';
                 showToast("Successfully synced with Google Tasks!");
