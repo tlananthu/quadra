@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quadra | Eisenhower Matrix & Time Tracker</title>
+    <title>Quadra | Eisenhower Matrix & Calendar</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -252,7 +252,7 @@
         .closed-note { opacity: 0.6; box-shadow: none; cursor: default; }
         .closed-note .note-text { text-decoration: line-through; cursor: default; overflow-y: hidden; }
 
-        /* --- TIME TRACKER VIEW --- */
+        /* --- CALENDAR VIEW --- */
         #tracker-view { display: none; flex-grow: 1; width: 100%; overflow: hidden; background: #ffffff; }
         .tracker-layout { display: flex; height: 100%; }
         
@@ -474,6 +474,7 @@
             .form-row-inline label { width: 100%; }
             .modal-content { padding: 20px; }
         }
+
     </style>
 </head>
 <body>
@@ -487,7 +488,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.27</span></h1>
+                <h1>Quadra <span class="version-badge">v2.28</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -507,7 +508,7 @@
                 <button id="btnGrid" title="Quadrant View" onclick="setLayout('grid')">⊞</button>
                 <button id="btnKanban" title="Kanban View" onclick="setLayout('kanban')">⏸</button>
                 <button id="btnOverdue" title="Overdue Tasks" onclick="setLayout('overdue')">⚠️</button>
-                <button id="btnTracker" title="Tracker View" onclick="setLayout('tracker')">⏱️</button>
+                <button id="btnTracker" title="Calendar View" onclick="setLayout('tracker')">📅</button>
             </div>
             <button id="authorize_button" class="btn" onclick="handleAuthClick()">Sign In</button>
             <button id="signout_button" class="btn btn-outline icon-button" onclick="handleSignoutClick()" title="Sign out of Google">↪</button>
@@ -588,7 +589,7 @@
             </div>
         </div>
 
-        <!-- Time Tracker View -->
+        <!-- Calendar View (formerly Tracker) -->
         <div id="tracker-view">
             <div class="tracker-layout">
                 <div class="tracker-palette">
@@ -804,7 +805,7 @@
                     <select id="configDefaultView" style="width: auto;">
                         <option value="grid">Quadrant</option>
                         <option value="kanban">Kanban</option>
-                        <option value="tracker">Tracker</option>
+                        <option value="tracker">Calendar</option>
                         <option value="overdue">Overdue</option>
                     </select>
                 </div>
@@ -813,7 +814,7 @@
                     <div style="display: flex; gap: 16px; font-size: 13px; margin-top: 4px; flex-wrap: wrap;">
                         <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewGrid"> Quadrant</label>
                         <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewKanban"> Kanban</label>
-                        <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewTracker"> Tracker</label>
+                        <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewTracker"> Calendar</label>
                         <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewOverdue"> Overdue</label>
                     </div>
                 </div>
@@ -821,7 +822,7 @@
                 <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
                 
                 <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">Recurring Overlays</h4>
-                <p style="font-size: 12px; color: var(--text-muted); margin-top: 0; margin-bottom: 12px;">Highlight unavailable time on your tracker.</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 0; margin-bottom: 12px;">Highlight unavailable time on your calendar.</p>
                 <div id="scheduleConfigList"></div>
                 <button class="btn btn-outline" style="margin-top: 8px; width: 100%;" onclick="addScheduleRow()">+ Add Block</button>
 
@@ -835,6 +836,7 @@
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- Modals -->
@@ -878,6 +880,7 @@
         </div>
     </div>
 
+    <!-- Keyboard Shortcuts Modal -->
     <div id="shortcutsModal" class="modal">
         <div class="modal-content" style="max-width: 450px;">
             <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">Keyboard Shortcuts</h3>
@@ -915,7 +918,7 @@
                     <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">K</kbd>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Tracker View</span>
+                    <span>Calendar View</span>
                     <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">T</kbd>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
@@ -1486,29 +1489,33 @@
             let totalTimeRendered = 0;
             let weeklyTotalRendered = 0;
 
+            let dueOffset = 0; // Ensures multiple due dates stack properly on same day
+
             notes.forEach(note => {
-                if (note.deleted || !note.timeBlocks) return;
-                // Requirement 1: Calendar events should not be filtered out during search/filtering
+                if (note.deleted) return;
                 const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
                 if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
                 
-                note.timeBlocks.forEach(tb => {
-                    const duration = roundToQuarterHour(tb.duration);
-                    if (!duration) return;
+                // Track standard Time Blocks if present
+                if (note.timeBlocks) {
+                    note.timeBlocks.forEach(tb => {
+                        const duration = roundToQuarterHour(tb.duration);
+                        if (!duration) return;
 
-                    const blockStart = roundToQuarterHour(tb.startHour);
-                    const blockEnd = blockStart + duration;
+                        const blockStart = roundToQuarterHour(tb.startHour);
+                        const blockEnd = blockStart + duration;
 
-                    if (weekDateKeys.has(tb.date)) {
-                        weeklyTotalRendered += duration;
-                    }
+                        if (weekDateKeys.has(tb.date)) {
+                            weeklyTotalRendered += duration;
+                        }
 
-                    if (tb.date === baseDateStr) {
-                        totalTimeRendered += duration;
-                    } else if (tb.date === addDays(baseDateStr, -1) && blockStart < 24 && blockEnd > 24) {
-                        totalTimeRendered += roundToQuarterHour(blockEnd - 24);
-                    }
-                });
+                        if (tb.date === baseDateStr) {
+                            totalTimeRendered += duration;
+                        } else if (tb.date === addDays(baseDateStr, -1) && blockStart < 24 && blockEnd > 24) {
+                            totalTimeRendered += roundToQuarterHour(blockEnd - 24);
+                        }
+                    });
+                }
             });
 
             datesToRender.forEach(dtObj => {
@@ -1573,72 +1580,40 @@
                     });
                 });
 
+                dueOffset = 0; // Reset stack position per column
+
                 notes.forEach(note => {
-                    if (note.deleted || !note.timeBlocks) return;
+                    if (note.deleted) return;
                     const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
                     if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
 
-                    note.timeBlocks.forEach(tb => {
-                        let blockStart = roundToQuarterHour(tb.startHour);
-                        let duration = roundToQuarterHour(tb.duration);
-                        let blockEnd = blockStart + duration;
-                        if (blockEnd < blockStart) {
-                            blockEnd += 24;
-                        }
-                        let actualDuration = roundToQuarterHour(blockEnd - blockStart);
-
-                        if (tb.date === dateStr) {
-                            let renderStart = blockStart % 24;
-                            let renderDuration = duration;
-
-                            if (blockStart < 24 && blockEnd > 24) {
-                                renderDuration = 24 - blockStart; 
-                            } else if (blockStart >= 24) {
-                                return; 
+                    // 1. Render actual time blocks for this specific date
+                    if (note.timeBlocks) {
+                        note.timeBlocks.forEach(tb => {
+                            let blockStart = roundToQuarterHour(tb.startHour);
+                            let duration = roundToQuarterHour(tb.duration);
+                            let blockEnd = blockStart + duration;
+                            if (blockEnd < blockStart) {
+                                blockEnd += 24;
                             }
+                            let actualDuration = roundToQuarterHour(blockEnd - blockStart);
 
-                            const blockEl = document.createElement('div');
-                            const isMeeting = note.eventId || note.text.includes('#meeting');
-                            const quadClass = note.quadrant || 'q2';
-                            blockEl.className = 'logged-block' + (isMeeting ? ' is-meeting' : ` ${quadClass}`);
-                            blockEl.id = `block-${tb.id}`;
-                            blockEl.style.top = `${renderStart * hourPx}px`;
-                            blockEl.style.height = `${Math.max(15, renderDuration * hourPx)}px`;
-                            
-                            let displayTitle = note.text.split('\n')[0].substring(0, 40);
-                            const actualEndHour = (blockStart + actualDuration) % 24;
-                            const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)} (${actualDuration}h)`;
+                            if (tb.date === dateStr) {
+                                let renderStart = blockStart % 24;
+                                let renderDuration = duration;
 
-                            blockEl.innerHTML = `
-                                <div class="block-info">
-                                    <div class="block-title">${displayTitle}</div>
-                                    <div class="block-meta">${timeStr}</div>
-                                </div>
-                                <button class="block-edit-icon" onclick="openEditBlockModal('${note.id}', '${tb.id}', event)" title="Edit Time Block Hours">📝</button>
-                                <div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', '${tb.id}', true)"></div>
-                            `;
-                            
-                            blockEl.onclick = (e) => {
-                                if(e.target.closest('.block-edit-icon') || e.target.closest('.resize-handle')) return;
-                                openTaskModal(null, note.id, e);
-                            };
+                                if (blockStart < 24 && blockEnd > 24) {
+                                    renderDuration = 24 - blockStart; 
+                                } else if (blockStart >= 24) {
+                                    return; 
+                                }
 
-                            blockEl.onmousedown = (e) => {
-                                if(e.target.closest('.block-edit-icon') || e.target.closest('.resize-handle')) return;
-                                startBlockDrag(e, note.id, tb.id, false);
-                            };
-                            col.appendChild(blockEl);
-                        } 
-                        else if (tb.date === addDays(dateStr, -1)) {
-                            if (blockStart < 24 && blockEnd > 24) {
-                                let overflowDuration = roundToQuarterHour(blockEnd - 24);
                                 const blockEl = document.createElement('div');
-                                const isMeeting = note.eventId || note.text.includes('#meeting');
                                 const quadClass = note.quadrant || 'q2';
-                                blockEl.className = 'logged-block' + (isMeeting ? ' is-meeting' : ` ${quadClass}`);
-                                blockEl.id = `block-overflow-${tb.id}`;
-                                blockEl.style.top = `0px`;
-                                blockEl.style.height = `${Math.max(15, overflowDuration * hourPx)}px`;
+                                blockEl.className = 'logged-block' + (isCalendarEvent ? ' is-meeting' : ` ${quadClass}`);
+                                blockEl.id = `block-${tb.id}`;
+                                blockEl.style.top = `${renderStart * hourPx}px`;
+                                blockEl.style.height = `${Math.max(15, renderDuration * hourPx)}px`;
                                 
                                 let displayTitle = note.text.split('\n')[0].substring(0, 40);
                                 const actualEndHour = (blockStart + actualDuration) % 24;
@@ -1646,19 +1621,84 @@
 
                                 blockEl.innerHTML = `
                                     <div class="block-info">
-                                        <div class="block-title">${displayTitle} (cont.)</div>
+                                        <div class="block-title">${displayTitle}</div>
                                         <div class="block-meta">${timeStr}</div>
                                     </div>
                                     <button class="block-edit-icon" onclick="openEditBlockModal('${note.id}', '${tb.id}', event)" title="Edit Time Block Hours">📝</button>
+                                    <div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', '${tb.id}', true)"></div>
                                 `;
+                                
                                 blockEl.onclick = (e) => {
-                                    if(e.target.closest('.block-edit-icon')) return;
+                                    if(e.target.closest('.block-edit-icon') || e.target.closest('.resize-handle')) return;
                                     openTaskModal(null, note.id, e);
                                 };
+
+                                blockEl.onmousedown = (e) => {
+                                    if(e.target.closest('.block-edit-icon') || e.target.closest('.resize-handle')) return;
+                                    startBlockDrag(e, note.id, tb.id, false);
+                                };
                                 col.appendChild(blockEl);
+                            } 
+                            else if (tb.date === addDays(dateStr, -1)) {
+                                if (blockStart < 24 && blockEnd > 24) {
+                                    let overflowDuration = roundToQuarterHour(blockEnd - 24);
+                                    const blockEl = document.createElement('div');
+                                    const quadClass = note.quadrant || 'q2';
+                                    blockEl.className = 'logged-block' + (isCalendarEvent ? ' is-meeting' : ` ${quadClass}`);
+                                    blockEl.id = `block-overflow-${tb.id}`;
+                                    blockEl.style.top = `0px`;
+                                    blockEl.style.height = `${Math.max(15, overflowDuration * hourPx)}px`;
+                                    
+                                    let displayTitle = note.text.split('\n')[0].substring(0, 40);
+                                    const actualEndHour = (blockStart + actualDuration) % 24;
+                                    const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)} (${actualDuration}h)`;
+
+                                    blockEl.innerHTML = `
+                                        <div class="block-info">
+                                            <div class="block-title">${displayTitle} (cont.)</div>
+                                            <div class="block-meta">${timeStr}</div>
+                                        </div>
+                                        <button class="block-edit-icon" onclick="openEditBlockModal('${note.id}', '${tb.id}', event)" title="Edit Time Block Hours">📝</button>
+                                    `;
+                                    blockEl.onclick = (e) => {
+                                        if(e.target.closest('.block-edit-icon')) return;
+                                        openTaskModal(null, note.id, e);
+                                    };
+                                    col.appendChild(blockEl);
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
+
+                    // 2. Render Virtual Due Date block if applicable for this date
+                    if (note.dueDate && note.dueDate.split('T')[0] === dateStr && !isCalendarEvent && note.status === 'active') {
+                        let blockStart = 7 + (dueOffset * 0.75); // Stack visually starting at 7 AM
+                        let renderDuration = 0.75; 
+                        dueOffset++;
+                        
+                        const blockEl = document.createElement('div');
+                        const quadClass = note.quadrant || 'q2';
+                        blockEl.className = 'logged-block ' + quadClass;
+                        blockEl.style.top = `${blockStart * hourPx}px`;
+                        blockEl.style.height = `${renderDuration * hourPx}px`;
+                        blockEl.style.border = '2px dashed rgba(255,255,255,0.9)';
+                        blockEl.style.zIndex = '9'; // Subordinate z-index to avoid interrupting actual manual blocks
+                        
+                        let displayTitle = note.text.split('\n')[0].substring(0, 40);
+                        
+                        blockEl.innerHTML = `
+                            <div class="block-info">
+                                <div class="block-title">📅 DUE: ${displayTitle}</div>
+                                <div class="block-meta">Action Required</div>
+                            </div>
+                        `;
+                        
+                        blockEl.onclick = (e) => {
+                            openTaskModal(null, note.id, e);
+                        };
+                        
+                        col.appendChild(blockEl);
+                    }
                 });
 
                 colsContainer.appendChild(col);
@@ -1669,7 +1709,7 @@
             document.getElementById('trackerDailyTotal').innerText = `Total: ${dayTotal}h/${weekTotal}h`;
 
             const scrollArea = document.getElementById('timelineScrollArea');
-            if (scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
+            if (scrollArea && scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
         }
 
         // --- Render Overdue Tasks Page ---
@@ -1866,6 +1906,20 @@
             }
         });
 
+        function timeStrToDecimal(timeStr) {
+            if (!timeStr) return null;
+            const [h, m] = timeStr.split(':').map(Number);
+            return h + (m / 60);
+        }
+
+        function decimalToTimeStr(dec) {
+            let norm = dec % 24;
+            let h = Math.floor(norm);
+            let m = Math.round((norm - h) * 60);
+            if (m === 60) { h++; m = 0; }
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        }
+
         function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
             if (event) event.stopPropagation();
             const modal = document.getElementById('taskModal');
@@ -1912,6 +1966,11 @@
             if (!titleText && !infoText) return closeTaskModal();
 
             const fullText = titleText + (infoText ? ('\n' + infoText) : '');
+
+            let calculatedStartHour = 9;
+            if (pendingTimelineContext) {
+                calculatedStartHour = roundToQuarterHour(pendingTimelineContext.startHour);
+            }
 
             if (currentEditingId) { 
                 const note = notes.find(n => n.id === currentEditingId); 
