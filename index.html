@@ -468,7 +468,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.34</span></h1>
+                <h1>Quadra <span class="version-badge">v2.35</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -1397,6 +1397,7 @@
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
             
+            // UI Update for Day of Week
             const daySpan = document.getElementById('trackerDayOfWeek');
             if (daySpan) {
                 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -2788,22 +2789,22 @@
                         const remoteObj = remoteTaskMap[sn.id]; 
                         const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; 
                         
-                        // CORRECT DATE FORMATTING
-                        let formattedDue = null;
-                        if (sn.dueDate) {
-                            formattedDue = new Date(sn.dueDate).toISOString();
-                        }
-            
-                        // PROPER RESOURCE WRAPPER
+                        let lines = (sn.text || 'Untitled Task').split('\n');
+                        let tTitle = lines[0].trim() || 'Untitled Task';
+                        let tNotes = lines.slice(1).join('\n').trim();
+
                         const resourceBody = {
-                            title: sn.text || 'Untitled Task',
+                            title: tTitle,
+                            notes: tNotes,
                             status: gStatus
                         };
                         
-                        if (formattedDue) {
-                            resourceBody.due = formattedDue;
+                        if (sn.dueDate) {
+                            const [y, m, d] = sn.dueDate.split('-');
+                            const dueDt = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+                            resourceBody.due = dueDt.toISOString();
                         } else if (remoteObj) {
-                            resourceBody.due = null; // Clear existing due date in Google Tasks if removed locally
+                            resourceBody.due = null; 
                         }
             
                         if (remoteObj) { 
@@ -2832,7 +2833,9 @@
                     } else if (!sn.dirty && !sn.deleted) { 
                         const remoteObj = remoteTaskMap[sn.id]; 
                         if (remoteObj) { 
-                            sn.text = remoteObj.task.title || ''; 
+                            let fullText = remoteObj.task.title || '';
+                            if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
+                            sn.text = fullText; 
                             sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
                             sn.quadrant = remoteObj.quadKey; 
                             sn.dueDate = remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null; 
@@ -2840,7 +2843,21 @@
                         } 
                     }
                 }
-                Object.values(remoteTaskMap).forEach(remoteObj => { syncSnapshot.push({ id: remoteObj.task.id, text: remoteObj.task.title || '', quadrant: remoteObj.quadKey, status: remoteObj.task.status === 'completed' ? 'closed' : 'active', dueDate: remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null, timeBlocks: [], eventId: null, dirty: false, deleted: false }); });
+                Object.values(remoteTaskMap).forEach(remoteObj => { 
+                    let fullText = remoteObj.task.title || '';
+                    if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
+                    syncSnapshot.push({ 
+                        id: remoteObj.task.id, 
+                        text: fullText, 
+                        quadrant: remoteObj.quadKey, 
+                        status: remoteObj.task.status === 'completed' ? 'closed' : 'active', 
+                        dueDate: remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null, 
+                        eventId: null, 
+                        dirty: false, 
+                        deleted: false 
+                    }); 
+                });
+                
                 let newNotesArray = []; let syncedIds = new Set();
                 syncSnapshot.forEach(sn => { if (sn.deleted && !sn.dirty) return; const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); if (liveNote) { sn.eventId = liveNote.eventId || null; if (liveNote.dirty) { if (sn.tempId) liveNote.id = sn.id; newNotesArray.push(liveNote); } else { newNotesArray.push(sn); } syncedIds.add(liveNote.id); if (sn.tempId) syncedIds.add(sn.tempId); } else { newNotesArray.push(sn); } });
                 notes = newNotesArray; 
