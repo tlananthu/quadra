@@ -468,7 +468,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.36</span></h1>
+                <h1>Quadra <span class="version-badge">v2.37</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -2733,6 +2733,126 @@
             });
 
             return parsedEvents;
+        }
+
+        async function importCalendarEvents() {
+            const dateStr = document.getElementById('trackerDate').value;
+            const ignoreKeywords = (appConfig.ignoreKeywords || 'out of office, ooo, away, vacation, holiday')
+                .toLowerCase()
+                .split(',')
+                .map(k => k.trim())
+                .filter(k => k.length > 0);
+
+            let importedCount = 0;
+            let ignoredCount = 0;
+
+            try {
+                document.getElementById('sync-banner').style.display = 'block';
+
+                if (appConfig.calSource === 'outlook' && appConfig.icsUrl) {
+                    let fetchUrl = appConfig.icsUrl;
+                    
+                    const res = await fetch(fetchUrl);
+                    if (!res.ok) throw new Error("Failed to fetch ICS feed via Apps Script bridge");
+                    
+                    const icsText = await res.text();
+                    const icsEvents = parseICS(icsText, dateStr, ignoreKeywords);
+
+                    icsEvents.forEach(ev => {
+                        if (notes.find(n => n.eventId === ev.id)) return;
+                        notes.push({
+                            id: Date.now().toString() + Math.random(),
+                            eventId: ev.id,
+                            text: `${ev.summary} #meeting`,
+                            quadrant: 'q2',
+                            status: 'active',
+                            dirty: false,
+                            deleted: false,
+                            dueDate: dateStr,
+                            dueTime: ev.startHour,
+                            dueDuration: ev.duration
+                        });
+                        importedCount++;
+                    });
+
+                } else {
+                    const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+                    if (!savedToken || !savedToken.token || savedToken.expires_at < Date.now()) {
+                        document.getElementById('sync-banner').style.display = 'none';
+                        return showToast("Please sign in to Google first.");
+                    }
+                    if (!appConfig.calendarId) {
+                        document.getElementById('sync-banner').style.display = 'none';
+                        return showToast("Please select a Google calendar in Settings first.");
+                    }
+                    
+                    const [y, m, day] = dateStr.split('-');
+                    const timeMin = new Date(y, m-1, day, 0, 0, 0).toISOString();
+                    const timeMax = new Date(y, m-1, day, 23, 59, 59).toISOString();
+
+                    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(appConfig.calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
+                        headers: { 'Authorization': `Bearer ${savedToken.token}` }
+                    });
+                    const data = await res.json();
+                    if(data.error) throw new Error(data.error.message);
+
+                    const events = data.items || [];
+                    events.forEach(event => {
+                        if (!event.start.dateTime) return; // Skip all-day events
+
+                        const title = (event.summary || '').toLowerCase();
+                        const shouldIgnore = ignoreKeywords.some(keyword => title.includes(keyword));
+
+                        if (shouldIgnore) {
+                            ignoredCount++;
+                            return;
+                        }
+                        
+                        const start = new Date(event.start.dateTime);
+                        const end = new Date(event.end.dateTime);
+                        
+                        const rawStartHour = start.getHours() + (start.getMinutes() / 60);
+                        let rawEndHour = end.getHours() + (end.getMinutes() / 60);
+                        if (rawEndHour <= rawStartHour) rawEndHour += 24;
+                        const rawDuration = rawEndHour - rawStartHour;
+
+                        const startHour = roundToQuarterHour(rawStartHour);
+                        const duration = Math.max(0.25, roundToQuarterHour(rawDuration));
+                        
+                        if (notes.find(n => n.eventId === event.id)) return; 
+                        
+                        const newNote = {
+                            id: Date.now().toString() + Math.random(),
+                            eventId: event.id, 
+                            text: `${event.summary || 'Meeting'} #meeting`,
+                            quadrant: 'q2', 
+                            status: 'active',
+                            dirty: false, 
+                            deleted: false,
+                            dueDate: dateStr,
+                            dueTime: startHour,
+                            dueDuration: duration
+                        };
+                        
+                        notes.push(newNote);
+                        importedCount++;
+                    });
+                }
+                
+                document.getElementById('sync-banner').style.display = 'none';
+                if (importedCount > 0 || ignoredCount > 0) {
+                    saveNotes();
+                    renderTrackerTimeline(); 
+                    showToast(`${importedCount} imported, ${ignoredCount} ignored.`);
+                } else {
+                    showToast("No new meetings found for this date.");
+                }
+                
+            } catch(e) {
+                console.error("Calendar Sync Error:", e);
+                document.getElementById('sync-banner').style.display = 'none';
+                showToast("Failed to fetch calendar events. Check your network or Apps Script Web App URL.");
+            }
         }
 
         async function performBackgroundSync() {
