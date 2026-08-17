@@ -468,7 +468,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.35</span></h1>
+                <h1>Quadra <span class="version-badge">v2.36</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -681,6 +681,7 @@
                     <label>Home Timezone</label>
                     <select id="configPrimaryTz" style="width: auto;">
                         <option value="local">Local Browser Time</option>
+                        <!-- Negative Offsets (West of UTC) -->
                         <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
                         <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
                         <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
@@ -694,7 +695,11 @@
                         <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
                         <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
                         <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
+
+                        <!-- Zero Offset -->
                         <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
+
+                        <!-- Positive Offsets (East of UTC) -->
                         <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
                         <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
                         <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
@@ -726,6 +731,7 @@
                     <select id="configSecondaryTz" style="width: auto;">
                         <option value="none">None</option>
                         <option value="local">Local Browser Time</option>
+                        <!-- Negative Offsets (West of UTC) -->
                         <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
                         <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
                         <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
@@ -739,7 +745,11 @@
                         <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
                         <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
                         <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
+
+                        <!-- Zero Offset -->
                         <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
+
+                        <!-- Positive Offsets (East of UTC) -->
                         <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
                         <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
                         <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
@@ -1074,6 +1084,7 @@
         let currentLayout = localStorage.getItem('quadra_layout') || appConfig.defaultView;
         let currentTrackerMode = 'day'; 
         
+        // Safety check to ensure we don't load into a disabled layout
         if (!appConfig.viewsEnabled[currentLayout]) {
             const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
             currentLayout = firstEnabled || 'grid';
@@ -1761,7 +1772,7 @@
             const note = notes.find(n => n.id === noteId);
             if (!note) return;
             
-            isDraggingBlock = true;
+            //isDraggingBlock = true;
 
             dragState = {
                 noteId, isResize,
@@ -1783,7 +1794,14 @@
 
         function onBlockDrag(e) {
             if (!dragState) return;
-            dragState.hasMoved = true;
+            
+            if (!dragState.hasMoved && Math.abs(e.clientY - dragState.startY) > 3) {
+                dragState.hasMoved = true;
+                isDraggingBlock = true;
+            }
+
+            if (!dragState.hasMoved) return;
+
             const hourPx = 60 * timelineZoom;
             const dy = e.clientY - dragState.startY;
             const dHours = roundToQuarterHour(dy / hourPx); 
@@ -1819,7 +1837,9 @@
                 document.removeEventListener('mousemove', onBlockDrag);
                 document.removeEventListener('mouseup', stopBlockDrag);
                 
-                if (dragState.hasMoved) {
+                let didMove = dragState.hasMoved;
+
+                if (didMove) {
                     const note = notes.find(n => n.id === dragState.noteId);
                     if (note) {
                         note.dirty = true; 
@@ -1833,9 +1853,13 @@
                 }
                 
                 dragState = null;
-                renderTrackerTimeline(); 
                 
-                setTimeout(() => { isDraggingBlock = false; }, 50);
+                if (didMove) {
+                    renderTrackerTimeline(); 
+                    setTimeout(() => { isDraggingBlock = false; }, 50);
+                } else {
+                    isDraggingBlock = false;
+                }
             }
         }
 
@@ -2861,8 +2885,8 @@
                 let newNotesArray = []; let syncedIds = new Set();
                 syncSnapshot.forEach(sn => { if (sn.deleted && !sn.dirty) return; const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); if (liveNote) { sn.eventId = liveNote.eventId || null; if (liveNote.dirty) { if (sn.tempId) liveNote.id = sn.id; newNotesArray.push(liveNote); } else { newNotesArray.push(sn); } syncedIds.add(liveNote.id); if (sn.tempId) syncedIds.add(sn.tempId); } else { newNotesArray.push(sn); } });
                 notes = newNotesArray; 
-                saveNotes(); 
-                handleSearch(); 
+                saveNotes();
+                handleSearch();
 
                 document.getElementById('sync-banner').style.display = 'none';
                 showToast("Successfully synced with Google Tasks!");
@@ -2956,6 +2980,26 @@
             }
         });
         
+        function checkConfigState() {
+            const authorizeButton = document.getElementById('authorize_button');
+            const signoutButton = document.getElementById('signout_button');
+
+            authorizeButton.style.display = 'none';
+            signoutButton.style.display = 'none';
+
+            const savedTokenData = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+            if (savedTokenData && savedTokenData.expires_at > Date.now()) {
+                authorizeButton.style.display = 'none';
+                signoutButton.style.display = 'inline-block';
+                isGoogleSynced = true;
+                if (typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: savedTokenData.token });
+                loadCalendars(); 
+            } else {
+                authorizeButton.style.display = 'inline-block';
+                signoutButton.style.display = 'none';
+            }
+        }
+
         function handleAuthClick() { 
             if (!appConfig.clientId) return openSettingsPage(); 
             if (!tokenClient && typeof google !== 'undefined' && google.accounts) { 
