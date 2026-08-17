@@ -1460,28 +1460,6 @@
             let totalTimeRendered = 0;
             let weeklyTotalRendered = 0;
 
-            /*notes.forEach(note => {
-                if (note.deleted) return;
-                const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-                if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
-                
-                if (note.dueDate) {
-                    let duration = roundToQuarterHour(note.dueDuration || 1.0);
-                    let blockStart = roundToQuarterHour(note.dueTime || 9.0);
-                    let blockEnd = blockStart + duration;
-
-                    if (weekDateKeys.has(note.dueDate)) {
-                        weeklyTotalRendered += duration;
-                    }
-
-                    if (note.dueDate === baseDateStr) {
-                        totalTimeRendered += duration;
-                    } else if (note.dueDate === addDays(baseDateStr, -1) && blockStart < 24 && blockEnd > 24) {
-                        totalTimeRendered += roundToQuarterHour(blockEnd - 24);
-                    }
-                }
-            });*/
-
             datesToRender.forEach(dtObj => {
                 const dateStr = dtObj.date;
                 const col = document.createElement('div');
@@ -1771,8 +1749,6 @@
             e.stopPropagation();
             const note = notes.find(n => n.id === noteId);
             if (!note) return;
-            
-            //isDraggingBlock = true;
 
             dragState = {
                 noteId, isResize,
@@ -2767,23 +2743,14 @@
 
                 if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks || !gapi.client.tasks.tasklists || !gapi.client.tasks.tasks) {
                     document.getElementById('sync-banner').style.display = 'none';
-                    return showToast("Google Tasks is still loading. Please try again in a moment.");
+                    return showToast("Google APIs are still loading. Please try again in a moment.");
                 }
 
                 if(typeof gapi !== 'undefined' && gapi.client && typeof gapi.client.setToken === 'function' && !gapi.client.getToken()) {
                     gapi.client.setToken({ access_token: savedToken.token });
                 }
                 
-                // Helper function to sanitize task titles for Google Tasks API
-                const sanitizeTitle = (text) => {
-                    if (!text) return '';
-                    // Remove newlines, tabs, and other control characters
-                    return text
-                        .replace(/[\n\r\t]/g, ' ') // Replace newlines/tabs with space
-                        .replace(/\s+/g, ' ')      // Collapse multiple spaces
-                        .trim();                    // Trim whitespace
-                };
-                
+                // 1. TASK SYNC LOGIC
                 const response = await gapi.client.tasks.tasklists.list();
                 const remoteLists = response.result.items || [];
                 const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
@@ -2794,7 +2761,7 @@
                     if (existingList) { 
                         gapiListIds[quadKey] = existingList.id; 
                     } else { 
-                        const newListReq = await gapi.client.tasks.tasklists.insert({ resource: { title: GAPI_LIST_NAMES[quadKey] } }); 
+                        const newListReq = await gapi.client.tasks.tasklists.insert({ title: GAPI_LIST_NAMES[quadKey] }); 
                         gapiListIds[quadKey] = newListReq.result.id; 
                     } 
                 }
@@ -2804,124 +2771,95 @@
                     const listId = gapiListIds[quadKey]; 
                     const tasksReq = await gapi.client.tasks.tasks.list({ tasklist: listId, showHidden: true, maxResults: 100 }); 
                     const rTasks = tasksReq.result.items || []; 
-                    rTasks.forEach(t => { 
-                        remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; 
-                    }); 
+                    rTasks.forEach(t => { remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; }); 
                 }
                 
                 const syncSnapshot = JSON.parse(JSON.stringify(notes));
-                
                 for (let sn of syncSnapshot) {
-                    if (sn.eventId) continue; // Skip calendar events
-                    
-                    // Handle deleted tasks
+                    if (sn.eventId) continue; 
                     if (sn.deleted && sn.dirty) { 
                         if (remoteTaskMap[sn.id]) { 
-                            try { 
-                                await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); 
-                            } catch(e){
-                                console.error("Error deleting task:", e);
-                            } 
+                            try { await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); } catch(e){ console.error("Error deleting remote task", e); } 
                         } 
                         sn.dirty = false; 
                         continue; 
                     }
-                    
-                    // Handle modified tasks
                     if (sn.dirty && !sn.deleted) {
                         const targetListId = gapiListIds[sn.quadrant]; 
                         const remoteObj = remoteTaskMap[sn.id]; 
                         const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; 
                         
-                        // Build resource body with sanitized title
-                        const resource = { 
-                            title: sanitizeTitle(sn.text),  // SANITIZE TITLE HERE
+                        let lines = (sn.text || 'Untitled Task').split('\n');
+                        let tTitle = lines[0].trim() || 'Untitled Task';
+                        let tNotes = lines.slice(1).join('\n').trim();
+
+                        const resourceBody = { 
+                            title: tTitle, 
+                            notes: tNotes,
                             status: gStatus 
-                        };
+                        }; 
                         
-                        // Only add due date if it exists
                         if (sn.dueDate) {
-                            resource.due = sn.dueDate;
+                            resourceBody.due = sn.dueDate + "T00:00:00.000Z";
+                        } else if (remoteObj) {
+                            resourceBody.due = null;
                         }
-                        
+
                         if (remoteObj) { 
-                            // Task exists remotely
                             if (remoteObj.listId !== targetListId) { 
-                                // Move to different list: delete from old, insert to new
                                 try { 
-                                    await gapi.client.tasks.tasks.delete({ 
-                                        tasklist: remoteObj.listId, 
-                                        task: sn.id 
-                                    }); 
-                                    const res = await gapi.client.tasks.tasks.insert({ 
-                                        tasklist: targetListId,
-                                        resource: resource
-                                    }); 
+                                    await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); 
+                                    const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
                                     sn.tempId = sn.id; 
-                                    sn.id = res.result.id;
-                                } catch(e){
-                                    console.error("Error moving task:", e);
-                                } 
+                                    sn.id = res.result.id; 
+                                } catch(e){} 
                             } else { 
-                                // Update in same list
                                 try { 
-                                    await gapi.client.tasks.tasks.patch({ 
-                                        tasklist: remoteObj.listId,
-                                        task: sn.id,
-                                        resource: resource
-                                    }); 
-                                } catch(e){
-                                    console.error("Error patching task:", e);
-                                } 
+                                    await gapi.client.tasks.tasks.patch({ tasklist: targetListId, task: sn.id, resource: resourceBody }); 
+                                } catch(e){} 
                             } 
                             delete remoteTaskMap[sn.id]; 
-                            delete remoteTaskMap[sn.tempId]; 
+                            if(sn.tempId) delete remoteTaskMap[sn.tempId]; 
                         } else { 
-                            // New task, insert it
                             try { 
-                                const res = await gapi.client.tasks.tasks.insert({ 
-                                    tasklist: targetListId,
-                                    resource: resource
-                                }); 
+                                const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
                                 sn.tempId = sn.id; 
                                 sn.id = res.result.id; 
-                            } catch(e){
-                                console.error("Error inserting task:", e);
-                            } 
+                            } catch(e){} 
                         }
                         sn.dirty = false;
                     } else if (!sn.dirty && !sn.deleted) { 
-                        // Unmodified local task, pull from remote if it exists there
                         const remoteObj = remoteTaskMap[sn.id]; 
                         if (remoteObj) { 
-                            sn.text = remoteObj.task.title || ''; 
+                            let fullText = remoteObj.task.title || '';
+                            if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
+                            sn.text = fullText; 
                             sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
                             sn.quadrant = remoteObj.quadKey; 
-                            sn.dueDate = remoteObj.task.due || null; 
+                            sn.dueDate = remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null; 
                             delete remoteTaskMap[sn.id]; 
                         } 
                     }
                 }
                 
-                // Add remaining remote tasks that don't exist locally
                 Object.values(remoteTaskMap).forEach(remoteObj => { 
+                    let fullText = remoteObj.task.title || '';
+                    if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
                     syncSnapshot.push({ 
                         id: remoteObj.task.id, 
-                        text: remoteObj.task.title || '', 
+                        text: fullText, 
                         quadrant: remoteObj.quadKey, 
                         status: remoteObj.task.status === 'completed' ? 'closed' : 'active', 
-                        dueDate: remoteObj.task.due || null, 
+                        dueDate: remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null, 
                         eventId: null, 
                         dirty: false, 
                         deleted: false 
                     }); 
                 });
                 
-                // Merge changes back into main notes array
-                let newNotesArray = []; 
-                let syncedIds = new Set();
+                let newNotesArray = []; let syncedIds = new Set();
                 syncSnapshot.forEach(sn => { 
-                    if (sn.deleted && !sn.dirty) return; // Skip deleted items that weren't dirty
+                    if (sn.deleted && !sn.dirty) return; 
                     const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); 
                     if (liveNote) { 
                         sn.eventId = liveNote.eventId || null; 
@@ -2941,13 +2879,11 @@
                 notes = newNotesArray; 
                 saveNotes(); 
                 handleSearch(); 
-                
                 document.getElementById('sync-banner').style.display = 'none';
-                showToast("✓ Successfully synced with Google Tasks!");
-                
+                showToast("Successfully synced with Google Tasks!");
             } catch (e) {
                 document.getElementById('sync-banner').style.display = 'none';
-                console.error("Background sync error:", e);
+                console.error(e);
                 showToast("Tasks sync failed. Check your API configuration.");
             }
         }
@@ -3089,170 +3025,6 @@
             document.getElementById('authorize_button').style.display = 'inline-block'; 
             document.getElementById('signout_button').style.display = 'none'; 
             showToast("Signed out successfully.");
-        }
-
-        async function importCalendarEvents() {
-            const dateStr = document.getElementById('trackerDate').value;
-            const ignoreKeywords = (appConfig.ignoreKeywords || 'out of office, ooo, away, vacation, holiday')
-                .toLowerCase()
-                .split(',')
-                .map(k => k.trim())
-                .filter(k => k.length > 0);
-
-            let importedCount = 0;
-            let ignoredCount = 0;
-
-            try {
-                document.getElementById('sync-banner').style.display = 'block';
-
-                if (appConfig.calSource === 'outlook' && appConfig.icsUrl) {
-                    let fetchUrl = appConfig.icsUrl;
-                    
-                    const res = await fetch(fetchUrl);
-                    if (!res.ok) throw new Error("Failed to fetch ICS feed via Apps Script bridge");
-                    
-                    const icsText = await res.text();
-                    const icsEvents = parseICS(icsText, dateStr, ignoreKeywords);
-
-                    icsEvents.forEach(ev => {
-                        if (notes.find(n => n.eventId === ev.id)) return;
-                        notes.push({
-                            id: Date.now().toString() + Math.random(),
-                            eventId: ev.id,
-                            text: `${ev.summary} #meeting`,
-                            quadrant: 'q2',
-                            status: 'active',
-                            dirty: false,
-                            deleted: false,
-                            dueDate: dateStr,
-                            dueTime: ev.startHour,
-                            dueDuration: ev.duration
-                        });
-                        importedCount++;
-                    });
-
-                } else {
-                    const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-                    if (!savedToken || !savedToken.token || savedToken.expires_at < Date.now()) {
-                        document.getElementById('sync-banner').style.display = 'none';
-                        return showToast("Please sign in to Google first.");
-                    }
-                    if (!appConfig.calendarId) {
-                        document.getElementById('sync-banner').style.display = 'none';
-                        return showToast("Please select a Google calendar in Settings first.");
-                    }
-                    
-                    const [y, m, day] = dateStr.split('-');
-                    const timeMin = new Date(y, m-1, day, 0, 0, 0).toISOString();
-                    const timeMax = new Date(y, m-1, day, 23, 59, 59).toISOString();
-
-                    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(appConfig.calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
-                        headers: { 'Authorization': `Bearer ${savedToken.token}` }
-                    });
-                    const data = await res.json();
-                    if(data.error) throw new Error(data.error.message);
-
-                    const events = data.items || [];
-                    events.forEach(event => {
-                        if (!event.start.dateTime) return; // Skip all-day events
-
-                        const title = (event.summary || '').toLowerCase();
-                        const shouldIgnore = ignoreKeywords.some(keyword => title.includes(keyword));
-
-                        if (shouldIgnore) {
-                            ignoredCount++;
-                            return;
-                        }
-                        
-                        const start = new Date(event.start.dateTime);
-                        const end = new Date(event.end.dateTime);
-                        
-                        const rawStartHour = start.getHours() + (start.getMinutes() / 60);
-                        let rawEndHour = end.getHours() + (end.getMinutes() / 60);
-                        if (rawEndHour <= rawStartHour) rawEndHour += 24;
-                        const rawDuration = rawEndHour - rawStartHour;
-
-                        const startHour = roundToQuarterHour(rawStartHour);
-                        const duration = Math.max(0.25, roundToQuarterHour(rawDuration));
-                        
-                        if (notes.find(n => n.eventId === event.id)) return; 
-                        
-                        const newNote = {
-                            id: Date.now().toString() + Math.random(),
-                            eventId: event.id, 
-                            text: `${event.summary || 'Meeting'} #meeting`,
-                            quadrant: 'q2', 
-                            status: 'active',
-                            dirty: false, 
-                            deleted: false,
-                            dueDate: dateStr,
-                            dueTime: startHour,
-                            dueDuration: duration
-                        };
-                        
-                        notes.push(newNote);
-                        importedCount++;
-                    });
-                }
-                
-                document.getElementById('sync-banner').style.display = 'none';
-                if (importedCount > 0 || ignoredCount > 0) {
-                    saveNotes();
-                    renderTrackerTimeline(); 
-                    showToast(`${importedCount} imported, ${ignoredCount} ignored.`);
-                } else {
-                    showToast("No new meetings found for this date.");
-                }
-                
-            } catch(e) {
-                console.error("Calendar Sync Error:", e);
-                document.getElementById('sync-banner').style.display = 'none';
-                showToast("Failed to fetch calendar events. Check your network or Apps Script Web App URL.");
-            }
-        }
-
-        async function performBackgroundSync() {
-            const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-            if (!savedToken || !savedToken.token) return showToast("Please sign in first to sync with Google Tasks.");
-            try {
-                document.getElementById('sync-banner').style.display = 'block';
-
-                if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks || !gapi.client.tasks.tasklists || !gapi.client.tasks.tasks) {
-                    document.getElementById('sync-banner').style.display = 'none';
-                    return showToast("Google Tasks is still loading. Please try again in a moment.");
-                }
-
-                if(typeof gapi !== 'undefined' && gapi.client && typeof gapi.client.setToken === 'function' && !gapi.client.getToken()) {
-                    gapi.client.setToken({ access_token: savedToken.token });
-                }
-                const response = await gapi.client.tasks.tasklists.list();
-                const remoteLists = response.result.items || [];
-                const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
-                let gapiListIds = { inbox: null, q1: null, q2: null, q3: null, q4: null, closed: null };
-                for (const quadKey of Object.keys(GAPI_LIST_NAMES)) { const existingList = remoteLists.find(l => l.title === GAPI_LIST_NAMES[quadKey]); if (existingList) { gapiListIds[quadKey] = existingList.id; } else { const newListReq = await gapi.client.tasks.tasklists.insert({ title: GAPI_LIST_NAMES[quadKey] }); gapiListIds[quadKey] = newListReq.result.id; } }
-                let remoteTaskMap = {};
-                for (const quadKey of Object.keys(gapiListIds)) { const listId = gapiListIds[quadKey]; const tasksReq = await gapi.client.tasks.tasks.list({ tasklist: listId, showHidden: true, maxResults: 100 }); const rTasks = tasksReq.result.items || []; rTasks.forEach(t => { remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; }); }
-                const syncSnapshot = JSON.parse(JSON.stringify(notes));
-                for (let sn of syncSnapshot) {
-                    if (sn.eventId) continue; 
-                    if (sn.deleted && sn.dirty) { if (remoteTaskMap[sn.id]) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); } catch(e){} } sn.dirty = false; continue; }
-                    if (sn.dirty && !sn.deleted) {
-                        const targetListId = gapiListIds[sn.quadrant]; const remoteObj = remoteTaskMap[sn.id]; const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; const payload = { tasklist: targetListId, title: sn.text, status: gStatus }; if (sn.dueDate) payload.due = sn.dueDate; else payload.due = null;
-                        if (remoteObj) { if (remoteObj.listId !== targetListId) { try { await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; res.result.id; } catch(e){} } else { try { payload.task = sn.id; await gapi.client.tasks.tasks.patch(payload); } catch(e){} } delete remoteTaskMap[sn.id]; delete remoteTaskMap[sn.tempId]; } else { try { const res = await gapi.client.tasks.tasks.insert(payload); sn.tempId = sn.id; sn.id = res.result.id; } catch(e){} }
-                        sn.dirty = false;
-                    } else if (!sn.dirty && !sn.deleted) { const remoteObj = remoteTaskMap[sn.id]; if (remoteObj) { sn.text = remoteObj.task.title || ''; sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; sn.quadrant = remoteObj.quadKey; sn.dueDate = remoteObj.task.due || null; delete remoteTaskMap[sn.id]; } }
-                }
-                Object.values(remoteTaskMap).forEach(remoteObj => { syncSnapshot.push({ id: remoteObj.task.id, text: remoteObj.task.title || '', quadrant: remoteObj.quadKey, status: remoteObj.task.status === 'completed' ? 'closed' : 'active', dueDate: remoteObj.task.due || null, eventId: null, dirty: false, deleted: false }); });
-                let newNotesArray = []; let syncedIds = new Set();
-                syncSnapshot.forEach(sn => { if (sn.deleted && !sn.dirty) return; const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); if (liveNote) { sn.eventId = liveNote.eventId || null; if (liveNote.dirty) { if (sn.tempId) liveNote.id = sn.id; newNotesArray.push(liveNote); } else { newNotesArray.push(sn); } syncedIds.add(liveNote.id); if (sn.tempId) syncedIds.add(sn.tempId); } else { newNotesArray.push(sn); } });
-                notes = newNotesArray; saveNotes(); handleSearch(); 
-                document.getElementById('sync-banner').style.display = 'none';
-                showToast("Successfully synced with Google Tasks!");
-            } catch (e) {
-                document.getElementById('sync-banner').style.display = 'none';
-                console.error(e);
-                showToast("Tasks sync failed. Check your API configuration.");
-            }
         }
 
         // --- Execute Initial Render logic with Search Preservation ---
