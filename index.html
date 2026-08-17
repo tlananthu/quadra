@@ -2774,6 +2774,16 @@
                     gapi.client.setToken({ access_token: savedToken.token });
                 }
                 
+                // Helper function to sanitize task titles for Google Tasks API
+                const sanitizeTitle = (text) => {
+                    if (!text) return '';
+                    // Remove newlines, tabs, and other control characters
+                    return text
+                        .replace(/[\n\r\t]/g, ' ') // Replace newlines/tabs with space
+                        .replace(/\s+/g, ' ')      // Collapse multiple spaces
+                        .trim();                    // Trim whitespace
+                };
+                
                 const response = await gapi.client.tasks.tasklists.list();
                 const remoteLists = response.result.items || [];
                 const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
@@ -2823,9 +2833,9 @@
                         const remoteObj = remoteTaskMap[sn.id]; 
                         const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; 
                         
-                        // Build resource body with only valid fields
+                        // Build resource body with sanitized title
                         const resource = { 
-                            title: sn.text, 
+                            title: sanitizeTitle(sn.text),  // SANITIZE TITLE HERE
                             status: gStatus 
                         };
                         
