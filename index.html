@@ -17,7 +17,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v3.06</span></h1>
+                <h1>Quadra <span class="version-badge">v3.07</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -131,14 +131,10 @@
                             <span style="font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">DUE ONLY</span>
                         </div>
                     </div>
-                    
-                    <!-- NEW: Local Palette Search Bar -->
                     <div style="padding: 10px 16px; border-bottom: 1px solid var(--border-color); background: #F8FAFC; position: relative; flex-shrink: 0;">
-                        <input type="text" id="paletteSearchInput" placeholder="Filter palette tasks..." style="width: 100%; padding: 8px 30px 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; background: #ffffff; color: var(--text-main);" oninput="renderTrackerTimeline()">
-                        <button id="clearPaletteSearchBtn" style="position: absolute; right: 24px; top: 50%; transform: translateY(-50%); display: none; background: none; border: none; font-size: 18px; line-height: 1; cursor: pointer; color: var(--text-muted); padding: 0;" onclick="document.getElementById('paletteSearchInput').value=''; renderTrackerTimeline();" title="Clear palette search">×</button>
+                        <input type="text" id="paletteSearchInput" placeholder="Filter palette tasks..." style="width: 100%; padding: 8px 30px 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; background: #ffffff; color: var(--text-main);" oninput="renderTrackerPalette()">
+                        <button id="clearPaletteSearchBtn" style="position: absolute; right: 24px; top: 50%; transform: translateY(-50%); display: none; background: none; border: none; font-size: 18px; line-height: 1; cursor: pointer; color: var(--text-muted); padding: 0;" onclick="document.getElementById('paletteSearchInput').value=''; renderTrackerPalette();" title="Clear palette search">×</button>
                     </div>
-                    <!-- END NEW -->
-
                     <div class="palette-list" id="tracker-palette-list">
                     </div>
                 </div>

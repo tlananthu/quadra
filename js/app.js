@@ -371,31 +371,26 @@ function goToToday() {
     renderTrackerTimeline();
 }
 
-function renderTrackerTimeline() {
-    // 1. Get Global Search Query
+function renderTrackerPalette() {
     const globalSearchInput = document.getElementById('searchInput');
-    const globalQuery = globalSearchInput ? globalSearchInput.value.toLowerCase() : '';
+    const globalQuery = globalSearchInput ? globalSearchInput.value : '';
     
-    // 2. Get Palette-Specific Search Query
     const paletteSearchInput = document.getElementById('paletteSearchInput');
     const paletteSearchText = paletteSearchInput ? paletteSearchInput.value : '';
     
-    // Manage local clear button visibility
     const clearPaletteBtn = document.getElementById('clearPaletteSearchBtn');
     if (clearPaletteBtn) {
         clearPaletteBtn.style.display = paletteSearchText.trim().length > 0 ? 'block' : 'none';
     }
     
-    // Decouple Logic: If local palette search is empty, fallback to global query
+    // Decouple Logic: Fallback to global query if local is empty
     const effectivePaletteQuery = paletteSearchText.trim().length > 0 ? paletteSearchText : globalQuery;
 
-    const canvas = document.getElementById('timelineCanvas');
     const paletteList = document.getElementById('tracker-palette-list');
-    const hourPx = 60 * timelineZoom;
+    if (!paletteList) return;
     
     paletteList.innerHTML = '';
     
-    // 3. CRITICAL FIX: Ensure 'effectivePaletteQuery' is passed here!
     let paletteNotes = notes.filter(n => !n.deleted && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId);
     
     // Apply Due Only Filter
@@ -405,7 +400,6 @@ function renderTrackerTimeline() {
         paletteNotes.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     }
     
-    // 4. Render Palette UI identical to Quadrants (No complete/sync buttons)
     paletteNotes.forEach(note => {
         const el = document.createElement('div');
         el.className = 'note' + (note.status === 'closed' ? ' closed-note' : '');
@@ -439,7 +433,18 @@ function renderTrackerTimeline() {
         el.appendChild(contentWrapper);
         paletteList.appendChild(el);
     });
+}
 
+function renderTrackerTimeline() {
+    const searchInput = document.getElementById('searchInput');
+    const globalQuery = searchInput ? searchInput.value.toLowerCase() : '';
+    
+    // 1. Render the palette independently
+    renderTrackerPalette();
+
+    const canvas = document.getElementById('timelineCanvas');
+    const hourPx = 60 * timelineZoom;
+    
     canvas.innerHTML = '';
     canvas.style.height = `${24 * hourPx}px`;
 
@@ -777,7 +782,7 @@ function toggleDueFilter() {
     const toggle = document.getElementById('dueFilterToggle');
     if (toggle) {
         localStorage.setItem('quadra_due_filter', toggle.checked);
-        renderTrackerTimeline();
+        renderTrackerPalette();
     }
 }
 
