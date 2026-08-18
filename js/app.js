@@ -1392,36 +1392,63 @@ function saveSettings() {
 }
 
 // --- Updated Quick Tags Function ---
+// --- Updated Quick Tags Function (With Counts & Sorting) ---
 function updateQuickTags() {
     const tagsBar = document.getElementById('quick-tags-bar');
     if (!tagsBar) return;
     
-    let allTags = new Set();
+    // Map to track tag occurrences
+    let tagCounts = new Map();
     
-    // Scan all active notes for hashtags and mentions
+    // Failsafe Regex: Identifies standard Hex Colors (e.g., #3C4043 or #FFF) so we can explicitly ignore them
+    const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+    
     notes.forEach(note => {
         if (note.deleted || note.eventId) return;
         
-        // FIX: Convert the raw HTML to plain text first so CSS hex codes are stripped out
-        const plainText = cleanHTMLToPlainText(note.text || '');
+        // 1. Safely strip ALL HTML attributes by using the browser's native DOM parser
+        let tempDiv = document.createElement('div');
+        tempDiv.innerHTML = note.text || '';
+        let safePlainText = tempDiv.textContent || tempDiv.innerText || '';
         
-        // Scan the cleaned text for tags
-        const matches = plainText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
+        // 2. Extract tags from the clean text
+        const matches = safePlainText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
         if (matches) {
-            matches.forEach(m => allTags.add(m));
+            // Deduplicate tags within the SAME note (so a note with five "#jira" tags only counts as 1 for that note)
+            let uniqueMatches = [...new Set(matches)];
+            
+            uniqueMatches.forEach(tag => {
+                // 3. Explicitly filter out any tags that perfectly match a Hex Color code format
+                if (hexColorRegex.test(tag)) return;
+                
+                // Increment the count for this tag
+                tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+            });
         }
     });
     
     tagsBar.innerHTML = '';
     
-    // Populate the bar with clickable tags
-    Array.from(allTags).sort().forEach(tag => {
+    // 4. Convert to Array and Sort: Descending by count, then alphabetically
+    let sortedTags = Array.from(tagCounts.entries()).sort((a, b) => {
+        if (b[1] !== a[1]) {
+            return b[1] - a[1]; // Highest count first
+        }
+        return a[0].localeCompare(b[0]); // Alphabetical tie-breaker
+    });
+    
+    // 5. Populate the bar with clickable tags and their counts
+    sortedTags.forEach(([tag, count]) => {
         let btn = document.createElement('button');
         btn.className = 'filter-tag' + (tag.startsWith('@') ? ' person-filter' : '');
-        btn.innerText = tag;
+        
+        // Display the tag with its occurrence count in brackets
+        btn.innerText = `${tag} (${count})`;
+        
         btn.onclick = () => {
             const searchInput = document.getElementById('searchInput');
             if(searchInput) {
+                // Only pass the tag name (without the count) into the search bar
                 searchInput.value = tag;
                 handleSearch();
             }
