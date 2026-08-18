@@ -511,7 +511,6 @@
             max-width: 85%; 
         }
         
-        /* Update to show full wrapping title instead of truncation */
         .note-text { 
             white-space: pre-wrap; 
             word-break: break-word; 
@@ -1110,7 +1109,6 @@
         .rich-task-input h2 { font-size: 16px; }
         .rich-task-input ul, .rich-task-input ol { padding-left: 20px; margin: 6px 0; }
         .rich-task-input li { margin: 2px 0; }
-        
         .rich-task-input[placeholder]:empty:before { 
             content: attr(placeholder); color: var(--text-muted); 
             cursor: text; pointer-events: none; display: block; 
@@ -1162,6 +1160,57 @@
             .modal-content { padding: 20px; }
         }
 
+        /* Clickable Spans Custom Todo Items Styling */
+        .inline-todo-wrapper {
+            display: flex;
+            align-items: flex-start;
+            margin: 4px 0;
+            gap: 4px;
+        }
+
+        .editor-todo-span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            border: 2px solid var(--brand-primary);
+            border-radius: 4px;
+            cursor: pointer;
+            vertical-align: middle;
+            user-select: none;
+            flex-shrink: 0;
+            margin-top: 3px;
+            background: #ffffff;
+            font-size: 0px;
+            color: transparent;
+            transition: all 0.15s ease;
+        }
+
+        .editor-todo-span.todo-checked {
+            background-color: #A855F7 !important;
+            border-color: #A855F7 !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            color: #ffffff !important;
+        }
+
+        .editor-todo-span.todo-checked::after {
+            content: '✓';
+            line-height: 1;
+        }
+
+        .todo-text-line {
+            flex-grow: 1;
+        }
+
+        .todo-text-line.text-crossed {
+            text-decoration: line-through;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
     </style>
 </head>
 <body>
@@ -1175,7 +1224,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.43</span></h1>
+                <h1>Quadra <span class="version-badge">v2.44</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -1711,26 +1760,35 @@
         });
 
         // --- Edge Splitter Pull Resizing Engine ---
-        function initQuadResize(event, quadId) {
-            event.preventDefault();
-            event.stopPropagation();
+        function initQuadResize(e, quadId) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const quadEl = document.getElementById(quadId);
             if (!quadEl) return;
-            const startX = event.clientX;
+            
+            const startX = e.clientX;
             const startWidth = quadEl.getBoundingClientRect().width;
+            const handleEl = e.currentTarget;
+            handleEl.classList.add('resizing');
             document.body.style.cursor = 'col-resize';
+            
             function onMouseMove(e) {
+                e.preventDefault();
                 const deltaX = e.clientX - startX;
                 const newWidth = Math.max(260, Math.min(1000, Math.round(startWidth + deltaX)));
                 quadEl.style.width = newWidth + 'px';
                 appConfig.quadrantWidths[quadId] = newWidth + 'px';
             }
-            function onMouseUp() {
+            
+            function onMouseUp(e) {
+                handleEl.classList.remove('resizing');
                 document.body.style.cursor = '';
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);
                 localStorage.setItem('quadra_config', JSON.stringify(appConfig));
             }
+            
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
         }
@@ -1744,12 +1802,36 @@
             return (new Date(tzStr) - new Date(utcStr)) / 3600000;
         }
 
+        // --- Custom Checkbox Interceptor Setup ---
+        function handleInlineTodoClick(e) {
+            if (e.target.classList.contains('editor-todo-span')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const span = e.target;
+                span.classList.toggle('todo-checked');
+                
+                // Find containing block or text line sibling node
+                const textLine = span.nextElementSibling;
+                if (textLine && textLine.classList.contains('todo-text-line')) {
+                    textLine.classList.toggle('text-crossed', span.classList.contains('todo-checked'));
+                }
+                triggerAutoSaveInterval();
+            }
+        }
+
+        // Bind global proxy delegation for click events targeting todo spans within standard popup editors
+        document.getElementById('taskTitleInput').addEventListener('click', handleInlineTodoClick);
+        document.getElementById('taskInfoInput').addEventListener('click', handleInlineTodoClick);
+
         function getTzTime(date, tzString) {
             if (!tzString || tzString === 'local') return { h: date.getHours(), m: date.getMinutes(), s: date.getSeconds() };
             const parts = new Intl.DateTimeFormat('en-US', {
                 timeZone: tzString,
-                hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false
+                hour: 'numeric', minute: 'numeric', second: 'numeric',
+                hour12: false
             }).formatToParts(date);
+            
             let h = 0, m = 0, s = 0;
             for (let p of parts) {
                 if (p.type === 'hour') h = parseInt(p.value, 10);
@@ -1764,24 +1846,119 @@
             let primaryOpts = { hour: '2-digit', minute:'2-digit' };
             if (appConfig.primaryTz !== 'local') primaryOpts.timeZone = appConfig.primaryTz;
             let text = date.toLocaleTimeString([], primaryOpts);
+
             if (appConfig.secondaryTz && appConfig.secondaryTz !== 'none') {
-                let secOpts = { hour: '2-digit', minute:'2-digit', timeZoneName: 'short', timeZone: appConfig.secondaryTz };
+                let secOpts = { hour: '2-digit', minute:'2-digit', timeZoneName: 'short' };
+                secOpts.timeZone = appConfig.secondaryTz;
                 let secText = date.toLocaleTimeString([], secOpts);
                 text += ` (${secText})`;
             }
             return text;
         }
 
-        // --- Plain Text Cleaner ---
+        // --- Custom Graphical Checklist Node Conversion Engine ---
         function cleanHTMLToPlainText(htmlString) {
             if (!htmlString) return '';
             let tempDiv = document.createElement("div");
-            let processed = htmlString.replace(/<br\s*[\/]?>/gi, '\n')
-                                      .replace(/<\/p>|<\/div>|<\/li>|<\/h[1-6]>/gi, '\n')
-                                      .replace(/<[^>]+>/g, '');
+            
+            // Clone string frame to transform interactive checklist nodes directly to clean plaintext representations
+            let sandbox = htmlString;
+            
+            // Match custom inline task items inside the content stream structure
+            sandbox = sandbox.replace(/<span[^>]*class="editor-todo-span\s+todo-checked"[^>]*>.*?<\/span>/gi, '[x] ');
+            sandbox = sandbox.replace(/<span[^>]*class="editor-todo-span"[^>]*>.*?<\/span>/gi, '[ ] ');
+            
+            let processed = sandbox.replace(/<br\s*[\/]?>/gi, '\n')
+                                    .replace(/<\/p>|<\/div>|<\/li>|<\/h[1-6]>/gi, '\n')
+                                    .replace(/<[^>]+>/g, '');
             tempDiv.innerHTML = processed;
             return (tempDiv.textContent || tempDiv.innerText || '').trim();
         }
+
+        // --- Dynamic OneNote Todo Lifecycle Keyboard Interceptor ---
+        function executeInlineTodoCycle(editorId) {
+            const editor = document.getElementById(editorId);
+            if (!editor) return;
+
+            let sel = window.getSelection();
+            if (!sel.rangeCount) return;
+
+            let range = sel.getRangeAt(0);
+            let node = range.startContainer;
+
+            // Track target parent element up to root editor block
+            let currentLineBlock = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
+            while (currentLineBlock && currentLineBlock.parentNode !== editor && currentLineBlock !== editor) {
+                currentLineBlock = currentLineBlock.parentNode;
+            }
+
+            if (!currentLineBlock || currentLineBlock === editor) {
+                // Wrap base text node if empty or dangling loose inside parent
+                document.execCommand('formatBlock', false, 'div');
+                sel = window.getSelection();
+                range = sel.getRangeAt(0);
+                currentLineBlock = range.startContainer.parentNode;
+            }
+
+            const existingTodo = currentLineBlock.querySelector('.editor-todo-span');
+
+            if (!existingTodo) {
+                // STATE 1: Insert Un-checked Todo block decoration layout wrapper natively
+                const wrapper = document.createElement('div');
+                wrapper.className = 'inline-todo-wrapper';
+                
+                const todoSpan = document.createElement('span');
+                todoSpan.className = 'editor-todo-span';
+                todoSpan.setAttribute('contenteditable', 'false');
+                todoSpan.innerHTML = '&nbsp;';
+
+                const textLine = document.createElement('span');
+                textLine.className = 'todo-text-line';
+                
+                // Migrate range contents into structured sub-spans safely
+                textLine.innerHTML = currentLineBlock.innerHTML || '<br>';
+                
+                wrapper.appendChild(todoSpan);
+                wrapper.appendChild(textLine);
+                
+                currentLineBlock.innerHTML = '';
+                currentLineBlock.appendChild(wrapper);
+                
+                // Secure focus text caret range frame directly onto text container node frame
+                let newRange = document.createRange();
+                newRange.selectNodeContents(textLine);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+            } 
+            else if (!existingTodo.classList.contains('todo-checked')) {
+                // STATE 2: Toggle Box Checklist Checked Natively
+                existingTodo.classList.add('todo-checked');
+                const textLine = currentLineBlock.querySelector('.todo-text-line');
+                if (textLine) textLine.classList.add('text-crossed');
+            } 
+            else {
+                // STATE 3: Destroy Todo wrapping layout parameters entirely to return to raw text structure
+                const textLine = currentLineBlock.querySelector('.todo-text-line');
+                if (textLine) {
+                    currentLineBlock.innerHTML = textLine.innerHTML;
+                } else {
+                    existingTodo.remove();
+                }
+            }
+            triggerAutoSaveInterval();
+        }
+
+        // Setup individual key trackers across editable field assets specifically targeting Ctrl + 1
+        ['taskTitleInput', 'taskInfoInput'].forEach(id => {
+            document.getElementById(id).addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === '1') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    executeInlineTodoCycle(id);
+                }
+            });
+        });
 
         // --- Layout Management ---
         let currentLayout = localStorage.getItem('quadra_layout') || appConfig.defaultView;
@@ -1928,6 +2105,7 @@
             if(clockIntervalId) { clearInterval(clockIntervalId); clockIntervalId = null; }
         }
 
+        // --- Drag/Drop Quadrants (Columns) Logic ---
         function dragStartQuad(e) {
             if (e.target.classList.contains('quadrant')) {
                 e.dataTransfer.setData('quadrant_id', e.target.id);
@@ -1935,14 +2113,12 @@
                 setTimeout(() => e.target.style.opacity = '0.5', 0);
             }
         }
-
         function dragEndQuad(e) {
             if (e.target.classList.contains('quadrant')) {
                 e.target.style.opacity = '1';
                 document.querySelectorAll('.quadrant').forEach(q => q.classList.remove('quad-drag-over', 'drag-over'));
             }
         }
-
         function allowDropQuad(e) {
             e.preventDefault();
             if(e.dataTransfer.types.includes('quadrant_id')) {
@@ -1951,11 +2127,9 @@
                 e.currentTarget.classList.add('drag-over');
             }
         }
-
         function dragLeaveQuad(e) {
             e.currentTarget.classList.remove('quad-drag-over', 'drag-over');
         }
-
         function dropQuad(e) {
             e.preventDefault();
             e.currentTarget.classList.remove('quad-drag-over', 'drag-over');
@@ -2090,6 +2264,7 @@
             const [y, m, d] = baseDateStr.split('-');
             const baseDate = new Date(y, m - 1, d);
             
+            // UI Update for Day of Week
             const daySpan = document.getElementById('trackerDayOfWeek');
             if (daySpan) {
                 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -2207,7 +2382,7 @@
                 let dayBlocks = [];
 
                 notes.forEach(note => {
-                    if (note.deleted) return; 
+                    if (note.deleted || note.status === 'closed') return; 
                     const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
                     if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
 
@@ -2215,7 +2390,11 @@
                         let blockStart = roundToQuarterHour(note.dueTime !== undefined ? note.dueTime : 9.0);
                         let duration = roundToQuarterHour(note.dueDuration !== undefined ? note.dueDuration : 1.0);
                         let blockEnd = blockStart + duration;
-                        if (blockEnd < blockStart) { blockEnd += 24; }
+                        
+                        if (blockEnd < blockStart) {
+                            blockEnd += 24;
+                        }
+                        
                         let actualDuration = roundToQuarterHour(blockEnd - blockStart);
 
                         // Totals calculations
@@ -2355,33 +2534,12 @@
                 colsContainer.appendChild(col);
             });
 
-            const dayTotal = roundToQuarterHour(totalTimeRendered);
-            const weekTotal = roundToQuarterHour(weeklyTotalRendered);
-
-            // Need to deduplicate because we iterate multiple days in week view
-            let actualWeekly = 0;
-            let countedIds = new Set();
-            notes.forEach(note => {
-                if (note.deleted || note.eventId) return;
-                if (note.dueDate && weekDateKeys.has(note.dueDate) && !countedIds.has(note.id)) {
-                    actualWeekly += roundToQuarterHour(note.dueDuration || 1.0);
-                    countedIds.add(note.id);
-                }
-            });
-
-            let actualDaily = 0;
-            notes.forEach(note => {
-                if (note.deleted || note.eventId) return;
-                if (note.dueDate && note.dueDate === baseDateStr) {
-                    actualDaily += roundToQuarterHour(note.dueDuration || 1.0);
-                }
-            });
-
-            const dailyTotalEl = document.getElementById('trackerDailyTotal');
-            if(dailyTotalEl) dailyTotalEl.innerText = `Total: ${actualDaily}h/${actualWeekly}h`;
-
+            let actWk = 0, counted = new Set();
+            notes.forEach(n => { if (!n.deleted && !n.eventId && n.dueDate && weekDateKeys.has(n.dueDate) && !counted.has(n.id)) { actWk += roundToQuarterHour(n.dueDuration || 1.0); counted.add(n.id); } });
+            let actDay = notes.reduce((sum, n) => (!n.deleted && !n.eventId && n.dueDate === baseDateStr) ? sum + roundToQuarterHour(n.dueDuration || 1.0) : sum, 0);
+            document.getElementById('trackerDailyTotal').innerText = `Total: ${actDay}h/${actWk}h`;
             const scrollArea = document.getElementById('timelineScrollArea');
-            if (scrollArea && scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
+            if (scrollArea && scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx;
         }
 
         function renderOverdueTasksPage() {
@@ -2535,7 +2693,6 @@
         }
 
         function allowTrackerDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add('drag-over'); }
-        
         function dragLeaveTracker(ev) { ev.currentTarget.classList.remove('drag-over'); }
         
         function dropToTracker(ev, dateStr) {
@@ -2557,6 +2714,7 @@
                 handleSearch(); 
             }
         }
+
 
         // --- Modals & Keyboard Handler ---
         let currentEditingId = null; 
@@ -2767,169 +2925,7 @@
             }
         });
 
-        function triggerAutoSaveInterval() {
-            if (autoSaveTimerId) return; 
-            autoSaveTimerId = setInterval(() => {
-                if (!currentEditingId) return;
-                const note = notes.find(n => n.id === currentEditingId);
-                if (note) {
-                    const titleText = document.getElementById('taskTitleInput').innerHTML;
-                    const infoText = document.getElementById('taskInfoInput').innerHTML;
-                    
-                    if ((!titleText || titleText === '<br>') && (!infoText || infoText === '<br>')) return;
-
-                    const revisedFullText = titleText + (infoText && infoText !== '<br>' ? ('\n' + infoText) : '');
-                    if (note.text !== revisedFullText) {
-                        note.text = revisedFullText;
-                        note.dirty = true;
-                        saveNotes();
-                        console.log("⏰ Snapshot checkpoint autosaved into LocalStorage.");
-                    }
-                }
-            }, 30000); 
-        }
-
-        function clearAutoSaveInterval() {
-            if (autoSaveTimerId) {
-                clearInterval(autoSaveTimerId);
-                autoSaveTimerId = null;
-            }
-        }
-
-        function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
-            if (event) event.stopPropagation();
-            const modal = document.getElementById('taskModal');
-            const titleInput = document.getElementById('taskTitleInput');
-            const infoInput = document.getElementById('taskInfoInput');
-            const dueDateInput = document.getElementById('taskDueDate');
-            const completeBtn = document.getElementById('taskModalCompleteBtn');
-
-            clearAutoSaveInterval();
-
-            if (noteId) {
-                currentEditingId = noteId; 
-                const note = notes.find(n => n.id === noteId); 
-                document.getElementById('taskModalTitle').innerText = 'Task Details'; 
-
-                let rawText = note.text || "";
-                
-                // Advanced auto-recovery parse engine to split legacy or corrupted sync chunks correctly
-                let match = rawText.match(/\n|<br\s*\/?>/i);
-
-                if (!match) {
-                    titleInput.innerHTML = rawText.trim();
-                    infoInput.innerHTML = '';
-                } else {
-                    let splitIdx = match.index;
-                    let skipLen = match[0].length;
-                    
-                    // The title field must never contain HTML tags from legacy syncs
-                    titleInput.innerHTML = cleanHTMLToPlainText(rawText.substring(0, splitIdx)).trim();
-                    
-                    let bodyHTML = rawText.substring(splitIdx + skipLen);
-                    
-                    if (!/<[a-z][\s\S]*>/i.test(bodyHTML)) {
-                        bodyHTML = bodyHTML.replace(/\n/g, '<br>');
-                    }
-                    infoInput.innerHTML = bodyHTML;
-                }
-
-                // Restore live formatting upon opening
-                formatEditorNodes('taskTitleInput');
-                formatEditorNodes('taskInfoInput');
-
-                dueDateInput.value = note.dueDate || '';
-
-                completeBtn.style.display = 'inline-block';
-                if (note.status === 'closed') {
-                    completeBtn.innerHTML = '↺ Restore Task';
-                    completeBtn.style.color = '#3B82F6';
-                    completeBtn.style.borderColor = '#3B82F6';
-                } else {
-                    completeBtn.innerHTML = '✓ Mark Complete';
-                    completeBtn.style.color = '#10B981';
-                    completeBtn.style.borderColor = '#10B981';
-                }
-
-            } else { 
-                currentEditingId = null; 
-                currentAddingQuadrant = quadrant || 'inbox'; 
-                document.getElementById('taskModalTitle').innerText = 'Add Task'; 
-                titleInput.innerHTML = '';
-                infoInput.innerHTML = '';
-                dueDateInput.value = timelineContext ? timelineContext.date : '';
-                completeBtn.style.display = 'none';
-                
-                pendingTimelineContext = timelineContext || null;
-            }
-            modal.style.display = 'flex'; 
-            setTimeout(() => titleInput.focus(), 100);
-        }
-
-        let pendingTimelineContext = null;
-
-        function closeTaskModal() { 
-            clearAutoSaveInterval();
-            document.getElementById('taskModal').style.display = 'none'; 
-            pendingTimelineContext = null; 
-        }
-
-        function saveTaskModal() {
-            clearAutoSaveInterval();
-            const titleText = document.getElementById('taskTitleInput').innerHTML; 
-            const infoText = document.getElementById('taskInfoInput').innerHTML; 
-            const dueDate = document.getElementById('taskDueDate').value;
-
-            if ((!titleText || titleText === '<br>') && (!infoText || infoText === '<br>')) {
-                return closeTaskModal();
-            }
-
-            const fullText = titleText + (infoText && infoText !== '<br>' ? ('\n' + infoText) : '');
-
-            let calculatedStartHour = 9.0;
-            if (pendingTimelineContext && pendingTimelineContext.startHour !== undefined) {
-                calculatedStartHour = roundToQuarterHour(pendingTimelineContext.startHour);
-            }
-
-            if (currentEditingId) { 
-                const note = notes.find(n => n.id === currentEditingId); 
-                if (note) { 
-                    note.text = fullText; 
-                    
-                    if (dueDate) {
-                        if (!note.dueDate || note.dueDate !== dueDate) {
-                            note.dueDate = dueDate;
-                            if (note.dueTime === undefined) note.dueTime = 9.0;
-                            if (note.dueDuration === undefined) note.dueDuration = 1.0;
-                        }
-                    } else {
-                        note.dueDate = null;
-                    }
-                    
-                    note.dirty = true; 
-                    saveNotes(); 
-                    handleSearch(); 
-                } 
-            } else { 
-                let targetQuad = currentAddingQuadrant || 'inbox';
-                notes.push({ 
-                    id: Date.now().toString(), 
-                    text: fullText, 
-                    quadrant: targetQuad, 
-                    status: 'active', 
-                    dueDate: dueDate || null,
-                    dueTime: dueDate ? calculatedStartHour : undefined,
-                    dueDuration: dueDate ? 1.0 : undefined,
-                    dirty: true, 
-                    deleted: false, 
-                    eventId: null,
-                    syncFailed: false
-                }); 
-                saveNotes(); 
-                handleSearch(); 
-            }
-            closeTaskModal();
-        }
+        let pendingTimelineContext = null;   
 
         function clearCalendarCache() {
             if (confirm("Are you sure you want to clear the calendar event cache? This will allow re-importing all meetings when you click Sync Meetings.")) {
@@ -2989,7 +2985,7 @@
 
             navigator.clipboard.writeText(plainTextLog).then(() => showToast("Calendar copied to clipboard!")).catch(err => showToast("Copy failed"));
         }
-
+        
         async function loadCalendars() {
             if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.getToken()) return;
             const token = gapi.client.getToken();
@@ -3031,8 +3027,7 @@
 
         function addScheduleRow(block = {title: '', startHour: 14, endHour: 29}) {
             const div = document.createElement('div');
-            div.className = 'schedule-row';
-            div.style.display = 'flex'; div.style.gap = '8px'; div.style.marginBottom = '8px';
+            div.className = 'schedule-row'; div.style.display = 'flex'; div.style.gap = '8px'; div.style.marginBottom = '8px';
             div.innerHTML = `
                 <input type="text" class="sched-title" value="${block.title}" placeholder="Label" style="flex:2; padding:8px;">
                 <input type="time" class="sched-start" value="${formatTimeForInput(block.startHour)}" style="padding:8px;">
@@ -3113,214 +3108,7 @@
         function escapeHTML(str) { 
             return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); 
         }
-
-        async function performBackgroundSync() {
-            const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-            if (!savedToken || !savedToken.token) return showToast("Please sign in first to sync with Google Tasks.");
-            try {
-                document.getElementById('sync-banner').style.display = 'block';
-
-                if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks || !gapi.client.tasks.tasklists || !gapi.client.tasks.tasks) {
-                    document.getElementById('sync-banner').style.display = 'none';
-                    return showToast("Google APIs are still loading. Please try again in a moment.");
-                }
-
-                if(typeof gapi !== 'undefined' && gapi.client && typeof gapi.client.setToken === 'function' && !gapi.client.getToken()) {
-                    gapi.client.setToken({ access_token: savedToken.token });
-                }
-                
-                // 1. TASK SYNC LOGIC
-                const response = await gapi.client.tasks.tasklists.list();
-                const remoteLists = response.result.items || [];
-                const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
-                let gapiListIds = { inbox: null, q1: null, q2: null, q3: null, q4: null, closed: null };
-                
-                for (const quadKey of Object.keys(GAPI_LIST_NAMES)) { 
-                    const existingList = remoteLists.find(l => l.title === GAPI_LIST_NAMES[quadKey]); 
-                    if (existingList) { 
-                        gapiListIds[quadKey] = existingList.id; 
-                    } else { 
-                        const newListReq = await gapi.client.tasks.tasklists.insert({ resource: { title: GAPI_LIST_NAMES[quadKey] } }); 
-                        gapiListIds[quadKey] = newListReq.result.id; 
-                    } 
-                }
-                
-                let remoteTaskMap = {};
-                for (const quadKey of Object.keys(gapiListIds)) { 
-                    const listId = gapiListIds[quadKey]; 
-                    const tasksReq = await gapi.client.tasks.tasks.list({ tasklist: listId, showHidden: true, maxResults: 100 }); 
-                    const rTasks = tasksReq.result.items || []; 
-                    rTasks.forEach(t => { 
-                        remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; 
-                    }); 
-                }
-                
-                const syncSnapshot = JSON.parse(JSON.stringify(notes));
-                
-                for (let sn of syncSnapshot) {
-                    if (sn.eventId) continue; 
-                    
-                    if (sn.deleted && sn.dirty) { 
-                        if (remoteTaskMap[sn.id]) { 
-                            try { 
-                                await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); 
-                                sn.syncFailed = false;
-                            } catch(e){
-                                console.error("Error deleting remote task:", e);
-                                sn.syncFailed = true;
-                            } 
-                        } 
-                        sn.dirty = false; 
-                        continue; 
-                    }
-                    
-                    if (sn.dirty && !sn.deleted) {
-                        const targetListId = gapiListIds[sn.quadrant]; 
-                        const remoteObj = remoteTaskMap[sn.id]; 
-                        const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; 
-                        
-                        let plainTextPayload = cleanHTMLToPlainText(sn.text);
-                        let lines = plainTextPayload.split('\n');
-                        let tTitle = lines[0].trim() || 'Untitled Task';
-                        let tNotes = lines.slice(1).join('\n').trim();
-
-                        const resourceBody = { 
-                            title: tTitle, 
-                            notes: tNotes,
-                            status: gStatus 
-                        }; 
-                        
-                        if (sn.dueDate) {
-                            const [y, m, d] = sn.dueDate.split('-');
-                            const dueDt = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
-                            resourceBody.due = dueDt.toISOString();
-                        } else if (remoteObj && remoteObj.task.due) {
-                            resourceBody.due = null;
-                        }
-
-                        if (remoteObj) { 
-                            if (remoteObj.listId !== targetListId) { 
-                                try { 
-                                    await gapi.client.tasks.tasks.delete({ 
-                                        tasklist: remoteObj.listId, 
-                                        task: sn.id 
-                                    }); 
-                                    const res = await gapi.client.tasks.tasks.insert({ 
-                                        tasklist: targetListId,
-                                        resource: resourceBody
-                                    }); 
-                                    sn.tempId = sn.id; 
-                                    sn.id = res.result.id;
-                                    sn.syncFailed = false;
-                                } catch(e){
-                                    console.error("Error moving task:", e);
-                                    sn.syncFailed = true;
-                                } 
-                            } else { 
-                                try { 
-                                    await gapi.client.tasks.tasks.patch({ 
-                                        tasklist: remoteObj.listId,
-                                        task: sn.id,
-                                        resource: resourceBody
-                                    }); 
-                                    sn.syncFailed = false;
-                                } catch(e){
-                                    console.error("Error patching task:", e);
-                                    sn.syncFailed = true;
-                                } 
-                            } 
-                            delete remoteTaskMap[sn.id]; 
-                            if (sn.tempId) delete remoteTaskMap[sn.tempId]; 
-                        } else { 
-                            try { 
-                                const res = await gapi.client.tasks.tasks.insert({ 
-                                    tasklist: targetListId,
-                                    resource: resourceBody
-                                }); 
-                                sn.tempId = sn.id; 
-                                sn.id = res.result.id; 
-                                sn.syncFailed = false;
-                            } catch(e){
-                                console.error("Error inserting task:", e);
-                                sn.syncFailed = true;
-                            } 
-                        }
-                        sn.dirty = false;
-                    } else if (!sn.dirty && !sn.deleted) { 
-                        const remoteObj = remoteTaskMap[sn.id]; 
-                        if (remoteObj) { 
-                            let fullText = remoteObj.task.title || '';
-                            if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
-                            
-                            if (!/<[a-z][\s\S]*>/i.test(fullText)) {
-                                fullText = fullText.replace(/\n/g, '<br>');
-                            }
-                            
-                            sn.text = fullText; 
-                            sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
-                            sn.quadrant = remoteObj.quadKey; 
-                            sn.dueDate = remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null; 
-                            sn.syncFailed = false;
-                            delete remoteTaskMap[sn.id]; 
-                        } 
-                    }
-                }
-                
-                Object.values(remoteTaskMap).forEach(remoteObj => { 
-                    let fullText = remoteObj.task.title || '';
-                    if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
-                    
-                    if (!/<[a-z][\s\S]*>/i.test(fullText)) {
-                        fullText = fullText.replace(/\n/g, '<br>');
-                    }
-                    
-                    syncSnapshot.push({ 
-                        id: remoteObj.task.id, 
-                        text: fullText, 
-                        quadrant: remoteObj.quadKey, 
-                        status: remoteObj.task.status === 'completed' ? 'closed' : 'active', 
-                        dueDate: remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null, 
-                        eventId: null, 
-                        dirty: false, 
-                        deleted: false,
-                        syncFailed: false
-                    }); 
-                });
-                
-                let newNotesArray = []; 
-                let syncedIds = new Set();
-                syncSnapshot.forEach(sn => { 
-                    if (sn.deleted && !sn.dirty) return; 
-                    const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); 
-                    if (liveNote) { 
-                        sn.eventId = liveNote.eventId || null; 
-                        if (liveNote.dirty) { 
-                            if (sn.tempId) liveNote.id = sn.id; 
-                            newNotesArray.push(liveNote); 
-                        } else { 
-                            newNotesArray.push(sn); 
-                        } 
-                        syncedIds.add(liveNote.id); 
-                        if (sn.tempId) syncedIds.add(sn.tempId); 
-                    } else { 
-                        newNotesArray.push(sn); 
-                    } 
-                });
-                
-                notes = newNotesArray; 
-                saveNotes(); 
-                handleSearch(); 
-                
-                document.getElementById('sync-banner').style.display = 'none';
-                showToast("✓ Successfully synced with Google Tasks!");
-                
-            } catch (e) {
-                document.getElementById('sync-banner').style.display = 'none';
-                console.error("Background sync error:", e);
-                showToast("Tasks sync failed. Check your API configuration.");
-            }
-        }
-
+        
         function parseTags(str) { 
             let html = escapeHTML(str);
             html = html.replace(/(#[a-zA-Z0-9_]+)/g, '<span class="hashtag" onclick="searchTag(\'$1\', event)">$1</span>');
@@ -3473,7 +3261,6 @@
             if(!searchInput) return;
             const query = searchInput.value;
             
-            // Persist the query to localStorage if it exists, otherwise remove it
             if (query.trim().length > 0) {
                 localStorage.setItem('quadra_search', query);
             } else {
@@ -3485,11 +3272,7 @@
         }
 
         function renderNotes(searchQuery = '') {
-            ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'closed'].forEach(q => { 
-                const el = document.getElementById(`list-${q}`); 
-                if (el) el.innerHTML = ''; 
-            });
-            
+            ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'closed'].forEach(q => { const el = document.getElementById(`list-${q}`); if (el) el.innerHTML = ''; });
             let filteredNotes = notes.filter(note => {
                 if (note.deleted) return false;
                 const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
@@ -3532,13 +3315,9 @@
 
                     const contentWrapper = document.createElement('div'); contentWrapper.className = 'note-content-wrapper';
                     
-                    // Overdue Indicator Check
                     let overdueIndicator = '';
-                    if (!isCalendarEvent && note.status === 'active' && note.dueDate) {
-                        const dueDateStr = note.dueDate.split('T')[0];
-                        if (dueDateStr < todayStr) {
-                            overdueIndicator = `<span style="background: #FFF1F2; color: #9F1239; border: 1px solid #FECDD3; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">OVERDUE</span>`;
-                        }
+                    if (!isCalendarEvent && note.status === 'active' && note.dueDate && note.dueDate.split('T')[0] < todayStr) {
+                        overdueIndicator = `<span style="background: #FFF1F2; color: #9F1239; border: 1px solid #FECDD3; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">OVERDUE</span>`;
                     }
 
                     let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
@@ -3553,7 +3332,6 @@
                         if (note.status === 'active') actionsDiv.innerHTML = `<button class="action-btn complete-btn" onclick="completeTask('${note.id}')">✓</button>`;
                         else actionsDiv.innerHTML = `<button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×</button>`;
                         
-                        // Cloud Icon Configuration
                         let cloudSpan = document.createElement('span');
                         if (note.syncFailed) {
                             cloudSpan.className = 'sync-cloud-indicator failed';
@@ -3580,12 +3358,7 @@
             document.getElementById('badge-closed').innerText = notes.filter(n => !n.deleted && n.status === 'closed' && !n.eventId).length;
             document.getElementById('badge-inbox').innerText = filteredCounts.inbox;
             document.getElementById('badge-calendar').innerText = filteredCounts.calendar;
-            
-            ['q1', 'q2', 'q3', 'q4'].forEach(q => {
-                const badge = document.getElementById(`badge-${q}`);
-                if (badge) badge.innerText = filteredCounts[q];
-            });
-            
+            ['q1', 'q2', 'q3', 'q4'].forEach(q => { const badge = document.getElementById(`badge-${q}`); if (badge) badge.innerText = filteredCounts[q]; });
             if (currentLayout === 'tracker') renderTrackerTimeline();
             updateQuickTags();
         }
@@ -3947,7 +3720,6 @@
                     gapi.client.setToken({ access_token: savedToken.token });
                 }
                 
-                // 1. TASK SYNC LOGIC
                 const response = await gapi.client.tasks.tasklists.list();
                 const remoteLists = response.result.items || [];
                 const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
@@ -4069,6 +3841,15 @@
                         if (remoteObj) { 
                             let fullText = remoteObj.task.title || '';
                             if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
+                            
+                            // Transform brackets from Google Tasks natively back to custom checklist blocks
+                            fullText = fullText.replace(/^\[x\]\s+/gm, '<span class="editor-todo-span todo-checked" contenteditable="false">&nbsp;</span><span class="todo-text-line text-crossed">')
+                                               .replace(/^\[ \]\s+/gm, '<span class="editor-todo-span" contenteditable="false">&nbsp;</span><span class="todo-text-line">');
+                            
+                            if (!/<[a-z][\s\S]*>/i.test(fullText)) {
+                                fullText = fullText.replace(/\n/g, '<br>');
+                            }
+                            
                             sn.text = fullText; 
                             sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
                             sn.quadrant = remoteObj.quadKey; 
@@ -4082,6 +3863,14 @@
                 Object.values(remoteTaskMap).forEach(remoteObj => { 
                     let fullText = remoteObj.task.title || '';
                     if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
+                    
+                    fullText = fullText.replace(/^\[x\]\s+/gm, '<span class="editor-todo-span todo-checked" contenteditable="false">&nbsp;</span><span class="todo-text-line text-crossed">')
+                                       .replace(/^\[ \]\s+/gm, '<span class="editor-todo-span" contenteditable="false">&nbsp;</span><span class="todo-text-line">');
+
+                    if (!/<[a-z][\s\S]*>/i.test(fullText)) {
+                        fullText = fullText.replace(/\n/g, '<br>');
+                    }
+                    
                     syncSnapshot.push({ 
                         id: remoteObj.task.id, 
                         text: fullText, 
@@ -4118,6 +3907,7 @@
                 notes = newNotesArray; 
                 saveNotes(); 
                 handleSearch(); 
+                
                 document.getElementById('sync-banner').style.display = 'none';
                 showToast("✓ Successfully synced with Google Tasks!");
                 
@@ -4126,6 +3916,161 @@
                 console.error("Background sync error:", e);
                 showToast("Tasks sync failed. Check your API configuration.");
             }
+        }
+
+        function triggerAutoSaveInterval() {
+            if (autoSaveTimerId) return; 
+            autoSaveTimerId = setInterval(() => {
+                if (!currentEditingId) return;
+                const note = notes.find(n => n.id === currentEditingId);
+                if (note) {
+                    const titleText = document.getElementById('taskTitleInput').innerHTML;
+                    const infoText = document.getElementById('taskInfoInput').innerHTML;
+                    
+                    if ((!titleText || titleText === '<br>') && (!infoText || infoText === '<br>')) return;
+
+                    const revisedFullText = titleText + (infoText && infoText !== '<br>' ? ('\n' + infoText) : '');
+                    if (note.text !== revisedFullText) {
+                        note.text = revisedFullText;
+                        note.dirty = true;
+                        saveNotes();
+                        console.log("⏰ Snapshot checkpoint autosaved into LocalStorage.");
+                    }
+                }
+            }, 30000); 
+        }
+
+        function clearAutoSaveInterval() {
+            if (autoSaveTimerId) {
+                clearInterval(autoSaveTimerId);
+                autoSaveTimerId = null;
+            }
+        }
+
+        function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
+            if (event) event.stopPropagation();
+            const modal = document.getElementById('taskModal');
+            const titleInput = document.getElementById('taskTitleInput');
+            const infoInput = document.getElementById('taskInfoInput');
+            const dueDateInput = document.getElementById('taskDueDate');
+            const completeBtn = document.getElementById('taskModalCompleteBtn');
+
+            clearAutoSaveInterval();
+
+            if (noteId) {
+                currentEditingId = noteId; 
+                const note = notes.find(n => n.id === noteId); 
+                document.getElementById('taskModalTitle').innerText = 'Task Details'; 
+
+                let rawText = note.text || "";
+                let match = rawText.match(/\n|<br\s*\/?>/i);
+
+                if (!match) {
+                    titleInput.innerHTML = rawText.trim();
+                    infoInput.innerHTML = '';
+                } else {
+                    let splitIdx = match.index;
+                    let skipLen = match[0].length;
+                    
+                    titleInput.innerHTML = rawText.substring(0, splitIdx).trim();
+                    let bodyHTML = rawText.substring(splitIdx + skipLen);
+                    
+                    if (!/<[a-z][\s\S]*>/i.test(bodyHTML)) {
+                        bodyHTML = bodyHTML.replace(/\n/g, '<br>');
+                    }
+                    infoInput.innerHTML = bodyHTML;
+                }
+
+                formatEditorNodes('taskTitleInput');
+                formatEditorNodes('taskInfoInput');
+
+                dueDateInput.value = note.dueDate || '';
+
+                completeBtn.style.display = 'inline-block';
+                if (note.status === 'closed') {
+                    completeBtn.innerHTML = '↺ Restore Task';
+                    completeBtn.style.color = '#3B82F6';
+                    completeBtn.style.borderColor = '#3B82F6';
+                } else {
+                    completeBtn.innerHTML = '✓ Mark Complete';
+                    completeBtn.style.color = '#10B981';
+                    completeBtn.style.borderColor = '#10B981';
+                }
+
+            } else { 
+                currentEditingId = null; 
+                currentAddingQuadrant = quadrant || 'inbox'; 
+                document.getElementById('taskModalTitle').innerText = 'Add Task'; 
+                titleInput.innerHTML = '';
+                infoInput.innerHTML = '';
+                dueDateInput.value = timelineContext ? timelineContext.date : '';
+                completeBtn.style.display = 'none';
+                
+                pendingTimelineContext = timelineContext || null;
+            }
+            modal.style.display = 'flex'; 
+            setTimeout(() => titleInput.focus(), 100);
+        }
+
+        function closeTaskModal() { 
+            clearAutoSaveInterval();
+            document.getElementById('taskModal').style.display = 'none'; 
+            pendingTimelineContext = null; 
+        }
+
+        function saveTaskModal() {
+            clearAutoSaveInterval();
+            const titleText = document.getElementById('taskTitleInput').innerHTML; 
+            const infoText = document.getElementById('taskInfoInput').innerHTML; 
+            const dueDate = document.getElementById('taskDueDate').value;
+
+            if ((!titleText || titleText === '<br>') && (!infoText || infoText === '<br>')) return closeTaskModal();
+
+            const fullText = titleText + (infoText && infoText !== '<br>' ? ('\n' + infoText) : '');
+
+            let calculatedStartHour = 9.0;
+            if (pendingTimelineContext && pendingTimelineContext.startHour !== undefined) {
+                calculatedStartHour = roundToQuarterHour(pendingTimelineContext.startHour);
+            }
+
+            if (currentEditingId) { 
+                const note = notes.find(n => n.id === currentEditingId); 
+                if (note) { 
+                    note.text = fullText; 
+                    
+                    if (dueDate) {
+                        if (!note.dueDate || note.dueDate !== dueDate) {
+                            note.dueDate = dueDate;
+                            if (note.dueTime === undefined) note.dueTime = 9.0;
+                            if (note.dueDuration === undefined) note.dueDuration = 1.0;
+                        }
+                    } else {
+                        note.dueDate = null;
+                    }
+                    
+                    note.dirty = true; 
+                    saveNotes(); 
+                    handleSearch(); 
+                } 
+            } else { 
+                let targetQuad = currentAddingQuadrant || 'inbox';
+                notes.push({ 
+                    id: Date.now().toString(), 
+                    text: fullText, 
+                    quadrant: targetQuad, 
+                    status: 'active', 
+                    dueDate: dueDate || null,
+                    dueTime: dueDate ? calculatedStartHour : undefined,
+                    dueDuration: dueDate ? 1.0 : undefined,
+                    dirty: true, 
+                    deleted: false, 
+                    eventId: null,
+                    syncFailed: false
+                }); 
+                saveNotes(); 
+                handleSearch(); 
+            }
+            closeTaskModal();
         }
 
         window.addEventListener('load', () => {
@@ -4243,7 +4188,7 @@
             document.getElementById('signout_button').style.display = 'none'; 
             showToast("Signed out successfully.");
         }
-
+        
         // --- Execute Initial Render logic with Search Preservation ---
         setLayout(currentLayout); 
         
