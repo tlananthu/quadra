@@ -1007,6 +1007,64 @@ function clearAutoSaveInterval() {
     }
 }
 
+function formatEditorNodes(editorId) {
+    const editor = document.getElementById(editorId);
+    if (!editor) return;
+
+    let sel = window.getSelection();
+    let hasCaret = false;
+    
+    // Only insert marker if we are actively editing this specific field
+    if (sel.rangeCount > 0 && editor.contains(sel.focusNode)) {
+        let r = sel.getRangeAt(0);
+        let marker = document.createElement('span');
+        marker.id = 'caret-marker';
+        r.insertNode(marker);
+        hasCaret = true;
+    }
+
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null, false);
+    let nodesToProcess = [];
+    let node;
+    
+    while (node = walker.nextNode()) {
+        let p = node.parentNode;
+        if (p.tagName === 'A' || p.classList.contains('hashtag') || p.classList.contains('person-tag') || p.id === 'caret-marker') {
+            continue;
+        }
+        if (/(https?:\/\/[^\s]+)|(#[a-zA-Z0-9_]+)|(@[a-zA-Z0-9_]+)/.test(node.nodeValue)) {
+            nodesToProcess.push(node);
+        }
+    }
+
+    nodesToProcess.forEach(n => {
+        let span = document.createElement('span');
+        let escaped = escapeHTML(n.nodeValue);
+        let formatted = escaped
+            .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:var(--brand-primary); text-decoration:underline;">$1</a>')
+            .replace(/(#[a-zA-Z0-9_]+)/g, '<span class="hashtag">$1</span>')
+            .replace(/(@[a-zA-Z0-9_]+)/g, '<span class="person-tag">$1</span>');
+        span.innerHTML = formatted;
+        n.parentNode.replaceChild(span, n);
+        while (span.firstChild) {
+            span.parentNode.insertBefore(span.firstChild, span);
+        }
+        span.parentNode.removeChild(span);
+    });
+
+    if (hasCaret) {
+        let marker = document.getElementById('caret-marker');
+        if (marker) {
+            let newRange = document.createRange();
+            newRange.setStartAfter(marker);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            marker.parentNode.removeChild(marker);
+        }
+    }
+}
+
 function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
     if (event) event.stopPropagation();
     const modal = document.getElementById('taskModal');
@@ -1920,64 +1978,6 @@ const searchInputEl = document.getElementById('searchInput');
 if (searchInputEl && savedSearch) {
     searchInputEl.value = savedSearch;
     document.getElementById('clearSearchBtn').style.display = 'block';
-}
-
-function formatEditorNodes(editorId) {
-    const editor = document.getElementById(editorId);
-    if (!editor) return;
-
-    let sel = window.getSelection();
-    let hasCaret = false;
-    
-    // Only insert marker if we are actively editing this specific field
-    if (sel.rangeCount > 0 && editor.contains(sel.focusNode)) {
-        let r = sel.getRangeAt(0);
-        let marker = document.createElement('span');
-        marker.id = 'caret-marker';
-        r.insertNode(marker);
-        hasCaret = true;
-    }
-
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null, false);
-    let nodesToProcess = [];
-    let node;
-    
-    while (node = walker.nextNode()) {
-        let p = node.parentNode;
-        if (p.tagName === 'A' || p.classList.contains('hashtag') || p.classList.contains('person-tag') || p.id === 'caret-marker') {
-            continue;
-        }
-        if (/(https?:\/\/[^\s]+)|(#[a-zA-Z0-9_]+)|(@[a-zA-Z0-9_]+)/.test(node.nodeValue)) {
-            nodesToProcess.push(node);
-        }
-    }
-
-    nodesToProcess.forEach(n => {
-        let span = document.createElement('span');
-        let escaped = escapeHTML(n.nodeValue);
-        let formatted = escaped
-            .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:var(--brand-primary); text-decoration:underline;">$1</a>')
-            .replace(/(#[a-zA-Z0-9_]+)/g, '<span class="hashtag">$1</span>')
-            .replace(/(@[a-zA-Z0-9_]+)/g, '<span class="person-tag">$1</span>');
-        span.innerHTML = formatted;
-        n.parentNode.replaceChild(span, n);
-        while (span.firstChild) {
-            span.parentNode.insertBefore(span.firstChild, span);
-        }
-        span.parentNode.removeChild(span);
-    });
-
-    if (hasCaret) {
-        let marker = document.getElementById('caret-marker');
-        if (marker) {
-            let newRange = document.createRange();
-            newRange.setStartAfter(marker);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-            marker.parentNode.removeChild(marker);
-        }
-    }
 }
 
 renderNotes(savedSearch);
