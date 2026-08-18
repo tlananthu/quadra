@@ -721,7 +721,7 @@ function renderTrackerTimeline() {
     });
 
     const dailyTotalEl = document.getElementById('trackerDailyTotal');
-    if(dailyTotalEl) dailyTotalEl.innerText = `Total: ${actualDaily}h/${actualWeekly}h`;
+    if(dailyTotalEl) dailyTotalEl.innerText = `🎯: ${actualDaily}h/${actualWeekly}h`;
 
     const scrollArea = document.getElementById('timelineScrollArea');
     if (scrollArea && scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
@@ -907,8 +907,30 @@ function closeShortcutsModal() {
     if (modal) modal.style.display = 'none';
 }
 
+document.addEventListener('click', function(e) {
+    const li = e.target.closest('li.todo-item');
+    if (li) {
+        // The padding-left is 28px. If the click is on the far left side, 
+        // they clicked the ::before pseudo-element (the checkbox).
+        if (e.offsetX >= 0 && e.offsetX <= 26) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            li.classList.toggle('completed');
+            triggerAutoSaveInterval(); // Save the state
+        }
+    }
+});
+
 document.addEventListener('keydown', (e) => {
     const isEditingText = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
+
+    if (isEditingText && e.ctrlKey && e.key === '1') {
+        e.preventDefault();
+        const todoHtml = '<ul class="todo-list"><li class="todo-item">&#8203;</li></ul><br>';
+        document.execCommand('insertHTML', false, todoHtml);
+        return; 
+    }
 
     if (e.key === 'Escape') {
         const taskModal = document.getElementById('taskModal');
@@ -1895,9 +1917,12 @@ async function performBackgroundSync() {
                     if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
                     
                     // Transform brackets from Google Tasks natively back to custom checklist blocks
-                    fullText = fullText.replace(/^\[x\]\s+/gm, '<span class="editor-todo-span todo-checked" contenteditable="false">&nbsp;</span><span class="todo-text-line text-crossed">')
-                                        .replace(/^\[ \]\s+/gm, '<span class="editor-todo-span" contenteditable="false">&nbsp;</span><span class="todo-text-line">');
-                    
+                    fullText = fullText.replace(/^\[x\]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item completed">$1</li></ul>')
+                                    .replace(/^\[ \]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item">$1</li></ul>');
+
+                    // Clean up consecutive <ul> tags created by multi-line tasks to merge them into a single list
+                    fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
+
                     if (!/<[a-z][\s\S]*>/i.test(fullText)) {
                         fullText = fullText.replace(/\n/g, '<br>');
                     }
@@ -1916,8 +1941,12 @@ async function performBackgroundSync() {
             let fullText = remoteObj.task.title || '';
             if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
             
-            fullText = fullText.replace(/^\[x\]\s+/gm, '<span class="editor-todo-span todo-checked" contenteditable="false">&nbsp;</span><span class="todo-text-line text-crossed">')
-                                .replace(/^\[ \]\s+/gm, '<span class="editor-todo-span" contenteditable="false">&nbsp;</span><span class="todo-text-line">');
+            // Transform brackets from Google Tasks natively back to custom checklist blocks
+            fullText = fullText.replace(/^\[x\]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item completed">$1</li></ul>')
+                            .replace(/^\[ \]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item">$1</li></ul>');
+
+            // Clean up consecutive <ul> tags created by multi-line tasks to merge them into a single list
+            fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
 
             if (!/<[a-z][\s\S]*>/i.test(fullText)) {
                 fullText = fullText.replace(/\n/g, '<br>');
@@ -1969,6 +1998,26 @@ async function performBackgroundSync() {
         showToast("Tasks sync failed. Check your API configuration.");
     }
 }
+
+// Add click delegation to toggle task checkboxes inside the editor
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('editor-todo-span')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Toggle the visual checked state
+        e.target.classList.toggle('todo-checked');
+        
+        // Find the adjacent text line and cross it out
+        const textLine = e.target.nextElementSibling;
+        if (textLine && textLine.classList.contains('todo-text-line')) {
+            textLine.classList.toggle('text-crossed');
+        }
+        
+        // Trigger a save so the state is remembered
+        triggerAutoSaveInterval();
+    }
+});
 
 // --- Execute Initial Render logic with Search Preservation ---
 setLayout(currentLayout); 
