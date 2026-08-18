@@ -395,7 +395,7 @@ function renderTrackerTimeline() {
     
     paletteList.innerHTML = '';
     
-    // 3. Filter Palette using the Effective Query
+    // 3. CRITICAL FIX: Ensure 'effectivePaletteQuery' is passed here!
     let paletteNotes = notes.filter(n => !n.deleted && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId);
     
     // Apply Due Only Filter
@@ -408,20 +408,20 @@ function renderTrackerTimeline() {
     // 4. Render Palette UI identical to Quadrants (No complete/sync buttons)
     paletteNotes.forEach(note => {
         const el = document.createElement('div');
-        // Re-use standard quadrant note classes
         el.className = 'note' + (note.status === 'closed' ? ' closed-note' : '');
-        el.style.marginBottom = '8px'; // Slightly tighter for palette
+        el.style.marginBottom = '8px'; 
         el.style.cursor = 'grab';
         el.draggable = true;
         el.ondragstart = (e) => e.dataTransfer.setData('text/plain', note.id);
         
         const contentWrapper = document.createElement('div');
         contentWrapper.className = 'note-content-wrapper';
-        contentWrapper.style.maxWidth = '100%'; // Reclaim space normally used by action buttons
+        contentWrapper.style.maxWidth = '100%'; 
         
         let overdueIndicator = '';
         if (note.status === 'active' && note.dueDate) {
             const dueDateStr = note.dueDate.split('T')[0];
+            const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
             if (dueDateStr < todayStr) {
                 overdueIndicator = `<span style="background: #FFF1F2; color: #9F1239; border: 1px solid #FECDD3; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">OVERDUE</span>`;
             }
@@ -436,7 +436,6 @@ function renderTrackerTimeline() {
         
         contentWrapper.onclick = (e) => openTaskModal(null, note.id, e);
         
-        // We strictly DO NOT append a .note-actions div here.
         el.appendChild(contentWrapper);
         paletteList.appendChild(el);
     });
@@ -1551,6 +1550,18 @@ function handleSearch() {
     }
 
     document.getElementById('clearSearchBtn').style.display = query.length > 0 ? 'block' : 'none';
+
+    // --- NEW: Sync Global Search to Local Palette Search ---
+    const paletteSearchInput = document.getElementById('paletteSearchInput');
+    // Only sync if the user isn't actively typing inside the palette search box
+    if (paletteSearchInput && document.activeElement !== paletteSearchInput) {
+        paletteSearchInput.value = query;
+        const clearPaletteBtn = document.getElementById('clearPaletteSearchBtn');
+        if (clearPaletteBtn) {
+            clearPaletteBtn.style.display = query.trim().length > 0 ? 'block' : 'none';
+        }
+    }
+
     renderNotes(query);
 }
 
