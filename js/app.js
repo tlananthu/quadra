@@ -1688,32 +1688,29 @@ function renderNotes(searchQuery = '') {
             if (note.dueDate) contentWrapper.innerHTML += `<div style="font-size:12px; color:var(--brand-primary); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>`;
             
             contentWrapper.onclick = (e) => openTaskModal(null, note.id, e);
-
-            const actionsDiv = document.createElement('div'); actionsDiv.className = 'note-actions';
-            if (!note.eventId) {
-                if (note.status === 'active') actionsDiv.innerHTML = `<button class="action-btn complete-btn" onclick="completeTask('${note.id}')">✓</button>`;
-                else actionsDiv.innerHTML = `<button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×</button>`;
-                
-                let cloudSpan = document.createElement('span');
-                if (note.syncFailed) {
-                    cloudSpan.className = 'sync-cloud-indicator failed';
-                    cloudSpan.innerHTML = '⚡☁';
-                    cloudSpan.title = 'Sync failure encountered.';
-                } else if (note.dirty || (!note.id.startsWith('M') && isNaN(note.id))) {
-                    cloudSpan.className = 'sync-cloud-indicator pending';
-                    cloudSpan.innerHTML = '☁...';
-                    cloudSpan.title = 'Local modifications pending sync.';
-                } else {
-                    cloudSpan.className = 'sync-cloud-indicator synced';
-                    cloudSpan.innerHTML = '☁';
-                    cloudSpan.title = 'Remote copy matched and synced.';
-                }
-                actionsDiv.appendChild(cloudSpan);
-            } else {
-                actionsDiv.innerHTML = `<button class="action-btn delete-btn" onclick="deleteTask('${note.id}')" title="Remove event">×</button>`;
-            }
             
-            noteEl.append(contentWrapper, actionsDiv); list.appendChild(noteEl);
+            noteEl.append(contentWrapper);
+
+            // --- REVISED: Actions Div Logic ---
+            if (!note.eventId) {
+                // If it's closed, we still show Restore and Delete buttons
+                if (note.status !== 'active') {
+                    const actionsDiv = document.createElement('div'); 
+                    actionsDiv.className = 'note-actions';
+                    actionsDiv.innerHTML = `<button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×</button>`;
+                    noteEl.append(actionsDiv);
+                }
+                // (Active tasks no longer receive an actionsDiv, stripping the complete & sync elements)
+            } else {
+                // Calendar events still show the Delete button
+                const actionsDiv = document.createElement('div'); 
+                actionsDiv.className = 'note-actions';
+                actionsDiv.innerHTML = `<button class="action-btn delete-btn" onclick="deleteTask('${note.id}')" title="Remove event">×</button>`;
+                noteEl.append(actionsDiv);
+            }
+            // ----------------------------------
+            
+            list.appendChild(noteEl);
         }
     });
 
