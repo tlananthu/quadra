@@ -214,25 +214,6 @@
         .quadrant.drag-over { box-shadow: 0 0 0 2px var(--brand-primary) inset; }
         .quadrant.quad-drag-over { box-shadow: 0 0 0 2px var(--brand-primary) inset, 0 0 20px rgba(79, 70, 229, 0.2); background-color: rgba(79, 70, 229, 0.05) !important; }
 
-        #q1 { background-color: var(--q1-bg); } 
-        #q2 { background-color: var(--q2-bg); } 
-        #q3 { background-color: var(--q3-bg); } 
-        #q4 { background-color: var(--q4-bg); }
-        #tray-inbox { background-color: #F8FAFC; border-color: #E2E8F0; }
-        #tray-calendar { background-color: #F0FDF4; border-color: #BBF7D0; }
-        #tray-closed { background-color: #F3F4F6; border-color: #E5E7EB; }
-
-        .q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; pointer-events: none; }
-        .q-header h2 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .q-badge { font-size: 12px; font-weight: 600; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 12px; color: var(--text-muted); }
-        
-        .header-buttons { display: flex; gap: 8px; align-items: center; pointer-events: auto; }
-        .icon-btn { background: rgba(255,255,255,0.5); border: none; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.2s; font-size: 16px; font-weight: bold; }
-        .icon-btn:hover { background: rgba(255,255,255,0.9); color: var(--brand-primary); }
-        .add-btn { color: var(--brand-primary); font-size: 20px; padding: 0; }
-
-        .task-list { flex-grow: 1; overflow-y: auto; padding-bottom: 10px; scrollbar-width: thin; cursor: default; }
-        
         /* Note Styling */
         .note { background-color: #ffffff; border: 1px solid rgba(0,0,0,0.05); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: flex-start; font-size: 14px; line-height: 1.5; cursor: grab; transition: transform 0.2s, box-shadow 0.2s; }
         .note:active { cursor: grabbing; }
@@ -396,11 +377,6 @@
         .logged-block.is-closed { opacity: 0.6; }
         .logged-block.is-closed .block-title { text-decoration: line-through; }
 
-        .logged-block:active { cursor: grabbing; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 12;}
-        .block-info { pointer-events: none; overflow: hidden; flex-grow: 1; padding-right: 4px; }
-        .block-title { font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-        .block-meta { font-size: 11px; opacity: 0.9; line-height: 1; }
-
         .resize-handle { position: absolute; bottom: 0; left: 0; right: 0; height: 10px; cursor: ns-resize; display: flex; justify-content: center; align-items: center; z-index: 11; opacity: 0.7; transition: opacity 0.2s; }
         .resize-handle:hover { opacity: 1; }
         .resize-handle::after { content: ''; width: 24px; height: 3px; background: rgba(0,0,0,0.3); border-radius: 2px; }
@@ -490,7 +466,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.41</span></h1>
+                <h1>Quadra <span class="version-badge">v2.42</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -583,7 +559,8 @@
                     <h2>⚠️ Overdue Tasks (<span id="overdue-count-badge">0</span>)</h2>
                     <button class="btn btn-outline" onclick="setLayout(appConfig.defaultView)">← Back to Default</button>
                 </div>
-                <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;">
+                    </div>
             </div>
         </div>
 
@@ -594,7 +571,8 @@
                         <h3>Task Palette</h3>
                         <p>Click or drag tasks onto the calendar.</p>
                     </div>
-                    <div class="palette-list" id="tracker-palette-list"></div>
+                    <div class="palette-list" id="tracker-palette-list">
+                        </div>
                 </div>
                 
                 <div class="tracker-canvas-wrapper">
@@ -626,7 +604,8 @@
                     </div>
                     
                     <div class="timeline-scroll-area" id="timelineScrollArea">
-                        <div class="timeline" id="timelineCanvas"></div>
+                        <div class="timeline" id="timelineCanvas">
+                            </div>
                     </div>
                 </div>
             </div>
@@ -829,6 +808,7 @@
                 <input type="text" id="taskTitleInput" placeholder="Task summary" style="font-weight: 600; font-size: 15px;">
             </div>
 
+            <!-- WYSIWYG Editor Component -->
             <div class="form-group">
                 <label>Description Details</label>
                 <div class="editor-toolbar" id="editorToolbar">
@@ -2001,29 +1981,6 @@
             }
         }
 
-        // Setup WYSIWYG rich text action events binding
-        document.querySelectorAll('#editorToolbar button').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                const command = this.getAttribute('data-command');
-                const value = this.getAttribute('data-value') || null;
-                document.execCommand(command, false, value);
-                document.getElementById('taskInfoInput').focus();
-            });
-        });
-
-        // Tab interceptor inside rich contenteditable editor instance block
-        document.getElementById('taskInfoInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    document.execCommand('outdent', false, null);
-                } else {
-                    document.execCommand('indent', false, null);
-                }
-            }
-        });
-
         function triggerAutoSaveInterval() {
             if (autoSaveTimerId) return; 
             autoSaveTimerId = setInterval(() => {
@@ -2067,13 +2024,24 @@
                 const note = notes.find(n => n.id === noteId); 
                 document.getElementById('taskModalTitle').innerText = 'Task Details'; 
 
-                let firstNewline = note.text.indexOf('\n');
-                if (firstNewline === -1) {
-                    titleInput.value = note.text;
+                let rawText = note.text || "";
+                let match = rawText.match(/\n|<br\s*\/?>/i);
+
+                if (!match) {
+                    titleInput.value = cleanHTMLToPlainText(rawText).trim();
                     infoInput.innerHTML = '';
                 } else {
-                    titleInput.value = note.text.substring(0, firstNewline).trim();
-                    infoInput.innerHTML = note.text.substring(firstNewline + 1);
+                    let splitIdx = match.index;
+                    let skipLen = match[0].length;
+                    
+                    titleInput.value = cleanHTMLToPlainText(rawText.substring(0, splitIdx)).trim();
+                    
+                    let bodyHTML = rawText.substring(splitIdx + skipLen);
+                    
+                    if (!/<[a-z][\s\S]*>/i.test(bodyHTML)) {
+                        bodyHTML = bodyHTML.replace(/\n/g, '<br>');
+                    }
+                    infoInput.innerHTML = bodyHTML;
                 }
 
                 dueDateInput.value = note.dueDate || '';
@@ -2423,7 +2391,8 @@
             const tagCounts = {};
             notes.forEach(note => {
                 if (!note.deleted && note.status === 'active' && !note.eventId) {
-                    const matches = note.text.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
+                    let cleanText = cleanHTMLToPlainText(note.text);
+                    const matches = cleanText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
                     if (matches) {
                         const uniqueTags = new Set(matches.map(t => t.toLowerCase()));
                         uniqueTags.forEach(tag => { tagCounts[tag] = (tagCounts[tag] || 0) + 1; });
@@ -2573,7 +2542,8 @@
                         }
                     }
 
-                    contentWrapper.innerHTML = `<div class="note-text">${overdueIndicator}${parseTags(cleanHTMLToPlainText(note.text).split('\n')[0])}</div>`;
+                    let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+                    contentWrapper.innerHTML = `<div class="note-text">${overdueIndicator}${parseTags(cleanTextTitle)}</div>`;
                     
                     if (note.dueDate) contentWrapper.innerHTML += `<div style="font-size:12px; color:var(--brand-primary); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>`;
                     
@@ -2625,7 +2595,7 @@
         function restoreTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'active'; note.quadrant = 'inbox'; note.dirty = true; saveNotes(); handleSearch(); } }
         function deleteTask(id) { const note = notes.find(n => n.id === id); if (note) { note.deleted = true; note.dirty = true; saveNotes(); handleSearch(); } }
 
-        /*function checkConfigState() {
+        function checkConfigState() {
             const authorizeButton = document.getElementById('authorize_button');
             const signoutButton = document.getElementById('signout_button');
 
@@ -2643,7 +2613,7 @@
                 authorizeButton.style.display = 'inline-block';
                 signoutButton.style.display = 'none';
             }
-        }*/
+        }
 
         function exportData() { const dataStr = JSON.stringify(notes, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `quadra_backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url); }
         function triggerImport() { document.getElementById('importFile').click(); }
@@ -2979,6 +2949,7 @@
                     gapi.client.setToken({ access_token: savedToken.token });
                 }
                 
+                // 1. TASK SYNC LOGIC
                 const response = await gapi.client.tasks.tasklists.list();
                 const remoteLists = response.result.items || [];
                 const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
@@ -3028,7 +2999,8 @@
                         const remoteObj = remoteTaskMap[sn.id]; 
                         const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; 
                         
-                        let lines = (sn.text || 'Untitled Task').split('\n');
+                        let plainTextPayload = cleanHTMLToPlainText(sn.text);
+                        let lines = plainTextPayload.split('\n');
                         let tTitle = lines[0].trim() || 'Untitled Task';
                         let tNotes = lines.slice(1).join('\n').trim();
 
@@ -3146,8 +3118,8 @@
                 });
                 
                 notes = newNotesArray; 
-                saveNotes();
-                handleSearch();
+                saveNotes(); 
+                handleSearch(); 
                 document.getElementById('sync-banner').style.display = 'none';
                 showToast("✓ Successfully synced with Google Tasks!");
                 
@@ -3159,7 +3131,6 @@
         }
 
         window.addEventListener('load', () => {
-            // Apply Saved Grid Widths and Orders First
             const matrixContainer = document.getElementById('matrix');
             
             if (appConfig.quadrantOrder && appConfig.quadrantOrder.length > 0) {
@@ -3176,7 +3147,6 @@
                 quadResizeObserver.observe(q);
             });
 
-            // --- Execute Initial Render logic with Config ---
             if (!localStorage.getItem('quadra_layout')) {
                 currentLayout = appConfig.defaultView;
             }
@@ -3206,7 +3176,6 @@
             }
             checkConfigState();
 
-            // Setup Keyboard Navigation for Search and Quick Tags Bar
             const searchInput = document.getElementById('searchInput');
             const tagsBar = document.getElementById('quick-tags-bar');
 
