@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!--Force deploy-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quadra | Eisenhower Matrix & Calendar</title>
     <style>
@@ -246,12 +245,22 @@
         .person-tag { color: var(--person-tag); font-weight: 600; cursor: pointer; border-radius: 4px; padding: 0 2px; text-decoration: underline dotted var(--person-tag); }
         .person-tag:hover { background-color: var(--person-tag-hover); }
 
-        .note-actions { display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; padding-left: 12px; flex-shrink: 0; }
+        .note-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; transition: opacity 0.2s; padding-left: 12px; flex-shrink: 0; }
         .note:hover .note-actions { opacity: 1; }
         .action-btn { background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1; font-weight: bold; }
         .complete-btn { color: #10B981; } .delete-btn { color: #EF4444; } .restore-btn { color: #3B82F6; }  
         .closed-note { opacity: 0.6; box-shadow: none; cursor: default; }
         .closed-note .note-text { text-decoration: line-through; cursor: default; overflow-y: hidden; }
+
+        .sync-cloud-indicator { font-size: 14px; user-select: none; }
+        .sync-cloud-indicator.synced { color: #3B82F6; }
+        .sync-cloud-indicator.pending { color: #F59E0B; animation: cloudPulse 2s infinite ease-in-out; }
+        .sync-cloud-indicator.failed { color: #EF4444; font-weight: bold; }
+
+        @keyframes cloudPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
 
         /* --- CALENDAR VIEW --- */
         #tracker-view { display: none; flex-grow: 1; width: 100%; overflow: hidden; background: #ffffff; }
@@ -352,7 +361,7 @@
         
         .timeline-bg-lines { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; pointer-events: none; }
         .time-row { position: absolute; width: 100%; border-top: 1px dashed var(--border-color); box-sizing: border-box; display: flex; align-items: flex-start; padding-left: 0; }
-        .time-label { color: var(--text-muted); font-size: 11px; font-weight: 500; position: absolute; left: 8px; top: -8px; background: #ffffff; padding: 0 4px; line-height: 1; z-index: 5; white-space: nowrap; }
+        .time-row-label { color: var(--text-muted); font-size: 11px; font-weight: 500; position: absolute; left: 8px; top: -8px; background: #ffffff; padding: 0 4px; line-height: 1; z-index: 5; white-space: nowrap; }
         
         .timeline-cols-container { position: absolute; left: 55px; right: 0; top: 0; bottom: 0; display: flex; z-index: 2; transition: left 0.2s; }
         .time-col { flex: 1; position: relative; border-left: 1px solid var(--border-color); height: 100%; cursor: crosshair; }
@@ -376,7 +385,7 @@
         .current-time-line::before { content: ''; position: absolute; left: -6px; top: -4px; width: 10px; height: 10px; background: #EF4444; border-radius: 50%; }
         .current-time-badge { position: absolute; left: 6px; top: -14px; background: #EF4444; color: white; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px; letter-spacing: 0.5px; white-space: nowrap; }
 
-        .logged-block { position: absolute; left: 6px; right: 6px; background: var(--brand-primary); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border: 1px solid rgba(255, 255, 255, 0.4); overflow: hidden; cursor: pointer; transition: box-shadow 0.1s; user-select: none; display: flex; justify-content: space-between; align-items: flex-start; min-height: 15px; }
+        .logged-block { position: absolute; background: var(--brand-primary); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border: 1px solid rgba(255, 255, 255, 0.4); overflow: hidden; cursor: pointer; transition: box-shadow 0.1s; user-select: none; display: flex; justify-content: space-between; align-items: flex-start; min-height: 15px; }
         
         .logged-block.q1 { background-color: var(--q1-bg); border-color: var(--q1-border); color: var(--q1-text); }
         .logged-block.q2 { background-color: var(--q2-bg); border-color: var(--q2-border); color: var(--q2-text); }
@@ -386,11 +395,6 @@
         
         .logged-block.is-closed { opacity: 0.6; }
         .logged-block.is-closed .block-title { text-decoration: line-through; }
-
-        .logged-block:active { cursor: grabbing; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 12;}
-        .block-info { pointer-events: none; overflow: hidden; flex-grow: 1; padding-right: 4px; }
-        .block-title { font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-        .block-meta { font-size: 11px; opacity: 0.9; line-height: 1; }
 
         .resize-handle { position: absolute; bottom: 0; left: 0; right: 0; height: 10px; cursor: ns-resize; display: flex; justify-content: center; align-items: center; z-index: 11; opacity: 0.7; transition: opacity 0.2s; }
         .resize-handle:hover { opacity: 1; }
@@ -469,7 +473,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v2.37</span></h1>
+                <h1>Quadra <span class="version-badge">v2.38</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -510,7 +514,6 @@
 
         <div id="quick-tags-bar" class="tags-bar"></div>
 
-        <!-- Unified Flexbox Matrix containing all Columns -->
         <div id="matrix" class="matrix-container layout-grid">
             
             <div class="quadrant" id="q1" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
@@ -557,7 +560,6 @@
             
         </div>
 
-        <!-- Overdue Tasks Full Page View -->
         <div id="overdue-view">
             <div class="overdue-container">
                 <div class="overdue-header">
@@ -565,12 +567,10 @@
                     <button class="btn btn-outline" onclick="setLayout(appConfig.defaultView)">← Back to Default</button>
                 </div>
                 <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;">
-                    <!-- Populated dynamically -->
-                </div>
+                    </div>
             </div>
         </div>
 
-        <!-- Calendar View -->
         <div id="tracker-view">
             <div class="tracker-layout">
                 <div class="tracker-palette">
@@ -579,8 +579,7 @@
                         <p>Click or drag tasks onto the calendar.</p>
                     </div>
                     <div class="palette-list" id="tracker-palette-list">
-                        <!-- Populated dynamically -->
-                    </div>
+                        </div>
                 </div>
                 
                 <div class="tracker-canvas-wrapper">
@@ -613,14 +612,12 @@
                     
                     <div class="timeline-scroll-area" id="timelineScrollArea">
                         <div class="timeline" id="timelineCanvas">
-                            <!-- Background lines, columns, and blocks render here -->
-                        </div>
+                            </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Settings Page View -->
         <div id="settings-view">
             <div class="settings-container">
                 <div class="settings-header">
@@ -682,7 +679,6 @@
                     <label>Home Timezone</label>
                     <select id="configPrimaryTz" style="width: auto;">
                         <option value="local">Local Browser Time</option>
-                        <!-- Negative Offsets (West of UTC) -->
                         <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
                         <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
                         <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
@@ -696,11 +692,7 @@
                         <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
                         <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
                         <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
-
-                        <!-- Zero Offset -->
                         <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
-
-                        <!-- Positive Offsets (East of UTC) -->
                         <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
                         <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
                         <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
@@ -732,7 +724,6 @@
                     <select id="configSecondaryTz" style="width: auto;">
                         <option value="none">None</option>
                         <option value="local">Local Browser Time</option>
-                        <!-- Negative Offsets (West of UTC) -->
                         <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
                         <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
                         <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
@@ -747,10 +738,8 @@
                         <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
                         <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
 
-                        <!-- Zero Offset -->
                         <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
 
-                        <!-- Positive Offsets (East of UTC) -->
                         <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
                         <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
                         <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
@@ -820,7 +809,6 @@
 
     </div>
 
-    <!-- Modals -->
     <div id="taskModal" class="modal">
         <div class="modal-content">
             <h3 id="taskModalTitle" style="font-size: 18px; font-weight: 700;">Task Details</h3>
@@ -830,7 +818,7 @@
             </div>
 
             <div class="form-group">
-                <textarea id="taskInfoInput" placeholder="task info"></textarea>
+                <textarea id="taskInfoInput" placeholder="task info" oninput="triggerAutoSaveInterval()"></textarea>
             </div>
 
             <div class="form-group form-row-inline">
@@ -848,7 +836,6 @@
         </div>
     </div>
 
-    <!-- Keyboard Shortcuts Modal -->
     <div id="shortcutsModal" class="modal">
         <div class="modal-content" style="max-width: 450px;">
             <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">Keyboard Shortcuts</h3>
@@ -952,6 +939,7 @@
         let isGoogleSynced = false;
         let clockIntervalId = null;
         let timelineZoom = parseFloat(localStorage.getItem('quadra_zoom')) || 1;
+        let autoSaveTimerId = null;
         
         const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.readonly';
 
@@ -971,6 +959,7 @@
             }
             if (note.dueDate && note.dueTime === undefined) note.dueTime = 9.0;
             if (note.dueDate && note.dueDuration === undefined) note.dueDuration = 1.0;
+            if (note.syncFailed === undefined) note.syncFailed = false;
             delete note.timeBlocks;
             delete note.timeLogs; 
             return { ...note, status: note.status || 'active', dirty: note.dirty || false, deleted: note.deleted || false, eventId: note.eventId || null, quadrant: note.quadrant || 'q2' };
@@ -1085,7 +1074,6 @@
         let currentLayout = localStorage.getItem('quadra_layout') || appConfig.defaultView;
         let currentTrackerMode = 'day'; 
         
-        // Safety check to ensure we don't load into a disabled layout
         if (!appConfig.viewsEnabled[currentLayout]) {
             const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
             currentLayout = firstEnabled || 'grid';
@@ -1398,7 +1386,7 @@
                     labelText += ` (${dispH.toString().padStart(2, '0')}:${sM.toString().padStart(2, '0')})`;
                 }
                 
-                row.innerHTML = `<span class="time-label">${labelText}</span>`;
+                row.innerHTML = `<span class="time-row-label">${labelText}</span>`;
                 bgLines.appendChild(row);
             }
             canvas.appendChild(bgLines);
@@ -1973,6 +1961,34 @@
             }
         }
 
+        function triggerAutoSaveInterval() {
+            if (autoSaveTimerId) return; 
+            autoSaveTimerId = setInterval(() => {
+                if (!currentEditingId) return;
+                const note = notes.find(n => n.id === currentEditingId);
+                if (note) {
+                    const titleText = document.getElementById('taskTitleInput').value.trim();
+                    const infoText = document.getElementById('taskInfoInput').value.trim();
+                    if (!titleText && !infoText) return;
+
+                    const revisedFullText = titleText + (infoText ? ('\n' + infoText) : '');
+                    if (note.text !== revisedFullText) {
+                        note.text = revisedFullText;
+                        note.dirty = true;
+                        saveNotes();
+                        console.log("⏰ Snapshot checkpoint autosaved into LocalStorage.");
+                    }
+                }
+            }, 30000); 
+        }
+
+        function clearAutoSaveInterval() {
+            if (autoSaveTimerId) {
+                clearInterval(autoSaveTimerId);
+                autoSaveTimerId = null;
+            }
+        }
+
         function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
             if (event) event.stopPropagation();
             const modal = document.getElementById('taskModal');
@@ -1980,6 +1996,8 @@
             const infoInput = document.getElementById('taskInfoInput');
             const dueDateInput = document.getElementById('taskDueDate');
             const completeBtn = document.getElementById('taskModalCompleteBtn');
+
+            clearAutoSaveInterval();
 
             if (noteId) {
                 currentEditingId = noteId; 
@@ -2020,11 +2038,13 @@
         let pendingTimelineContext = null;
 
         function closeTaskModal() { 
+            clearAutoSaveInterval();
             document.getElementById('taskModal').style.display = 'none'; 
             pendingTimelineContext = null; 
         }
 
         function saveTaskModal() {
+            clearAutoSaveInterval();
             const titleText = document.getElementById('taskTitleInput').value.trim(); 
             const infoText = document.getElementById('taskInfoInput').value.trim(); 
             const dueDate = document.getElementById('taskDueDate').value;
@@ -2069,7 +2089,8 @@
                     dueDuration: dueDate ? 1.0 : undefined,
                     dirty: true, 
                     deleted: false, 
-                    eventId: null 
+                    eventId: null,
+                    syncFailed: false
                 }); 
                 saveNotes(); 
                 handleSearch(); 
@@ -2871,7 +2892,6 @@
                     gapi.client.setToken({ access_token: savedToken.token });
                 }
                 
-                // 1. TASK SYNC LOGIC
                 const response = await gapi.client.tasks.tasklists.list();
                 const remoteLists = response.result.items || [];
                 const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
@@ -2882,7 +2902,7 @@
                     if (existingList) { 
                         gapiListIds[quadKey] = existingList.id; 
                     } else { 
-                        const newListReq = await gapi.client.tasks.tasklists.insert({ title: GAPI_LIST_NAMES[quadKey] }); 
+                        const newListReq = await gapi.client.tasks.tasklists.insert({ resource: { title: GAPI_LIST_NAMES[quadKey] } }); 
                         gapiListIds[quadKey] = newListReq.result.id; 
                     } 
                 }
@@ -2892,19 +2912,30 @@
                     const listId = gapiListIds[quadKey]; 
                     const tasksReq = await gapi.client.tasks.tasks.list({ tasklist: listId, showHidden: true, maxResults: 100 }); 
                     const rTasks = tasksReq.result.items || []; 
-                    rTasks.forEach(t => { remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; }); 
+                    rTasks.forEach(t => { 
+                        remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; 
+                    }); 
                 }
                 
                 const syncSnapshot = JSON.parse(JSON.stringify(notes));
+                
                 for (let sn of syncSnapshot) {
                     if (sn.eventId) continue; 
+                    
                     if (sn.deleted && sn.dirty) { 
                         if (remoteTaskMap[sn.id]) { 
-                            try { await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); } catch(e){ console.error("Error deleting remote task", e); } 
+                            try { 
+                                await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); 
+                                sn.syncFailed = false;
+                            } catch(e){
+                                console.error("Error deleting remote task:", e);
+                                sn.syncFailed = true;
+                            } 
                         } 
                         sn.dirty = false; 
                         continue; 
                     }
+                    
                     if (sn.dirty && !sn.deleted) {
                         const targetListId = gapiListIds[sn.quadrant]; 
                         const remoteObj = remoteTaskMap[sn.id]; 
@@ -2921,32 +2952,59 @@
                         }; 
                         
                         if (sn.dueDate) {
-                            resourceBody.due = sn.dueDate + "T00:00:00.000Z";
-                        } else if (remoteObj) {
+                            const [y, m, d] = sn.dueDate.split('-');
+                            const dueDt = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+                            resourceBody.due = dueDt.toISOString();
+                        } else if (remoteObj && remoteObj.task.due) {
                             resourceBody.due = null;
                         }
 
                         if (remoteObj) { 
                             if (remoteObj.listId !== targetListId) { 
                                 try { 
-                                    await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); 
-                                    const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
+                                    await gapi.client.tasks.tasks.delete({ 
+                                        tasklist: remoteObj.listId, 
+                                        task: sn.id 
+                                    }); 
+                                    const res = await gapi.client.tasks.tasks.insert({ 
+                                        tasklist: targetListId,
+                                        resource: resourceBody
+                                    }); 
                                     sn.tempId = sn.id; 
-                                    sn.id = res.result.id; 
-                                } catch(e){} 
+                                    sn.id = res.result.id;
+                                    sn.syncFailed = false;
+                                } catch(e){
+                                    console.error("Error moving task:", e);
+                                    sn.syncFailed = true;
+                                } 
                             } else { 
                                 try { 
-                                    await gapi.client.tasks.tasks.patch({ tasklist: targetListId, task: sn.id, resource: resourceBody }); 
-                                } catch(e){} 
+                                    await gapi.client.tasks.tasks.patch({ 
+                                        tasklist: remoteObj.listId,
+                                        task: sn.id,
+                                        resource: resourceBody
+                                    }); 
+                                    sn.syncFailed = false;
+                                } catch(e){
+                                    console.error("Error patching task:", e);
+                                    sn.syncFailed = true;
+                                } 
                             } 
                             delete remoteTaskMap[sn.id]; 
-                            if(sn.tempId) delete remoteTaskMap[sn.tempId]; 
+                            if (sn.tempId) delete remoteTaskMap[sn.tempId]; 
                         } else { 
                             try { 
-                                const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
+                                const res = await gapi.client.tasks.tasks.insert({ 
+                                    tasklist: targetListId,
+                                    resource: resourceBody
+                                }); 
                                 sn.tempId = sn.id; 
                                 sn.id = res.result.id; 
-                            } catch(e){} 
+                                sn.syncFailed = false;
+                            } catch(e){
+                                console.error("Error inserting task:", e);
+                                sn.syncFailed = true;
+                            } 
                         }
                         sn.dirty = false;
                     } else if (!sn.dirty && !sn.deleted) { 
@@ -2958,6 +3016,7 @@
                             sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
                             sn.quadrant = remoteObj.quadKey; 
                             sn.dueDate = remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null; 
+                            sn.syncFailed = false;
                             delete remoteTaskMap[sn.id]; 
                         } 
                     }
@@ -2974,11 +3033,13 @@
                         dueDate: remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null, 
                         eventId: null, 
                         dirty: false, 
-                        deleted: false 
+                        deleted: false,
+                        syncFailed: false
                     }); 
                 });
                 
-                let newNotesArray = []; let syncedIds = new Set();
+                let newNotesArray = []; 
+                let syncedIds = new Set();
                 syncSnapshot.forEach(sn => { 
                     if (sn.deleted && !sn.dirty) return; 
                     const liveNote = notes.find(n => n.id === sn.id || (sn.tempId && n.id === sn.tempId)); 
@@ -3001,16 +3062,16 @@
                 saveNotes(); 
                 handleSearch(); 
                 document.getElementById('sync-banner').style.display = 'none';
-                showToast("Successfully synced with Google Tasks!");
+                showToast("✓ Successfully synced with Google Tasks!");
+                
             } catch (e) {
                 document.getElementById('sync-banner').style.display = 'none';
-                console.error(e);
+                console.error("Background sync error:", e);
                 showToast("Tasks sync failed. Check your API configuration.");
             }
         }
 
         window.addEventListener('load', () => {
-            // Apply Saved Grid Widths and Orders First
             const matrixContainer = document.getElementById('matrix');
             
             if (appConfig.quadrantOrder && appConfig.quadrantOrder.length > 0) {
@@ -3027,7 +3088,6 @@
                 quadResizeObserver.observe(q);
             });
 
-            // --- Execute Initial Render logic with Config ---
             if (!localStorage.getItem('quadra_layout')) {
                 currentLayout = appConfig.defaultView;
             }
@@ -3057,7 +3117,6 @@
             }
             checkConfigState();
 
-            // Setup Keyboard Navigation for Search and Quick Tags Bar
             const searchInput = document.getElementById('searchInput');
             const tagsBar = document.getElementById('quick-tags-bar');
 
@@ -3092,26 +3151,6 @@
             }
         });
         
-        function checkConfigState() {
-            const authorizeButton = document.getElementById('authorize_button');
-            const signoutButton = document.getElementById('signout_button');
-
-            authorizeButton.style.display = 'none';
-            signoutButton.style.display = 'none';
-
-            const savedTokenData = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-            if (savedTokenData && savedTokenData.expires_at > Date.now()) {
-                authorizeButton.style.display = 'none';
-                signoutButton.style.display = 'inline-block';
-                isGoogleSynced = true;
-                if (typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: savedTokenData.token });
-                loadCalendars(); 
-            } else {
-                authorizeButton.style.display = 'inline-block';
-                signoutButton.style.display = 'none';
-            }
-        }
-
         function handleAuthClick() { 
             if (!appConfig.clientId) return openSettingsPage(); 
             if (!tokenClient && typeof google !== 'undefined' && google.accounts) { 
