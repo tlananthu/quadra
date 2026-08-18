@@ -17,7 +17,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v3.0</span></h1>
+                <h1>Quadra <span class="version-badge">v3.01</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -369,11 +369,12 @@
                     <button type="button" data-command="italic" style="font-style:italic;">I</button>
                     <button type="button" data-command="strikeThrough" style="text-decoration:line-through;">S</button>
                     <div class="separator"></div>
-                    <button type="button" data-command="insertUnorderedList">• List</button>
-                    <button type="button" data-command="insertOrderedList">1. List</button>
+                    <button type="button" data-command="insertUnorderedList">⫶☰</button>
+                    <button type="button" data-command="insertOrderedList">☰</button>
+                    <button type="button" onclick="toggleChecklistFormatting()">☑</button>
                     <div class="separator"></div>
-                    <button type="button" data-command="outdent">← Pull</button>
-                    <button type="button" data-command="indent">Push →</button>
+                    <button type="button" data-command="outdent">←</button>
+                    <button type="button" data-command="indent">→</button>
                 </div>
                 <div class="rich-task-input" id="taskInfoInput" contenteditable="true" placeholder="Enter multi-line task specs, lists, details..." oninput="triggerAutoSaveInterval()"></div>
             </div>

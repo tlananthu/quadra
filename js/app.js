@@ -927,8 +927,7 @@ document.addEventListener('keydown', (e) => {
 
     if (isEditingText && e.ctrlKey && e.key === '1') {
         e.preventDefault();
-        const todoHtml = '<ul class="todo-list"><li class="todo-item">&#8203;</li></ul><br>';
-        document.execCommand('insertHTML', false, todoHtml);
+        toggleChecklistFormatting();
         return; 
     }
 
@@ -1466,6 +1465,40 @@ function handleSearch() {
 
     document.getElementById('clearSearchBtn').style.display = query.length > 0 ? 'block' : 'none';
     renderNotes(query);
+}
+
+// --- Missing Quick Tags Function ---
+function updateQuickTags() {
+    const tagsBar = document.getElementById('quick-tags-bar');
+    if (!tagsBar) return;
+    
+    let allTags = new Set();
+    
+    // Scan all active notes for hashtags and mentions
+    notes.forEach(note => {
+        if (note.deleted || note.eventId) return;
+        const matches = (note.text || '').match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
+        if (matches) {
+            matches.forEach(m => allTags.add(m));
+        }
+    });
+    
+    tagsBar.innerHTML = '';
+    
+    // Populate the bar with clickable tags
+    Array.from(allTags).sort().forEach(tag => {
+        let btn = document.createElement('button');
+        btn.className = 'filter-tag' + (tag.startsWith('@') ? ' person-filter' : '');
+        btn.innerText = tag;
+        btn.onclick = () => {
+            const searchInput = document.getElementById('searchInput');
+            if(searchInput) {
+                searchInput.value = tag;
+                handleSearch();
+            }
+        };
+        tagsBar.appendChild(btn);
+    });
 }
 
 function renderNotes(searchQuery = '') {
@@ -2091,3 +2124,52 @@ if (searchInputEl && savedSearch) {
 }
 
 renderNotes(savedSearch);
+
+// --- Editor Toolbar Logic ---
+document.getElementById('editorToolbar')?.addEventListener('click', function(e) {
+    let btn = e.target.closest('button');
+    if (!btn) return;
+    let command = btn.getAttribute('data-command');
+    let value = btn.getAttribute('data-value') || null;
+    if (command) {
+        e.preventDefault();
+        document.execCommand(command, false, value);
+        document.getElementById('taskInfoInput').focus();
+        triggerAutoSaveInterval();
+    }
+});
+
+function toggleChecklistFormatting() {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+
+    let container = sel.getRangeAt(0).commonAncestorContainer;
+    let el = container.nodeType === 3 ? container.parentNode : container;
+    
+    // 1. Check if we are already inside a checklist item
+    let existingLi = el.closest('li.todo-item');
+    if (existingLi) {
+        existingLi.classList.toggle('completed');
+        triggerAutoSaveInterval();
+        return;
+    }
+
+    // 2. If not a checklist, safely convert the current line using native commands
+    document.execCommand('insertUnorderedList', false, null);
+    
+    // 3. Immediately upgrade the native list to our custom checklist styles
+    setTimeout(() => {
+        let currSel = window.getSelection();
+        if(!currSel.rangeCount) return;
+        let currNode = currSel.getRangeAt(0).commonAncestorContainer;
+        let currEl = currNode.nodeType === 3 ? currNode.parentNode : currNode;
+        
+        let li = currEl.closest('li');
+        let ul = currEl.closest('ul');
+        
+        if (li) li.classList.add('todo-item');
+        if (ul) ul.classList.add('todo-list');
+        
+        triggerAutoSaveInterval();
+    }, 10);
+}
