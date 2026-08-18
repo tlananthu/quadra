@@ -106,6 +106,17 @@ function parseTags(str) {
     return html;
 }
 
+function searchTag(tag, event) { 
+    event.stopPropagation(); 
+    document.getElementById('searchInput').value = tag; 
+    handleSearch(); 
+}
+
+function clearSearch() { 
+    document.getElementById('searchInput').value = ''; 
+    handleSearch(); 
+}
+
 function matchesSearchQuery(noteText, query) {
     const normalizedText = cleanHTMLToPlainText(noteText).toLowerCase();
     const trimmedQuery = (query || '').trim();
