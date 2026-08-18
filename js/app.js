@@ -372,36 +372,72 @@ function goToToday() {
 }
 
 function renderTrackerTimeline() {
-    const searchInput = document.getElementById('searchInput');
-    const query = searchInput ? searchInput.value.toLowerCase() : '';
+    // 1. Get Global Search Query
+    const globalSearchInput = document.getElementById('searchInput');
+    const globalQuery = globalSearchInput ? globalSearchInput.value.toLowerCase() : '';
+    
+    // 2. Get Palette-Specific Search Query
+    const paletteSearchInput = document.getElementById('paletteSearchInput');
+    const paletteSearchText = paletteSearchInput ? paletteSearchInput.value : '';
+    
+    // Manage local clear button visibility
+    const clearPaletteBtn = document.getElementById('clearPaletteSearchBtn');
+    if (clearPaletteBtn) {
+        clearPaletteBtn.style.display = paletteSearchText.trim().length > 0 ? 'block' : 'none';
+    }
+    
+    // Decouple Logic: If local palette search is empty, fallback to global query
+    const effectivePaletteQuery = paletteSearchText.trim().length > 0 ? paletteSearchText : globalQuery;
+
     const canvas = document.getElementById('timelineCanvas');
     const paletteList = document.getElementById('tracker-palette-list');
     const hourPx = 60 * timelineZoom;
     
     paletteList.innerHTML = '';
-    let filteredNotes = notes.filter(n => !n.deleted && matchesSearchQuery(n.text, query) && !n.eventId);
-
-    // --- NEW DUE DATE FILTER LOGIC ---
+    
+    // 3. Filter Palette using the Effective Query
+    let paletteNotes = notes.filter(n => !n.deleted && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId);
+    
+    // Apply Due Only Filter
     const dueToggle = document.getElementById('dueFilterToggle');
     if (dueToggle && dueToggle.checked) {
-        // 1. Keep only notes that have a dueDate
-        filteredNotes = filteredNotes.filter(n => n.dueDate);
-        
-        // 2. Sort them ascending (oldest/overdue first -> today -> future)
-        filteredNotes.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+        paletteNotes = paletteNotes.filter(n => n.dueDate);
+        paletteNotes.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     }
-
     
-    filteredNotes.forEach(note => {
+    // 4. Render Palette UI identical to Quadrants (No complete/sync buttons)
+    paletteNotes.forEach(note => {
         const el = document.createElement('div');
-        el.className = 'palette-note';
+        // Re-use standard quadrant note classes
+        el.className = 'note' + (note.status === 'closed' ? ' closed-note' : '');
+        el.style.marginBottom = '8px'; // Slightly tighter for palette
+        el.style.cursor = 'grab';
         el.draggable = true;
         el.ondragstart = (e) => e.dataTransfer.setData('text/plain', note.id);
-        el.onclick = (e) => openTaskModal(null, note.id, e);
         
-        let title = cleanHTMLToPlainText(note.text).split('\n')[0].substring(0, 50);
-        el.innerHTML = `<strong>${note.status === 'closed' ? '✓ ' : ''}</strong> ${parseTags(title)}`;
-        if (note.status === 'closed') el.style.opacity = '0.6';
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'note-content-wrapper';
+        contentWrapper.style.maxWidth = '100%'; // Reclaim space normally used by action buttons
+        
+        let overdueIndicator = '';
+        if (note.status === 'active' && note.dueDate) {
+            const dueDateStr = note.dueDate.split('T')[0];
+            if (dueDateStr < todayStr) {
+                overdueIndicator = `<span style="background: #FFF1F2; color: #9F1239; border: 1px solid #FECDD3; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">OVERDUE</span>`;
+            }
+        }
+
+        let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+        contentWrapper.innerHTML = `<div class="note-text">${overdueIndicator}${parseTags(cleanTextTitle)}</div>`;
+        
+        if (note.dueDate) {
+            contentWrapper.innerHTML += `<div style="font-size:12px; color:var(--brand-primary); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>`;
+        }
+        
+        contentWrapper.onclick = (e) => openTaskModal(null, note.id, e);
+        
+        // We strictly DO NOT append a .note-actions div here.
+        el.appendChild(contentWrapper);
         paletteList.appendChild(el);
     });
 
@@ -566,7 +602,7 @@ function renderTrackerTimeline() {
         notes.forEach(note => {
             if (note.deleted) return; 
             const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-            if (!isCalendarEvent && !matchesSearchQuery(note.text, query)) return;
+            if (!isCalendarEvent && !matchesSearchQuery(note.text, globalQuery)) return;
 
             if (note.dueDate) {
                 let blockStart = roundToQuarterHour(note.dueTime !== undefined ? note.dueTime : 9.0);
