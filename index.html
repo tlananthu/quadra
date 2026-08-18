@@ -17,7 +17,7 @@
                     <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
-                <h1>Quadra <span class="version-badge">v3.02</span></h1>
+                <h1>Quadra <span class="version-badge">v3.03</span></h1>
             </div>
             
             <div class="search-container" id="searchHeaderContainer">
@@ -118,10 +118,19 @@
         <div id="tracker-view">
             <div class="tracker-layout">
                 <div class="tracker-palette">
-                    <div class="palette-header">
+                    <div class="palette-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
                         <h3>Task Palette</h3>
                         <p>Click or drag tasks onto the calendar.</p>
                     </div>
+                    <div class="toggle-container" style="display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 2px;">
+                        <label class="switch">
+                            <input type="checkbox" id="dueFilterToggle" onchange="toggleDueFilter()" checked>
+                            <span class="slider round"></span>
+                        </label>
+                        <span style="font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">DUE ONLY</span>
+                    </div>
+                </div>
                     <div class="palette-list" id="tracker-palette-list">
                     </div>
                 </div>

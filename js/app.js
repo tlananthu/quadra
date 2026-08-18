@@ -380,6 +380,20 @@ function renderTrackerTimeline() {
     
     paletteList.innerHTML = '';
     const filteredNotes = notes.filter(n => !n.deleted && matchesSearchQuery(n.text, query) && !n.eventId);
+
+    // Get initial filtered list based on search and deletion status
+    let filteredNotes = notes.filter(n => !n.deleted && matchesSearchQuery(n.text, query) && !n.eventId);
+
+    // --- NEW DUE DATE FILTER LOGIC ---
+    const dueToggle = document.getElementById('dueFilterToggle');
+    if (dueToggle && dueToggle.checked) {
+        // 1. Keep only notes that have a dueDate
+        filteredNotes = filteredNotes.filter(n => n.dueDate);
+        
+        // 2. Sort them ascending (oldest/overdue first -> today -> future)
+        filteredNotes.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    }
+
     
     filteredNotes.forEach(note => {
         const el = document.createElement('div');
@@ -1716,6 +1730,20 @@ window.addEventListener('load', () => {
             }
         });
     }
+
+    // --- NEW: Load the saved state for the Due Only toggle ---
+    // Using !== 'false' ensures it defaults to true on the very first visit
+    const savedDueFilter = localStorage.getItem('quadra_due_filter') !== 'false';
+    const dueToggle = document.getElementById('dueFilterToggle');
+
+    if (dueToggle) {
+        dueToggle.checked = savedDueFilter;
+        
+        // If it defaulted to true on the first visit, trigger the filter immediately
+        if (savedDueFilter && !localStorage.getItem('quadra_due_filter')) {
+            toggleDueFilter();
+        }
+    }
 });
 
 function handleAuthClick() { 
@@ -2177,4 +2205,12 @@ function toggleChecklistFormatting() {
         
         triggerAutoSaveInterval();
     }, 10);
+}
+
+function toggleDueFilter() {
+    const toggle = document.getElementById('dueFilterToggle');
+    if (toggle) {
+        localStorage.setItem('quadra_due_filter', toggle.checked);
+        renderTrackerTimeline();
+    }
 }
