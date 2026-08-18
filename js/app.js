@@ -49,6 +49,12 @@ const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
 let savedDate = localStorage.getItem('quadra_tracker_date');
 document.getElementById('trackerDate').value = savedDate || todayStr;
 
+document.getElementById('taskTitleInput')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+    }
+});
+
 // --- Saving Quadrant Order and Width States ---
 function saveQuadrantState() {
     const container = document.getElementById('matrix');
