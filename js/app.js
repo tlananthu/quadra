@@ -1410,37 +1410,27 @@ function saveSettings() {
     if (currentLayout === 'tracker') renderTrackerTimeline();
 }
 
-// --- Updated Quick Tags Function ---
-// --- Updated Quick Tags Function (With Counts & Sorting) ---
+// --- Updated Quick Tags Function (With AND/OR Logic, Counts & Sorting) ---
 function updateQuickTags() {
     const tagsBar = document.getElementById('quick-tags-bar');
-    if (!tagsBar) return;
+    const searchInput = document.getElementById('searchInput');
+    if (!tagsBar || !searchInput) return;
     
-    // Map to track tag occurrences
     let tagCounts = new Map();
-    
-    // Failsafe Regex: Identifies standard Hex Colors (e.g., #3C4043 or #FFF) so we can explicitly ignore them
     const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
     
     notes.forEach(note => {
         if (note.deleted || note.eventId) return;
         
-        // 1. Safely strip ALL HTML attributes by using the browser's native DOM parser
         let tempDiv = document.createElement('div');
         tempDiv.innerHTML = note.text || '';
         let safePlainText = tempDiv.textContent || tempDiv.innerText || '';
         
-        // 2. Extract tags from the clean text
         const matches = safePlainText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
         if (matches) {
-            // Deduplicate tags within the SAME note (so a note with five "#jira" tags only counts as 1 for that note)
             let uniqueMatches = [...new Set(matches)];
-            
             uniqueMatches.forEach(tag => {
-                // 3. Explicitly filter out any tags that perfectly match a Hex Color code format
                 if (hexColorRegex.test(tag)) return;
-                
-                // Increment the count for this tag
                 tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
             });
         }
@@ -1448,29 +1438,66 @@ function updateQuickTags() {
     
     tagsBar.innerHTML = '';
     
-    // 4. Convert to Array and Sort: Descending by count, then alphabetically
+    const currentSearch = searchInput.value.trim();
+    
+    // --- NEW: Inject AND / OR logic buttons if search is active ---
+    if (currentSearch.length > 0) {
+        // Prevent adding multiple operators in a row
+        const endsWithOperator = /\b(AND|OR)$/i.test(currentSearch);
+        
+        if (!endsWithOperator) {
+            ['AND', 'OR'].forEach(op => {
+                let opBtn = document.createElement('button');
+                opBtn.className = 'filter-tag';
+                opBtn.style.backgroundColor = '#E2E8F0'; // Gray background to distinguish logic buttons
+                opBtn.style.color = '#475569';
+                opBtn.style.fontWeight = '700';
+                opBtn.innerText = op;
+                
+                opBtn.onclick = () => {
+                    searchInput.value = currentSearch + ` ${op} `;
+                    searchInput.focus();
+                    handleSearch(); // Triggers a re-render
+                };
+                tagsBar.appendChild(opBtn);
+            });
+            
+            // Add a subtle vertical divider
+            let divider = document.createElement('div');
+            divider.style.width = '1px';
+            divider.style.backgroundColor = 'var(--border-color)';
+            divider.style.margin = '0 8px';
+            tagsBar.appendChild(divider);
+        }
+    }
+    
+    // Convert to Array and Sort: Descending by count, then alphabetically
     let sortedTags = Array.from(tagCounts.entries()).sort((a, b) => {
         if (b[1] !== a[1]) {
-            return b[1] - a[1]; // Highest count first
+            return b[1] - a[1]; 
         }
-        return a[0].localeCompare(b[0]); // Alphabetical tie-breaker
+        return a[0].localeCompare(b[0]); 
     });
     
-    // 5. Populate the bar with clickable tags and their counts
+    // Populate the bar with clickable tags
     sortedTags.forEach(([tag, count]) => {
         let btn = document.createElement('button');
         btn.className = 'filter-tag' + (tag.startsWith('@') ? ' person-filter' : '');
-        
-        // Display the tag with its occurrence count in brackets
         btn.innerText = `${tag} (${count})`;
         
         btn.onclick = () => {
-            const searchInput = document.getElementById('searchInput');
-            if(searchInput) {
-                // Only pass the tag name (without the count) into the search bar
-                searchInput.value = tag;
-                handleSearch();
+            const currentVal = searchInput.value.trim();
+            const endsWithOp = /\b(AND|OR)$/i.test(currentVal);
+            
+            // Smart Append: If the search box ends with AND/OR, combine the tags. Otherwise, replace.
+            if (endsWithOp) {
+                searchInput.value = currentVal + ` ${tag} `;
+            } else {
+                searchInput.value = `${tag} `;
             }
+            
+            searchInput.focus();
+            handleSearch();
         };
         tagsBar.appendChild(btn);
     });
