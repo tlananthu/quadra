@@ -1392,6 +1392,67 @@ function saveSettings() {
     if (currentLayout === 'tracker') renderTrackerTimeline();
 }
 
+function updateQuickTags() {
+    const tagsBar = document.getElementById('quick-tags-bar'); 
+    if (!tagsBar) return;
+    
+    const searchInput = document.getElementById('searchInput');
+    const currentValue = searchInput ? (searchInput.value || '') : '';
+    const cursorPos = searchInput ? (searchInput.selectionStart ?? currentValue.length) : currentValue.length;
+    const beforeCursor = currentValue.slice(0, cursorPos);
+    
+    const lastTokenMatch = beforeCursor.match(/(?:^|\s)([^\s]*)$/);
+    const lastToken = lastTokenMatch ? lastTokenMatch[1] : '';
+    
+    let prefix = null;
+    let showBooleans = false;
+    
+    if (lastToken.startsWith('#') || lastToken.startsWith('@')) {
+        prefix = lastToken.toLowerCase();
+    } else if (beforeCursor.endsWith(' ') || beforeCursor.trim() !== '') {
+        if (beforeCursor.trim() !== '' && !lastToken) showBooleans = true;
+    }
+
+    const tagCounts = {};
+    notes.forEach(note => {
+        if (!note.deleted && note.status === 'active' && !note.eventId) {
+            let cleanText = cleanHTMLToPlainText(note.text);
+            const matches = cleanText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
+            if (matches) {
+                const uniqueTags = new Set(matches.map(t => t.toLowerCase()));
+                uniqueTags.forEach(tag => { tagCounts[tag] = (tagCounts[tag] || 0) + 1; });
+            }
+        }
+    });
+
+    tagsBar.innerHTML = '';
+
+    if (showBooleans) {
+        ['AND', 'OR'].forEach(op => {
+            const btn = document.createElement('button');
+            btn.className = 'filter-tag';
+            btn.innerText = op;
+            btn.onclick = (e) => { e.preventDefault(); insertSearchSuggestion(op); };
+            tagsBar.appendChild(btn);
+        });
+    }
+
+    const sortedTags = Object.keys(tagCounts).sort((a, b) => {
+        if (tagCounts[b] !== tagCounts[a]) return tagCounts[b] - tagCounts[a];
+        return a.localeCompare(b);
+    });
+
+    sortedTags.forEach(tag => {
+        if (prefix && !tag.startsWith(prefix)) return;
+        const btn = document.createElement('button');
+        const isPerson = tag.startsWith('@');
+        btn.className = 'filter-tag' + (isPerson ? ' person-filter' : '');
+        btn.innerText = `${tag} (${tagCounts[tag]})`;
+        btn.onclick = (e) => { e.preventDefault(); insertSearchSuggestion(tag); };
+        tagsBar.appendChild(btn);
+    });
+}
+
 function handleSearch() {
     const searchInput = document.getElementById('searchInput');
     if(!searchInput) return;
