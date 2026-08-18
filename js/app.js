@@ -1391,63 +1391,41 @@ function saveSettings() {
     if (currentLayout === 'tracker') renderTrackerTimeline();
 }
 
+// --- Updated Quick Tags Function ---
 function updateQuickTags() {
-    const tagsBar = document.getElementById('quick-tags-bar'); 
+    const tagsBar = document.getElementById('quick-tags-bar');
     if (!tagsBar) return;
     
-    const searchInput = document.getElementById('searchInput');
-    const currentValue = searchInput ? (searchInput.value || '') : '';
-    const cursorPos = searchInput ? (searchInput.selectionStart ?? currentValue.length) : currentValue.length;
-    const beforeCursor = currentValue.slice(0, cursorPos);
+    let allTags = new Set();
     
-    const lastTokenMatch = beforeCursor.match(/(?:^|\s)([^\s]*)$/);
-    const lastToken = lastTokenMatch ? lastTokenMatch[1] : '';
-    
-    let prefix = null;
-    let showBooleans = false;
-    
-    if (lastToken.startsWith('#') || lastToken.startsWith('@')) {
-        prefix = lastToken.toLowerCase();
-    } else if (beforeCursor.endsWith(' ') || beforeCursor.trim() !== '') {
-        if (beforeCursor.trim() !== '' && !lastToken) showBooleans = true;
-    }
-
-    const tagCounts = {};
+    // Scan all active notes for hashtags and mentions
     notes.forEach(note => {
-        if (!note.deleted && note.status === 'active' && !note.eventId) {
-            let cleanText = cleanHTMLToPlainText(note.text);
-            const matches = cleanText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
-            if (matches) {
-                const uniqueTags = new Set(matches.map(t => t.toLowerCase()));
-                uniqueTags.forEach(tag => { tagCounts[tag] = (tagCounts[tag] || 0) + 1; });
-            }
+        if (note.deleted || note.eventId) return;
+        
+        // FIX: Convert the raw HTML to plain text first so CSS hex codes are stripped out
+        const plainText = cleanHTMLToPlainText(note.text || '');
+        
+        // Scan the cleaned text for tags
+        const matches = plainText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
+        if (matches) {
+            matches.forEach(m => allTags.add(m));
         }
     });
-
+    
     tagsBar.innerHTML = '';
-
-    if (showBooleans) {
-        ['AND', 'OR'].forEach(op => {
-            const btn = document.createElement('button');
-            btn.className = 'filter-tag';
-            btn.innerText = op;
-            btn.onclick = (e) => { e.preventDefault(); insertSearchSuggestion(op); };
-            tagsBar.appendChild(btn);
-        });
-    }
-
-    const sortedTags = Object.keys(tagCounts).sort((a, b) => {
-        if (tagCounts[b] !== tagCounts[a]) return tagCounts[b] - tagCounts[a];
-        return a.localeCompare(b);
-    });
-
-    sortedTags.forEach(tag => {
-        if (prefix && !tag.startsWith(prefix)) return;
-        const btn = document.createElement('button');
-        const isPerson = tag.startsWith('@');
-        btn.className = 'filter-tag' + (isPerson ? ' person-filter' : '');
-        btn.innerText = `${tag} (${tagCounts[tag]})`;
-        btn.onclick = (e) => { e.preventDefault(); insertSearchSuggestion(tag); };
+    
+    // Populate the bar with clickable tags
+    Array.from(allTags).sort().forEach(tag => {
+        let btn = document.createElement('button');
+        btn.className = 'filter-tag' + (tag.startsWith('@') ? ' person-filter' : '');
+        btn.innerText = tag;
+        btn.onclick = () => {
+            const searchInput = document.getElementById('searchInput');
+            if(searchInput) {
+                searchInput.value = tag;
+                handleSearch();
+            }
+        };
         tagsBar.appendChild(btn);
     });
 }
