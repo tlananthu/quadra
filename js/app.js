@@ -379,9 +379,6 @@ function renderTrackerTimeline() {
     const hourPx = 60 * timelineZoom;
     
     paletteList.innerHTML = '';
-    const filteredNotes = notes.filter(n => !n.deleted && matchesSearchQuery(n.text, query) && !n.eventId);
-
-    // Get initial filtered list based on search and deletion status
     let filteredNotes = notes.filter(n => !n.deleted && matchesSearchQuery(n.text, query) && !n.eventId);
 
     // --- NEW DUE DATE FILTER LOGIC ---
