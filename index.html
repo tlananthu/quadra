@@ -214,6 +214,25 @@
         .quadrant.drag-over { box-shadow: 0 0 0 2px var(--brand-primary) inset; }
         .quadrant.quad-drag-over { box-shadow: 0 0 0 2px var(--brand-primary) inset, 0 0 20px rgba(79, 70, 229, 0.2); background-color: rgba(79, 70, 229, 0.05) !important; }
 
+        #q1 { background-color: var(--q1-bg); } 
+        #q2 { background-color: var(--q2-bg); } 
+        #q3 { background-color: var(--q3-bg); } 
+        #q4 { background-color: var(--q4-bg); }
+        #tray-inbox { background-color: #F8FAFC; border-color: #E2E8F0; }
+        #tray-calendar { background-color: #F0FDF4; border-color: #BBF7D0; }
+        #tray-closed { background-color: #F3F4F6; border-color: #E5E7EB; }
+
+        .q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; pointer-events: none; }
+        .q-header h2 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .q-badge { font-size: 12px; font-weight: 600; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 12px; color: var(--text-muted); }
+        
+        .header-buttons { display: flex; gap: 8px; align-items: center; pointer-events: auto; }
+        .icon-btn { background: rgba(255,255,255,0.5); border: none; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.2s; font-size: 16px; font-weight: bold; }
+        .icon-btn:hover { background: rgba(255,255,255,0.9); color: var(--brand-primary); }
+        .add-btn { color: var(--brand-primary); font-size: 20px; padding: 0; }
+
+        .task-list { flex-grow: 1; overflow-y: auto; padding-bottom: 10px; scrollbar-width: thin; cursor: default; }
+
         /* Note Styling */
         .note { background-color: #ffffff; border: 1px solid rgba(0,0,0,0.05); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: flex-start; font-size: 14px; line-height: 1.5; cursor: grab; transition: transform 0.2s, box-shadow 0.2s; }
         .note:active { cursor: grabbing; }
@@ -376,6 +395,11 @@
         
         .logged-block.is-closed { opacity: 0.6; }
         .logged-block.is-closed .block-title { text-decoration: line-through; }
+
+        .logged-block:active { cursor: grabbing; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 12;}
+        .block-info { pointer-events: none; overflow: hidden; flex-grow: 1; padding-right: 4px; }
+        .block-title { font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+        .block-meta { font-size: 11px; opacity: 0.9; line-height: 1; }
 
         .resize-handle { position: absolute; bottom: 0; left: 0; right: 0; height: 10px; cursor: ns-resize; display: flex; justify-content: center; align-items: center; z-index: 11; opacity: 0.7; transition: opacity 0.2s; }
         .resize-handle:hover { opacity: 1; }
