@@ -741,6 +741,14 @@ function renderTrackerTimeline() {
     if (scrollArea && scrollArea.scrollTop === 0) scrollArea.scrollTop = 7 * hourPx; 
 }
 
+function toggleDueFilter() {
+    const toggle = document.getElementById('dueFilterToggle');
+    if (toggle) {
+        localStorage.setItem('quadra_due_filter', toggle.checked);
+        renderTrackerTimeline();
+    }
+}
+
 function renderOverdueTasksPage() {
     const container = document.getElementById('overdue-list-container');
     container.innerHTML = '';
@@ -1486,39 +1494,6 @@ function handleSearch() {
     renderNotes(query);
 }
 
-// --- Missing Quick Tags Function ---
-function updateQuickTags() {
-    const tagsBar = document.getElementById('quick-tags-bar');
-    if (!tagsBar) return;
-    
-    let allTags = new Set();
-    
-    // Scan all active notes for hashtags and mentions
-    notes.forEach(note => {
-        if (note.deleted || note.eventId) return;
-        const matches = (note.text || '').match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
-        if (matches) {
-            matches.forEach(m => allTags.add(m));
-        }
-    });
-    
-    tagsBar.innerHTML = '';
-    
-    // Populate the bar with clickable tags
-    Array.from(allTags).sort().forEach(tag => {
-        let btn = document.createElement('button');
-        btn.className = 'filter-tag' + (tag.startsWith('@') ? ' person-filter' : '');
-        btn.innerText = tag;
-        btn.onclick = () => {
-            const searchInput = document.getElementById('searchInput');
-            if(searchInput) {
-                searchInput.value = tag;
-                handleSearch();
-            }
-        };
-        tagsBar.appendChild(btn);
-    });
-}
 
 function renderNotes(searchQuery = '') {
     ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'closed'].forEach(q => { 
@@ -2205,12 +2180,4 @@ function toggleChecklistFormatting() {
         
         triggerAutoSaveInterval();
     }, 10);
-}
-
-function toggleDueFilter() {
-    const toggle = document.getElementById('dueFilterToggle');
-    if (toggle) {
-        localStorage.setItem('quadra_due_filter', toggle.checked);
-        renderTrackerTimeline();
-    }
 }
