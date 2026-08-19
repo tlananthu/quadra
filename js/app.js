@@ -402,6 +402,7 @@ function goToToday() {
 // --- NEW: Dedicated Palette Renderer ---
 // --- NEW: Dedicated Palette Renderer (With Planned Indicator) ---
 // --- NEW: Dedicated Palette Renderer (Multi-Day Architecture) ---
+// --- NEW: Dedicated Palette Renderer (Smart Planned Indicator) ---
 function renderTrackerPalette() {
     const globalSearchInput = document.getElementById('searchInput');
     const globalQuery = globalSearchInput ? globalSearchInput.value : '';
@@ -429,6 +430,9 @@ function renderTrackerPalette() {
         paletteNotes.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     }
     
+    // Calculate today's date string once to use for both planned & overdue checks
+    const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
+
     paletteNotes.forEach(note => {
         const el = document.createElement('div');
         el.className = 'note'; 
@@ -437,8 +441,8 @@ function renderTrackerPalette() {
         el.draggable = true;
         el.ondragstart = (e) => e.dataTransfer.setData('text/plain', note.id);
         
-        // --- NEW: Check if there are any scheduled time blocks ---
-        const isPlannedOnCalendar = note.timeBlocks && note.timeBlocks.length > 0;
+        // --- UPGRADED: Only show PLANNED if there is a block scheduled for today or the future ---
+        const isPlannedOnCalendar = note.timeBlocks && note.timeBlocks.some(block => block.date >= todayStr);
         
         if (isPlannedOnCalendar) {
             el.style.backgroundColor = '#F8FAFC';
@@ -452,7 +456,6 @@ function renderTrackerPalette() {
         let overdueIndicator = '';
         if (note.dueDate) {
             const dueDateStr = note.dueDate.split('T')[0];
-            const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
             if (dueDateStr < todayStr) {
                 overdueIndicator = `<span style="background: #FFF1F2; color: #9F1239; border: 1px solid #FECDD3; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">OVERDUE</span>`;
             }
