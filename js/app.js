@@ -30,18 +30,47 @@ const defaultSchedule = [
 let appSchedule = JSON.parse(localStorage.getItem('quadra_schedule')) || defaultSchedule;
 
 // Data Migration
+// --- Data Migration (Upgrade to Multi-Day Architecture) ---
 let notes = JSON.parse(localStorage.getItem('quadra_notes')) || [];
+
 notes = notes.map(note => {
-    if (note.timeBlocks && note.timeBlocks.length > 0 && !note.dueDate) {
-        note.dueDate = note.timeBlocks[0].date;
-        note.dueTime = note.timeBlocks[0].startHour;
-        note.dueDuration = note.timeBlocks[0].duration;
+    // 1. Initialize the new timeBlocks array if it doesn't exist
+    if (!note.timeBlocks) {
+        note.timeBlocks = [];
     }
-    // (Removed default 9.0 and 1.0 overrides here)
+
+    // 2. Safely port existing scheduled times into the new array format
+    if (note.dueDate && note.dueTime !== undefined && note.dueDuration !== undefined) {
+        
+        // Prevent duplicates if the migration runs multiple times
+        const alreadyMigrated = note.timeBlocks.some(b => b.date === note.dueDate && b.startHour === note.dueTime);
+        
+        if (!alreadyMigrated) {
+            note.timeBlocks.push({
+                blockId: 'b_' + Date.now().toString() + Math.floor(Math.random() * 1000),
+                date: note.dueDate,
+                startHour: note.dueTime,
+                duration: note.dueDuration
+            });
+        }
+        
+        // 3. Clean up the outdated root-level scheduling variables
+        delete note.dueTime;
+        delete note.dueDuration;
+    }
+
+    // Ensure standard properties exist
     if (note.syncFailed === undefined) note.syncFailed = false;
-    delete note.timeBlocks;
-    delete note.timeLogs; 
-    return { ...note, status: note.status || 'active', dirty: note.dirty || false, deleted: note.deleted || false, eventId: note.eventId || null, quadrant: note.quadrant || 'q2' };
+    delete note.timeLogs; // Remove legacy unused property
+    
+    return { 
+        ...note, 
+        status: note.status || 'active', 
+        dirty: note.dirty || false, 
+        deleted: note.deleted || false, 
+        eventId: note.eventId || null, 
+        quadrant: note.quadrant || 'q2' 
+    };
 });
 
 const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0]; 
@@ -372,6 +401,7 @@ function goToToday() {
 
 // --- NEW: Dedicated Palette Renderer ---
 // --- NEW: Dedicated Palette Renderer (With Planned Indicator) ---
+// --- NEW: Dedicated Palette Renderer (Multi-Day Architecture) ---
 function renderTrackerPalette() {
     const globalSearchInput = document.getElementById('searchInput');
     const globalQuery = globalSearchInput ? globalSearchInput.value : '';
@@ -384,7 +414,6 @@ function renderTrackerPalette() {
         clearPaletteBtn.style.display = paletteSearchText.trim().length > 0 ? 'block' : 'none';
     }
     
-    // Decouple Logic: Fallback to global query if local is empty
     const effectivePaletteQuery = paletteSearchText.trim().length > 0 ? paletteSearchText : globalQuery;
 
     const paletteList = document.getElementById('tracker-palette-list');
@@ -394,7 +423,6 @@ function renderTrackerPalette() {
     
     let paletteNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId);
     
-    // Apply Due Only Filter
     const dueToggle = document.getElementById('dueFilterToggle');
     if (dueToggle && dueToggle.checked) {
         paletteNotes = paletteNotes.filter(n => n.dueDate);
@@ -409,10 +437,9 @@ function renderTrackerPalette() {
         el.draggable = true;
         el.ondragstart = (e) => e.dataTransfer.setData('text/plain', note.id);
         
-        // If the task has a defined dueTime, it means it is currently on the timeline grid
-        const isPlannedOnCalendar = note.dueDate && note.dueTime !== undefined;
+        // --- NEW: Check if there are any scheduled time blocks ---
+        const isPlannedOnCalendar = note.timeBlocks && note.timeBlocks.length > 0;
         
-        // Slightly dim the background of tasks that are already planned to differentiate them
         if (isPlannedOnCalendar) {
             el.style.backgroundColor = '#F8FAFC';
             el.style.borderColor = '#E2E8F0';
@@ -435,7 +462,6 @@ function renderTrackerPalette() {
         contentWrapper.innerHTML = `<div class="note-text">${overdueIndicator}${parseTags(cleanTextTitle)}</div>`;
         
         if (note.dueDate) {
-            // NEW: Render a 'Planned' badge if it has a due time, pushed to the right side
             let plannedBadge = isPlannedOnCalendar 
                 ? `<span style="margin-left: auto; background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; letter-spacing: 0.5px;">🕒 PLANNED</span>` 
                 : '';
@@ -458,7 +484,6 @@ function renderTrackerTimeline() {
     const searchInput = document.getElementById('searchInput');
     const globalQuery = searchInput ? searchInput.value.toLowerCase() : '';
     
-    // 1. Render the palette independently
     renderTrackerPalette();
 
     const canvas = document.getElementById('timelineCanvas');
@@ -505,7 +530,6 @@ function renderTrackerTimeline() {
     const [y, m, d] = baseDateStr.split('-');
     const baseDate = new Date(y, m - 1, d);
     
-    // UI Update for Day of Week
     const daySpan = document.getElementById('trackerDayOfWeek');
     if (daySpan) {
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -526,7 +550,6 @@ function renderTrackerTimeline() {
     }
 
     let datesToRender = [];
-    
     if (currentTrackerMode === 'day') {
         datesToRender.push({ date: baseDateStr, label: '' });
     } else {
@@ -534,15 +557,10 @@ function renderTrackerTimeline() {
         for(let i=0; i<7; i++) {
             let dateIter = new Date(weekStart);
             dateIter.setDate(weekStart.getDate() + i);
-            
             const localY = dateIter.getFullYear();
             const localM = String(dateIter.getMonth() + 1).padStart(2, '0');
             const localD = String(dateIter.getDate()).padStart(2, '0');
-            
-            datesToRender.push({
-                date: `${localY}-${localM}-${localD}`,
-                label: `${dayNames[i]} ${dateIter.getDate()}`
-            });
+            datesToRender.push({ date: `${localY}-${localM}-${localD}`, label: `${dayNames[i]} ${dateIter.getDate()}` });
         }
     }
 
@@ -619,7 +637,6 @@ function renderTrackerTimeline() {
             });
         });
 
-        // Prepare layout blocks for current column
         let dayBlocks = [];
 
         notes.forEach(note => {
@@ -627,24 +644,22 @@ function renderTrackerTimeline() {
             const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
             if (!isCalendarEvent && !matchesSearchQuery(note.text, globalQuery)) return;
 
-            if (note.dueDate && note.dueTime !== undefined) {
-                let blockStart = roundToQuarterHour(note.dueTime !== undefined ? note.dueTime : 9.0);
-                let duration = roundToQuarterHour(note.dueDuration !== undefined ? note.dueDuration : 1.0);
+            // --- NEW: Loop through timeBlocks array ---
+            let blocksToProcess = note.timeBlocks || [];
+            
+            // Dynamic fallback for Imported Google Events
+            if (isCalendarEvent && note.dueTime !== undefined) {
+                blocksToProcess = [{ blockId: 'cal', date: note.dueDate, startHour: note.dueTime, duration: note.dueDuration }];
+            }
+
+            blocksToProcess.forEach(tBlock => {
+                let blockStart = roundToQuarterHour(tBlock.startHour);
+                let duration = roundToQuarterHour(tBlock.duration);
                 let blockEnd = blockStart + duration;
                 if (blockEnd < blockStart) { blockEnd += 24; }
                 let actualDuration = roundToQuarterHour(blockEnd - blockStart);
 
-                // Totals calculations
-                if (weekDateKeys.has(note.dueDate)) {
-                    weeklyTotalRendered += actualDuration;
-                }
-                if (note.dueDate === baseDateStr) {
-                    totalTimeRendered += actualDuration;
-                } else if (note.dueDate === addDays(baseDateStr, -1) && blockStart < 24 && blockEnd > 24) {
-                    totalTimeRendered += roundToQuarterHour(blockEnd - 24);
-                }
-
-                if (note.dueDate === dateStr) {
+                if (tBlock.date === dateStr) {
                     let renderStart = blockStart % 24;
                     let renderDuration = duration;
 
@@ -657,7 +672,9 @@ function renderTrackerTimeline() {
                     const blockEl = document.createElement('div');
                     const quadClass = note.quadrant || 'q2';
                     blockEl.className = 'logged-block' + (isCalendarEvent ? ' is-meeting' : ` ${quadClass}`) + (note.status === 'closed' ? ' is-closed' : '');
-                    blockEl.id = `block-${note.id}`;
+                    
+                    // NEW: ID includes the specific blockId
+                    blockEl.id = `block-${note.id}-${tBlock.blockId}`;
                     blockEl.style.top = `${renderStart * hourPx}px`;
                     blockEl.style.height = `${Math.max(15, renderDuration * hourPx)}px`;
                     
@@ -665,12 +682,13 @@ function renderTrackerTimeline() {
                     const actualEndHour = (blockStart + actualDuration) % 24;
                     const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
+                    // NEW: Pass both note.id and tBlock.blockId to startBlockDrag
                     blockEl.innerHTML = `
                         <div class="block-info">
                             <div class="block-title">${displayTitle}</div>
                             <div class="block-meta">${timeStr}</div>
                         </div>
-                        ${isCalendarEvent ? '' : `<div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', true)"></div>`}
+                        ${isCalendarEvent ? '' : `<div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', '${tBlock.blockId}', true)"></div>`}
                     `;
                     
                     blockEl.onclick = (e) => {
@@ -682,19 +700,19 @@ function renderTrackerTimeline() {
                     if(!isCalendarEvent) {
                         blockEl.onmousedown = (e) => {
                             if(e.target.closest('.resize-handle')) return;
-                            startBlockDrag(e, note.id, false);
+                            startBlockDrag(e, note.id, tBlock.blockId, false);
                         };
                     }
                     
                     dayBlocks.push({ el: blockEl, start: renderStart, end: renderStart + renderDuration, duration: renderDuration });
                 } 
-                else if (note.dueDate === addDays(dateStr, -1)) {
+                else if (tBlock.date === addDays(dateStr, -1)) {
                     if (blockStart < 24 && blockEnd > 24) {
                         let overflowDuration = roundToQuarterHour(blockEnd - 24);
                         const blockEl = document.createElement('div');
                         const quadClass = note.quadrant || 'q2';
                         blockEl.className = 'logged-block' + (isCalendarEvent ? ' is-meeting' : ` ${quadClass}`) + (note.status === 'closed' ? ' is-closed' : '');
-                        blockEl.id = `block-overflow-${note.id}`;
+                        blockEl.id = `block-overflow-${note.id}-${tBlock.blockId}`;
                         blockEl.style.top = `0px`;
                         blockEl.style.height = `${Math.max(15, overflowDuration * hourPx)}px`;
                         
@@ -715,7 +733,7 @@ function renderTrackerTimeline() {
                         dayBlocks.push({ el: blockEl, start: 0, end: overflowDuration, duration: overflowDuration });
                     }
                 }
-            }
+            });
         });
 
         // Apply overlapping layout
@@ -771,25 +789,27 @@ function renderTrackerTimeline() {
         colsContainer.appendChild(col);
     });
 
-    // Deduplicate because we iterate multiple days in week view
+    // --- NEW: Daily/Weekly Hour Calculations loop through timeBlocks ---
     let actualWeekly = 0;
     let countedIds = new Set();
     notes.forEach(note => {
         if (note.deleted || note.eventId) return;
-        // FIX: Added note.dueTime !== undefined to prevent unscheduled palette tasks from counting in weekly totals
-        if (note.dueDate && note.dueTime !== undefined && weekDateKeys.has(note.dueDate) && !countedIds.has(note.id)) {
-            actualWeekly += roundToQuarterHour(note.dueDuration || 1.0);
-            countedIds.add(note.id);
-        }
+        (note.timeBlocks || []).forEach(tb => {
+            if (weekDateKeys.has(tb.date) && !countedIds.has(`${note.id}-${tb.blockId}`)) {
+                actualWeekly += roundToQuarterHour(tb.duration || 1.0);
+                countedIds.add(`${note.id}-${tb.blockId}`);
+            }
+        });
     });
 
     let actualDaily = 0;
     notes.forEach(note => {
         if (note.deleted || note.eventId) return;
-        // FIX: Added note.dueTime !== undefined to prevent unscheduled palette tasks from counting in daily totals
-        if (note.dueDate && note.dueTime !== undefined && note.dueDate === baseDateStr) {
-            actualDaily += roundToQuarterHour(note.dueDuration || 1.0);
-        }
+        (note.timeBlocks || []).forEach(tb => {
+            if (tb.date === baseDateStr) {
+                actualDaily += roundToQuarterHour(tb.duration || 1.0);
+            }
+        });
     });
 
     const dailyTotalEl = document.getElementById('trackerDailyTotal');
@@ -845,23 +865,25 @@ function renderOverdueTasksPage() {
     });
 }
 
-// --- Drag & Resize Engine ---
-// --- Drag & Resize Engine ---
-function startBlockDrag(e, noteId, isResize) {
+// --- Drag & Resize Engine (Multi-Day Architecture) ---
+function startBlockDrag(e, noteId, blockId, isResize) {
     e.stopPropagation();
     const note = notes.find(n => n.id === noteId);
-    if (!note) return;
+    if (!note || !note.timeBlocks) return;
+    
+    let tBlock = note.timeBlocks.find(b => b.blockId === blockId);
+    if (!tBlock) return;
     
     isDraggingBlock = true;
 
     dragState = {
-        noteId, isResize,
+        noteId, blockId, isResize,
         startX: e.clientX,
         startY: e.clientY,
-        originalStart: note.dueTime !== undefined ? roundToQuarterHour(note.dueTime) : 9.0,
-        originalDuration: note.dueDuration !== undefined ? roundToQuarterHour(note.dueDuration) : 1.0,
+        originalStart: tBlock.startHour,
+        originalDuration: tBlock.duration,
         hasMoved: false,
-        el: document.getElementById(`block-${noteId}`)
+        el: document.getElementById(`block-${noteId}-${blockId}`)
     };
 
     if (dragState.el) {
@@ -876,7 +898,6 @@ function startBlockDrag(e, noteId, isResize) {
 function onBlockDrag(e) {
     if (!dragState) return;
     
-    // Trigger movement flag if dragged horizontally OR vertically
     if (!dragState.hasMoved && (Math.abs(e.clientY - dragState.startY) > 3 || Math.abs(e.clientX - dragState.startX) > 3)) {
         dragState.hasMoved = true;
         isDraggingBlock = true;
@@ -890,9 +911,11 @@ function onBlockDrag(e) {
     const dHours = roundToQuarterHour(dy / hourPx); 
     
     const note = notes.find(n => n.id === dragState.noteId);
-    if (!note) return;
+    if (!note || !note.timeBlocks) return;
     
-    // --- Palette Un-scheduling Hover Logic ---
+    let tBlock = note.timeBlocks.find(b => b.blockId === dragState.blockId);
+    if (!tBlock) return;
+    
     const paletteEl = document.querySelector('.tracker-palette');
     let isOverPalette = false;
     
@@ -911,21 +934,20 @@ function onBlockDrag(e) {
 
     if (dragState.isResize) {
         let newDuration = Math.max(0.25, dragState.originalDuration + dHours);
-        note.dueDuration = newDuration;
+        tBlock.duration = newDuration;
         if (dragState.el) {
             dragState.el.style.height = `${newDuration * hourPx}px`;
-            const actualEndHour = (note.dueTime + newDuration) % 24;
-            const timeStr = `${decToTime(note.dueTime)} - ${decToTime(actualEndHour)}`;
+            const actualEndHour = (tBlock.startHour + newDuration) % 24;
+            const timeStr = `${decToTime(tBlock.startHour)} - ${decToTime(actualEndHour)}`;
             const metaEl = dragState.el.querySelector('.block-meta');
             if (metaEl) metaEl.innerText = timeStr;
         }
     } else {
-        let newStart = Math.max(0, Math.min(30 - note.dueDuration, dragState.originalStart + dHours));
-        note.dueTime = newStart;
+        let newStart = Math.max(0, Math.min(30 - tBlock.duration, dragState.originalStart + dHours));
+        tBlock.startHour = newStart;
         if (dragState.el) {
             dragState.el.style.top = `${(newStart % 24) * hourPx}px`;
             
-            // Allow the block to physically follow the mouse off the grid
             if (isOverPalette) {
                 dragState.el.style.transform = `translateX(${dx}px)`;
                 dragState.el.style.opacity = '0.5';
@@ -934,7 +956,7 @@ function onBlockDrag(e) {
                 dragState.el.style.opacity = '1';
             }
 
-            const actualEndHour = (newStart + note.dueDuration) % 24;
+            const actualEndHour = (newStart + tBlock.duration) % 24;
             const timeStr = `${decToTime(newStart)} - ${decToTime(actualEndHour)}`;
             const metaEl = dragState.el.querySelector('.block-meta');
             if (metaEl) metaEl.innerText = timeStr;
@@ -950,7 +972,6 @@ function stopBlockDrag(e) {
         let didMove = dragState.hasMoved;
         let unscheduled = false;
 
-        // --- Execute Un-schedule if dropped on palette ---
         const paletteEl = document.querySelector('.tracker-palette');
         if (paletteEl && !dragState.isResize) {
             const rect = paletteEl.getBoundingClientRect();
@@ -958,9 +979,9 @@ function stopBlockDrag(e) {
                 e.clientY >= rect.top && e.clientY <= rect.bottom) {
                 
                 const note = notes.find(n => n.id === dragState.noteId);
-                if (note) {
-                    note.dueTime = undefined;
-                    note.dueDuration = undefined;
+                if (note && note.timeBlocks) {
+                    // NEW: Filter out this specific block to un-schedule it
+                    note.timeBlocks = note.timeBlocks.filter(b => b.blockId !== dragState.blockId);
                     note.dirty = true;
                     unscheduled = true;
                     saveNotes();
@@ -972,10 +993,7 @@ function stopBlockDrag(e) {
 
         if (didMove && !unscheduled) {
             const note = notes.find(n => n.id === dragState.noteId);
-            if (note) {
-                note.dirty = true; 
-                saveNotes(); 
-            }
+            if (note) { note.dirty = true; saveNotes(); }
         }
         
         if (dragState.el) {
@@ -986,13 +1004,36 @@ function stopBlockDrag(e) {
         }
         
         dragState = null;
+        if (didMove || unscheduled) { renderTrackerTimeline(); setTimeout(() => { isDraggingBlock = false; }, 50); } 
+        else { isDraggingBlock = false; }
+    }
+}
+
+function dropToTracker(ev, dateStr) {
+    ev.preventDefault(); ev.currentTarget.classList.remove('drag-over');
+    const noteId = ev.dataTransfer.getData("text/plain");
+    const note = notes.find(n => n.id === noteId);
+    const hourPx = 60 * timelineZoom;
+    
+    if (note) {
+        const rect = ev.currentTarget.getBoundingClientRect();
+        const y = ev.clientY - rect.top; 
+        let dropHour = roundToQuarterHour(y / hourPx);
+
+        if (!note.timeBlocks) note.timeBlocks = [];
         
-        if (didMove || unscheduled) {
-            renderTrackerTimeline(); 
-            setTimeout(() => { isDraggingBlock = false; }, 50);
-        } else {
-            isDraggingBlock = false;
-        }
+        // NEW: Push a fresh calendar instance instead of overwriting a date
+        note.timeBlocks.push({
+            blockId: 'b_' + Date.now().toString() + Math.floor(Math.random() * 1000),
+            date: dateStr,
+            startHour: dropHour,
+            duration: 1.0
+        });
+
+        // We purposely do NOT overwrite note.dueDate here, allowing the deadline to stay distinct
+        note.dirty = true; 
+        saveNotes(); 
+        handleSearch(); 
     }
 }
 
@@ -1010,26 +1051,6 @@ function handleTimelineClick(ev, dateStr) {
 
 function allowTrackerDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add('drag-over'); }
 function dragLeaveTracker(ev) { ev.currentTarget.classList.remove('drag-over'); }
-
-function dropToTracker(ev, dateStr) {
-    ev.preventDefault(); ev.currentTarget.classList.remove('drag-over');
-    const noteId = ev.dataTransfer.getData("text/plain");
-    const note = notes.find(n => n.id === noteId);
-    const hourPx = 60 * timelineZoom;
-    
-    if (note) {
-        const rect = ev.currentTarget.getBoundingClientRect();
-        const y = ev.clientY - rect.top; 
-        let dropHour = roundToQuarterHour(y / hourPx);
-
-        note.dueDate = dateStr;
-        note.dueTime = dropHour;
-        note.dueDuration = 1.0;
-        note.dirty = true; 
-        saveNotes(); 
-        handleSearch(); 
-    }
-}
 
 function openShortcutsModal() {
     const modal = document.getElementById('shortcutsModal');
@@ -1233,6 +1254,7 @@ function closeTaskModal() {
     pendingTimelineContext = null; 
 }
 
+// --- NEW: Save Modal (Multi-Day Architecture) ---
 function saveTaskModal() {
     clearAutoSaveInterval();
     const titleText = document.getElementById('taskTitleInput').innerHTML; 
@@ -1243,22 +1265,26 @@ function saveTaskModal() {
 
     const fullText = titleText + (infoText && infoText !== '<br>' ? ('\n' + infoText) : '');
 
-    let calculatedStartHour = undefined;
+    let newTimeBlock = null;
     if (pendingTimelineContext && pendingTimelineContext.startHour !== undefined) {
-        calculatedStartHour = roundToQuarterHour(pendingTimelineContext.startHour);
+        newTimeBlock = {
+            blockId: 'b_' + Date.now().toString() + Math.floor(Math.random() * 1000),
+            date: pendingTimelineContext.date,
+            startHour: roundToQuarterHour(pendingTimelineContext.startHour),
+            duration: 1.0
+        };
     }
 
     if (currentEditingId) { 
         const note = notes.find(n => n.id === currentEditingId); 
         if (note) { 
             note.text = fullText; 
+            note.dueDate = dueDate || null;
             
-            if (dueDate) {
-                note.dueDate = dueDate;
-            } else {
-                note.dueDate = null;
-                note.dueTime = undefined;
-                note.dueDuration = undefined;
+            // If the user clicked the timeline while the modal was open for an existing task, append a new block
+            if (newTimeBlock) {
+                if(!note.timeBlocks) note.timeBlocks = [];
+                note.timeBlocks.push(newTimeBlock);
             }
             
             note.dirty = true; 
@@ -1273,8 +1299,7 @@ function saveTaskModal() {
             quadrant: targetQuad, 
             status: 'active', 
             dueDate: dueDate || null,
-            dueTime: calculatedStartHour,
-            dueDuration: calculatedStartHour !== undefined ? 1.0 : undefined,
+            timeBlocks: newTimeBlock ? [newTimeBlock] : [], // Initialize array with generated block
             dirty: true, 
             deleted: false, 
             eventId: null,
@@ -1525,13 +1550,15 @@ function saveSettings() {
 
 // --- Updated Quick Tags Function (With AND/OR Logic, Counts & Sorting) ---
 // --- Updated Quick Tags Function (With Real-Time Filtering & Smart Append) ---
+// --- Updated Quick Tags Function (Case-Insensitive Tag Merging) ---
 function updateQuickTags() {
     const tagsBar = document.getElementById('quick-tags-bar');
     const searchInput = document.getElementById('searchInput');
     if (!tagsBar || !searchInput) return;
     
     let tagCounts = new Map();
-    const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+    // Added 'i' flag to regex to ensure lowercase hex colors are also caught safely
+    const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/i; 
     
     notes.forEach(note => {
         if (note.deleted || note.eventId) return;
@@ -1542,7 +1569,10 @@ function updateQuickTags() {
         
         const matches = safePlainText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
         if (matches) {
-            let uniqueMatches = [...new Set(matches)];
+            // FIX: Convert all tags to lowercase BEFORE deduplicating
+            const lowerCaseMatches = matches.map(tag => tag.toLowerCase());
+            let uniqueMatches = [...new Set(lowerCaseMatches)];
+            
             uniqueMatches.forEach(tag => {
                 if (hexColorRegex.test(tag)) return;
                 tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
@@ -1555,21 +1585,18 @@ function updateQuickTags() {
     const rawSearchValue = searchInput.value;
     const currentSearch = rawSearchValue.trim();
     
-    // Identify the exact word the user is currently typing
     const words = rawSearchValue.split(/\s+/);
     const lastWord = words[words.length - 1];
     
-    // Determine if we need to filter the tag library based on the active word
     let tagFilter = null;
     if (lastWord.startsWith('#') || lastWord.startsWith('@')) {
-        tagFilter = lastWord.toLowerCase();
+        tagFilter = lastWord.toLowerCase(); // Ensure active typing filter is also lowercase
     }
     
     // --- Inject AND / OR logic buttons if search is active ---
     if (currentSearch.length > 0) {
         const endsWithOperator = /\b(AND|OR)$/i.test(currentSearch);
         
-        // Hide the AND/OR buttons if the user is actively typing a tag
         if (!endsWithOperator && !tagFilter) {
             ['AND', 'OR'].forEach(op => {
                 let opBtn = document.createElement('button');
@@ -1603,9 +1630,9 @@ function updateQuickTags() {
         return a[0].localeCompare(b[0]); 
     });
     
-    // --- NEW: Apply the real-time typing filter ---
+    // Apply the real-time typing filter
     if (tagFilter) {
-        sortedTags = sortedTags.filter(([tag, count]) => tag.toLowerCase().startsWith(tagFilter));
+        sortedTags = sortedTags.filter(([tag, count]) => tag.startsWith(tagFilter));
     }
     
     // Populate the bar with clickable tags
@@ -1615,10 +1642,8 @@ function updateQuickTags() {
         btn.innerText = `${tag} (${count})`;
         
         btn.onclick = () => {
-            // Smart Substitution: Replace the partially typed word with the fully clicked tag
             let currentWords = searchInput.value.split(/\s+/);
             
-            // Pop the partial fragment (or trailing space element) so we can replace it cleanly
             if (currentWords[currentWords.length - 1].startsWith('#') || currentWords[currentWords.length - 1].startsWith('@') || currentWords[currentWords.length - 1] === '') {
                 currentWords.pop();
             }
