@@ -371,6 +371,7 @@ function goToToday() {
 }
 
 // --- NEW: Dedicated Palette Renderer ---
+// --- NEW: Dedicated Palette Renderer (With Planned Indicator) ---
 function renderTrackerPalette() {
     const globalSearchInput = document.getElementById('searchInput');
     const globalQuery = globalSearchInput ? globalSearchInput.value : '';
@@ -391,7 +392,6 @@ function renderTrackerPalette() {
     
     paletteList.innerHTML = '';
     
-    // FIX: Added 'n.status !== "closed"' to completely hide completed items from the palette
     let paletteNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId);
     
     // Apply Due Only Filter
@@ -408,6 +408,15 @@ function renderTrackerPalette() {
         el.style.cursor = 'grab';
         el.draggable = true;
         el.ondragstart = (e) => e.dataTransfer.setData('text/plain', note.id);
+        
+        // If the task has a defined dueTime, it means it is currently on the timeline grid
+        const isPlannedOnCalendar = note.dueDate && note.dueTime !== undefined;
+        
+        // Slightly dim the background of tasks that are already planned to differentiate them
+        if (isPlannedOnCalendar) {
+            el.style.backgroundColor = '#F8FAFC';
+            el.style.borderColor = '#E2E8F0';
+        }
         
         const contentWrapper = document.createElement('div');
         contentWrapper.className = 'note-content-wrapper';
@@ -426,7 +435,16 @@ function renderTrackerPalette() {
         contentWrapper.innerHTML = `<div class="note-text">${overdueIndicator}${parseTags(cleanTextTitle)}</div>`;
         
         if (note.dueDate) {
-            contentWrapper.innerHTML += `<div style="font-size:12px; color:var(--brand-primary); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>`;
+            // NEW: Render a 'Planned' badge if it has a due time, pushed to the right side
+            let plannedBadge = isPlannedOnCalendar 
+                ? `<span style="margin-left: auto; background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; letter-spacing: 0.5px;">🕒 PLANNED</span>` 
+                : '';
+                
+            contentWrapper.innerHTML += `
+                <div style="font-size:12px; color:var(--brand-primary); margin-top:8px; font-weight:500; display: flex; align-items: center;">
+                    🗓️ ${note.dueDate.split('T')[0]}
+                    ${plannedBadge}
+                </div>`;
         }
         
         contentWrapper.onclick = (e) => openTaskModal(null, note.id, e);
