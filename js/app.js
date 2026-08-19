@@ -2324,3 +2324,24 @@ function toggleChecklistFormatting() {
         triggerAutoSaveInterval();
     }, 10);
 }
+
+// --- Live Tag Formatting for Editor ---
+['taskTitleInput', 'taskInfoInput'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        // Trigger formatting when hitting Space or Enter
+        el.addEventListener('keyup', function(e) {
+            if (e.key === ' ' || e.key === 'Enter') {
+                formatEditorNodes(id);
+            }
+        });
+        
+        // Trigger formatting when pasting text to catch multiple tags at once
+        el.addEventListener('paste', function(e) {
+            // Give the browser a 10ms tick to actually insert the pasted text before formatting
+            setTimeout(() => {
+                formatEditorNodes(id);
+            }, 10);
+        });
+    }
+});
