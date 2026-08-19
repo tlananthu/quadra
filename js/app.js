@@ -1524,6 +1524,7 @@ function saveSettings() {
 }
 
 // --- Updated Quick Tags Function (With AND/OR Logic, Counts & Sorting) ---
+// --- Updated Quick Tags Function (With Real-Time Filtering & Smart Append) ---
 function updateQuickTags() {
     const tagsBar = document.getElementById('quick-tags-bar');
     const searchInput = document.getElementById('searchInput');
@@ -1551,18 +1552,29 @@ function updateQuickTags() {
     
     tagsBar.innerHTML = '';
     
-    const currentSearch = searchInput.value.trim();
+    const rawSearchValue = searchInput.value;
+    const currentSearch = rawSearchValue.trim();
     
-    // --- NEW: Inject AND / OR logic buttons if search is active ---
+    // Identify the exact word the user is currently typing
+    const words = rawSearchValue.split(/\s+/);
+    const lastWord = words[words.length - 1];
+    
+    // Determine if we need to filter the tag library based on the active word
+    let tagFilter = null;
+    if (lastWord.startsWith('#') || lastWord.startsWith('@')) {
+        tagFilter = lastWord.toLowerCase();
+    }
+    
+    // --- Inject AND / OR logic buttons if search is active ---
     if (currentSearch.length > 0) {
-        // Prevent adding multiple operators in a row
         const endsWithOperator = /\b(AND|OR)$/i.test(currentSearch);
         
-        if (!endsWithOperator) {
+        // Hide the AND/OR buttons if the user is actively typing a tag
+        if (!endsWithOperator && !tagFilter) {
             ['AND', 'OR'].forEach(op => {
                 let opBtn = document.createElement('button');
                 opBtn.className = 'filter-tag';
-                opBtn.style.backgroundColor = '#E2E8F0'; // Gray background to distinguish logic buttons
+                opBtn.style.backgroundColor = '#E2E8F0'; 
                 opBtn.style.color = '#475569';
                 opBtn.style.fontWeight = '700';
                 opBtn.innerText = op;
@@ -1570,12 +1582,11 @@ function updateQuickTags() {
                 opBtn.onclick = () => {
                     searchInput.value = currentSearch + ` ${op} `;
                     searchInput.focus();
-                    handleSearch(); // Triggers a re-render
+                    handleSearch(); 
                 };
                 tagsBar.appendChild(opBtn);
             });
             
-            // Add a subtle vertical divider
             let divider = document.createElement('div');
             divider.style.width = '1px';
             divider.style.backgroundColor = 'var(--border-color)';
@@ -1592,6 +1603,11 @@ function updateQuickTags() {
         return a[0].localeCompare(b[0]); 
     });
     
+    // --- NEW: Apply the real-time typing filter ---
+    if (tagFilter) {
+        sortedTags = sortedTags.filter(([tag, count]) => tag.toLowerCase().startsWith(tagFilter));
+    }
+    
     // Populate the bar with clickable tags
     sortedTags.forEach(([tag, count]) => {
         let btn = document.createElement('button');
@@ -1599,15 +1615,16 @@ function updateQuickTags() {
         btn.innerText = `${tag} (${count})`;
         
         btn.onclick = () => {
-            const currentVal = searchInput.value.trim();
-            const endsWithOp = /\b(AND|OR)$/i.test(currentVal);
+            // Smart Substitution: Replace the partially typed word with the fully clicked tag
+            let currentWords = searchInput.value.split(/\s+/);
             
-            // Smart Append: If the search box ends with AND/OR, combine the tags. Otherwise, replace.
-            if (endsWithOp) {
-                searchInput.value = currentVal + ` ${tag} `;
-            } else {
-                searchInput.value = `${tag} `;
+            // Pop the partial fragment (or trailing space element) so we can replace it cleanly
+            if (currentWords[currentWords.length - 1].startsWith('#') || currentWords[currentWords.length - 1].startsWith('@') || currentWords[currentWords.length - 1] === '') {
+                currentWords.pop();
             }
+            
+            currentWords.push(tag);
+            searchInput.value = currentWords.join(' ') + ' ';
             
             searchInput.focus();
             handleSearch();
