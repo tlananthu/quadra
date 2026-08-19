@@ -21,6 +21,28 @@ let pendingTimelineContext = null;
 let dragState = null;
 let isDraggingBlock = false;
 
+let isDocMode = false;
+
+function toggleDocMode() {
+    const modalContent = document.querySelector('#taskModal .modal-content');
+    const toggleBtn = document.getElementById('docModeToggleBtn');
+    
+    isDocMode = !isDocMode;
+    
+    if (isDocMode) {
+        modalContent.classList.add('doc-mode');
+        toggleBtn.innerText = '🗗'; // Window restore icon
+        toggleBtn.title = "Exit Doc Mode";
+        
+        // Focus the main body text automatically when entering Doc Mode
+        setTimeout(() => document.getElementById('taskInfoInput').focus(), 250);
+    } else {
+        modalContent.classList.remove('doc-mode');
+        toggleBtn.innerText = '⛶'; // Maximize icon
+        toggleBtn.title = "Enter Doc Mode";
+    }
+}
+
 const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.readonly';
 
 const defaultSchedule = [
@@ -1188,6 +1210,16 @@ function clearAutoSaveInterval() {
 
 function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
     if (event) event.stopPropagation();
+
+    // Reset Doc Mode state when opening a modal
+    isDocMode = false;
+    document.querySelector('#taskModal .modal-content').classList.remove('doc-mode');
+    const toggleBtn = document.getElementById('docModeToggleBtn');
+    if (toggleBtn) {
+        toggleBtn.innerText = '⛶';
+        toggleBtn.title = "Enter Doc Mode";
+    }
+    
     const modal = document.getElementById('taskModal');
     const titleInput = document.getElementById('taskTitleInput');
     const infoInput = document.getElementById('taskInfoInput');

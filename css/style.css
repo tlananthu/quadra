@@ -1286,3 +1286,28 @@ input:checked + .slider:after {
     left: 8px;
     right: auto;
 }
+
+/* --- Doc Mode Styles --- */
+#taskModal .modal-content {
+    transition: width 0.2s ease, height 0.2s ease, max-width 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+#taskModal .modal-content.doc-mode {
+    width: 90vw !important;
+    height: 90vh !important;
+    max-width: 1200px !important;
+    padding: 30px 40px !important;
+}
+
+/* Make the body editor stretch to fill the expanded height */
+#taskModal .modal-content.doc-mode #taskInfoInput {
+    flex-grow: 1;
+    min-height: 50vh;
+    max-height: none;
+    font-size: 15px; /* Slightly larger text for reading comfort */
+    line-height: 1.7;
+    overflow-y: auto;
+    padding-right: 10px;
+}
