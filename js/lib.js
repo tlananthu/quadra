@@ -101,8 +101,8 @@ function escapeHTML(str) {
 
 function parseTags(str) { 
     let html = escapeHTML(str);
-    html = html.replace(/(#[a-zA-Z0-9_]+)/g, '<span class="hashtag" onclick="searchTag(\'$1\', event)">$1</span>');
-    html = html.replace(/(@[a-zA-Z0-9_]+)/g, '<span class="person-tag" onclick="searchTag(\'$1\', event)">$1</span>');
+    html = html.replace(/(^|[\s\(\)\[\]\{\}>;"',\.|])(#[a-zA-Z0-9_]+)/g, '$1<span class="hashtag" onclick="searchTag(\'$2\', event)">$2</span>');
+    html = html.replace(/(^|[\s\(\)\[\]\{\}>;"',\.|])(@[a-zA-Z0-9_]+)/g, '$1<span class="person-tag" onclick="searchTag(\'$2\', event)">$2</span>');
     return html;
 }
 

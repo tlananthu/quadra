@@ -1482,7 +1482,8 @@ function formatEditorNodes(editorId) {
         if (p.tagName === 'A' || p.classList.contains('hashtag') || p.classList.contains('person-tag') || p.id === 'caret-marker') {
             continue;
         }
-        if (/(https?:\/\/[^\s]+)|(#[a-zA-Z0-9_]+)|(@[a-zA-Z0-9_]+)/.test(node.nodeValue)) {
+        // NEW: Safe boundary check test
+        if (/(https?:\/\/[^\s]+)|(^|[\s\(\)\[\]\{\}>;"',\.|])([#@][a-zA-Z0-9_]+)/.test(node.nodeValue)) {
             nodesToProcess.push(node);
         }
     }
@@ -1490,10 +1491,13 @@ function formatEditorNodes(editorId) {
     nodesToProcess.forEach(n => {
         let span = document.createElement('span');
         let escaped = escapeHTML(n.nodeValue);
+        
+        // NEW: Uses $1 to preserve the preceding space/bracket, and $2 for the actual tag
         let formatted = escaped
             .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:var(--brand-primary); text-decoration:underline;">$1</a>')
-            .replace(/(#[a-zA-Z0-9_]+)/g, '<span class="hashtag">$1</span>')
-            .replace(/(@[a-zA-Z0-9_]+)/g, '<span class="person-tag">$1</span>');
+            .replace(/(^|[\s\(\)\[\]\{\}>;"',\.|])(#[a-zA-Z0-9_]+)/g, '$1<span class="hashtag">$2</span>')
+            .replace(/(^|[\s\(\)\[\]\{\}>;"',\.|])(@[a-zA-Z0-9_]+)/g, '$1<span class="person-tag">$2</span>');
+            
         span.innerHTML = formatted;
         n.parentNode.replaceChild(span, n);
         while (span.firstChild) {
@@ -1602,9 +1606,16 @@ function updateQuickTags() {
         tempDiv.innerHTML = note.text || '';
         let safePlainText = tempDiv.textContent || tempDiv.innerText || '';
         
-        const matches = safePlainText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
-        if (matches) {
-            // FIX: Convert all tags to lowercase BEFORE deduplicating
+        // Use a safe boundary regex and extract just the tag using an exec loop
+        const regex = /(^|[\s\(\)\[\]\{\}>;"',\.|])(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g;
+        let matches = [];
+        let m;
+        while ((m = regex.exec(safePlainText)) !== null) {
+            matches.push(m[2]);
+        }
+        
+        if (matches.length > 0) {
+            // Convert all tags to lowercase BEFORE deduplicating
             const lowerCaseMatches = matches.map(tag => tag.toLowerCase());
             let uniqueMatches = [...new Set(lowerCaseMatches)];
             
