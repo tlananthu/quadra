@@ -89,7 +89,8 @@ function cleanHTMLToPlainText(htmlString) {
     sandbox = sandbox.replace(/<ul[^>]*class="todo-list"[^>]*>([\s\S]*?)<\/ul>/gi, '$1');
     
     let processed = sandbox.replace(/<br\s*[\/]?>/gi, '\n')
-                            .replace(/<\/p>|<\/div>|<\/li>|<\/h[1-6]>/gi, '\n')
+                            // ADD |<\/pre> to this specific line
+                            .replace(/<\/p>|<\/div>|<\/li>|<\/h[1-6]>|<\/pre>/gi, '\n') 
                             .replace(/<[^>]+>/g, '');
     tempDiv.innerHTML = processed;
     return (tempDiv.textContent || tempDiv.innerText || '').trim();
@@ -349,3 +350,4 @@ function parseICS(icsText, targetDateStr, ignoreKeywords, primaryTz) {
 
     return parsedEvents;
 }
+

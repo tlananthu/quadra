@@ -2416,3 +2416,52 @@ function toggleChecklistFormatting() {
         });
     }
 });
+
+// --- Code Block Insertion Engine ---
+function insertCodeBlock() {
+    const editor = document.getElementById('taskInfoInput');
+    if (!editor) return;
+    
+    editor.focus();
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    
+    let range = sel.getRangeAt(0);
+    
+    // Safety check: ensure the user's cursor is actually inside the rich text editor
+    let node = range.commonAncestorContainer;
+    while (node && node !== editor) {
+        if (node.parentNode === editor) break;
+        node = node.parentNode;
+    }
+    
+    // If cursor is outside the editor, force it to the end of the editor
+    if (!node || (node !== editor && node.parentNode !== editor)) {
+        range.selectNodeContents(editor);
+        range.collapse(false);
+    }
+
+    // 1. Create the fixed-width code block
+    const pre = document.createElement('pre');
+    pre.className = 'editor-code-block';
+    pre.innerHTML = '<br>'; // Gives the block physical height so it can be clicked
+
+    // 2. Create the "escape" div below it so the user isn't trapped inside the formatting
+    const escapeDiv = document.createElement('div');
+    escapeDiv.innerHTML = '<br>';
+
+    // 3. Inject both into the editor
+    range.deleteContents();
+    const frag = document.createDocumentFragment();
+    frag.appendChild(pre);
+    frag.appendChild(escapeDiv);
+    range.insertNode(frag);
+
+    // 4. Force the blinking cursor inside the new code block automatically
+    range.setStart(pre, 0);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    triggerAutoSaveInterval();
+}
