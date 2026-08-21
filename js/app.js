@@ -97,13 +97,21 @@ function syncNotesToSQLite() {
 }
 
 // --- Google Drive AppData Sync ---
+// --- Google Drive AppData Sync ---
 async function downloadDatabaseFromDrive() {
+    // --- FIXED: True Promise-based await for the anti-race condition ---
+    if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.drive) {
+        console.log("Waiting for Google Drive API to initialize...");
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return await downloadDatabaseFromDrive(); // Recursively try again and block execution
+    }
+
     try {
         // 1. Search the user's visible Drive for the database file
         const response = await gapi.client.drive.files.list({
-            // Removed spaces: 'appDataFolder'
-            q: "name='quadra.sqlite' and trashed=false", // Ensures we don't grab a deleted file
-            fields: 'files(id, name)'
+            q: "name='quadra.sqlite' and trashed=false", 
+            fields: 'files(id, name)',
+            orderBy: 'createdTime desc' // Always grab the newest one if duplicates exist
         });
         
         const files = response.result.files;
@@ -2776,24 +2784,25 @@ async function syncSingleTask(noteId) {
 }
 
 // --- Cloud Sync Status UI ---
+// --- Cloud Sync Status UI ---
 function setCloudSyncIcon(state) {
     const icon = document.getElementById('cloudSyncIcon');
     if (!icon) return;
 
     if (state === 'saving') {
-        icon.innerHTML = '☁️ ⏳'; // Hourglass or spinner
+        icon.innerHTML = '🌧️'; 
         icon.style.color = '#3B82F6'; // Blue
         icon.title = 'Saving to Google Drive...';
     } else if (state === 'saved') {
-        icon.innerHTML = '☁️ ✓';
+        icon.innerHTML = '🌤️';
         icon.style.color = '#10B981'; // Green
         icon.title = 'Saved to Google Drive';
     } else if (state === 'unsaved') {
-        icon.innerHTML = '☁️ •';
+        icon.innerHTML = '☁️';
         icon.style.color = '#F59E0B'; // Orange
         icon.title = 'Unsaved changes (Press Ctrl+S)';
     } else if (state === 'error') {
-        icon.innerHTML = '☁️ ❌';
+        icon.innerHTML = '⛈️'; // Added a storm cloud for errors!
         icon.style.color = '#EF4444'; // Red
         icon.title = 'Error saving to Drive';
     }
