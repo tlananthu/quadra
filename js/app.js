@@ -23,6 +23,171 @@ let pendingTimelineContext = null;
 let dragState = null;
 let isDraggingBlock = false;
 
+// --- SQLite Database Engine ---
+let db;
+let SQL;
+let driveFileId = null; // Will store the Google Drive file ID
+
+async function initSQLite(binaryData = null) {
+    if (!SQL) {
+        SQL = await initSqlJs({
+            // Fetch the WebAssembly file from the CDN
+            locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+        });
+    }
+    
+    if (binaryData) {
+        // Load existing database from Google Drive
+        db = new SQL.Database(new Uint8Array(binaryData));
+        console.log("Loaded existing SQLite database from Google Drive.");
+    } else {
+        // Create a fresh database and schema
+        db = new SQL.Database();
+        db.run(`
+            CREATE TABLE IF NOT EXISTS tasks (
+                id TEXT PRIMARY KEY,
+                text TEXT,
+                quadrant TEXT,
+                status TEXT,
+                dueDate TEXT,
+                timeBlocks TEXT,
+                deleted INTEGER DEFAULT 0
+            );
+        `);
+        console.log("Created fresh SQLite database in memory.");
+    }
+}
+
+// --- Sync Memory Notes into SQLite Database ---
+function syncNotesToSQLite() {
+    if (!db) return;
+
+    // Ensure the table exists
+    db.run(`
+        CREATE TABLE IF NOT EXISTS tasks (
+            id TEXT PRIMARY KEY,
+            text TEXT,
+            quadrant TEXT,
+            status TEXT,
+            dueDate TEXT,
+            timeBlocks TEXT,
+            deleted INTEGER DEFAULT 0
+        );
+    `);
+
+    // Prepare a statement to insert or replace task records
+    const stmt = db.prepare(`
+        INSERT OR REPLACE INTO tasks (id, text, quadrant, status, dueDate, timeBlocks, deleted)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
+    `);
+
+    notes.forEach(note => {
+        stmt.run([
+            note.id.toString(),
+            note.text || '',
+            note.quadrant || 'inbox',
+            note.status || 'active',
+            note.dueDate || null,
+            JSON.stringify(note.timeBlocks || []),
+            note.deleted ? 1 : 0
+        ]);
+    });
+
+    stmt.free();
+}
+
+// --- Google Drive AppData Sync ---
+async function downloadDatabaseFromDrive() {
+    try {
+        // 1. Search the hidden appDataFolder for our database file
+        const response = await gapi.client.drive.files.list({
+            spaces: 'appDataFolder',
+            q: "name='quadra.sqlite'",
+            fields: 'files(id, name)'
+        });
+        
+        const files = response.result.files;
+        if (files && files.length > 0) {
+            driveFileId = files[0].id;
+            
+            // 2. If found, download the binary contents
+            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+                headers: { 'Authorization': `Bearer ${gapi.client.getToken().access_token}` }
+            });
+            const arrayBuffer = await fileRes.arrayBuffer();
+            
+            // 3. Boot SQLite with the downloaded data
+            await initSQLite(arrayBuffer);
+        } else {
+            // No file exists yet in Drive, boot a fresh database
+            await initSQLite(null);
+        }
+    } catch (e) {
+        console.error("Failed to load DB from Drive:", e);
+        await initSQLite(null); // Fallback to fresh DB
+    }
+}
+
+async function uploadDatabaseToDrive() {
+    if (!isGoogleSynced) {
+        showToast("Please sign in to Google first to save to Drive.");
+        return;
+    }
+    
+    // 1. Initialize SQLite if not yet initialized, then flush latest notes into it
+    if (!db) {
+        await initSQLite(null);
+    }
+    syncNotesToSQLite();
+
+    const banner = document.getElementById('sync-banner');
+    if (banner) banner.style.display = 'block';
+
+    try {
+        // 2. Export the SQLite database into a binary blob
+        const binaryData = db.export();
+        const blob = new Blob([binaryData], { type: 'application/x-sqlite3' });
+        const token = gapi.client.getToken().access_token;
+        
+        // 3. Build multipart metadata and form payload
+        const metadata = {
+            name: 'quadra.sqlite',
+            parents: ['appDataFolder']
+        };
+        
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', blob);
+        
+        let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+        let method = 'POST'; // Default: create new file
+        
+        if (driveFileId) {
+            // Overwrite existing file in AppData folder
+            url = `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`;
+            method = 'PATCH'; 
+        }
+        
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: form
+        });
+        
+        const result = await res.json();
+        if (result.id) driveFileId = result.id;
+        
+        if (banner) banner.style.display = 'none';
+        showToast("💾 Saved SQLite database to Google Drive!");
+        console.log("Database successfully backed up to Google Drive AppData!");
+        
+    } catch (e) {
+        if (banner) banner.style.display = 'none';
+        console.error("Failed to upload DB to Drive:", e);
+        showToast("Failed to save to Google Drive.");
+    }
+}
+
 function toggleDocMode() {
     const modalContent = document.querySelector('#taskModal .modal-content');
     const toggleBtn = document.getElementById('docModeToggleBtn');
@@ -43,7 +208,7 @@ function toggleDocMode() {
     }
 }
 
-const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.readonly';
+const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata';
 
 const defaultSchedule = [
     { title: 'Out of office hours', startHour: 14, endHour: 29 }, 
@@ -1104,8 +1269,19 @@ document.addEventListener('click', function(e) {
 });
 
 document.addEventListener('keydown', (e) => {
-    const isEditingText = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
+    // --- NEW: Intercept Ctrl+S / Cmd+S globally ---
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault(); // Stop default browser "Save Webpage" dialog
+        
+        // 1. Save standard state to localStorage first
+        saveNotes();
+        
+        // 2. Trigger SQLite backup to Google Drive AppData
+        uploadDatabaseToDrive();
+        return;
+    }
 
+    const isEditingText = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
     if (isEditingText && e.ctrlKey && e.key === '1') {
         e.preventDefault();
         toggleChecklistFormatting();
@@ -1853,8 +2029,8 @@ function checkConfigState() {
         if (typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: savedTokenData.token });
         
         loadCalendars(); 
-        startTokenHeartbeat(); // NEW: Start the background monitor
-        
+        startTokenHeartbeat();
+        downloadDatabaseFromDrive(); // <-- NEW: Pre-fetch Drive file ID and DB in background
     } else {
         authorizeButton.style.display = 'inline-block';
         signoutButton.style.display = 'none';
@@ -1889,7 +2065,13 @@ window.addEventListener('load', () => {
 
     if (typeof gapi !== 'undefined' && appConfig.apiKey) {
         gapi.load('client', () => {
-            gapi.client.init({ apiKey: appConfig.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest'] }).catch(() => {});
+            gapi.client.init({ 
+                apiKey: appConfig.apiKey, 
+                discoveryDocs: [
+                    'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest',
+                    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+                ] 
+            }).catch(() => {});
         });
     }
     if (typeof google !== 'undefined' && google.accounts && appConfig.clientId) {
