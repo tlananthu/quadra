@@ -1,4 +1,3 @@
-// --- Core Settings & Config ---
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -23,8 +22,6 @@ let currentAddingQuadrant = null;
 let pendingTimelineContext = null;
 let dragState = null;
 let isDraggingBlock = false;
-
-let isDocMode = false;
 
 function toggleDocMode() {
     const modalContent = document.querySelector('#taskModal .modal-content');
@@ -404,7 +401,8 @@ function dropQuad(e) {
             if (targetKey === 'closed') note.status = 'closed';
             note.quadrant = targetKey; 
             note.dirty = true; 
-            saveNotes(); 
+            saveNotes();
+            syncSingleTask(note.id);
             handleSearch(); 
         }
     }
@@ -1318,32 +1316,32 @@ function saveTaskModal() {
         if (note) { 
             note.text = fullText; 
             note.dueDate = dueDate || null;
-            
-            // If the user clicked the timeline while the modal was open for an existing task, append a new block
             if (newTimeBlock) {
                 if(!note.timeBlocks) note.timeBlocks = [];
                 note.timeBlocks.push(newTimeBlock);
             }
-            
             note.dirty = true; 
             saveNotes(); 
+            syncSingleTask(note.id); // <-- NEW
             handleSearch(); 
         } 
     } else { 
         let targetQuad = currentAddingQuadrant || 'inbox';
+        let newNoteId = Date.now().toString(); // Extract ID to variable
         notes.push({ 
-            id: Date.now().toString(), 
+            id: newNoteId, 
             text: fullText, 
             quadrant: targetQuad, 
             status: 'active', 
             dueDate: dueDate || null,
-            timeBlocks: newTimeBlock ? [newTimeBlock] : [], // Initialize array with generated block
+            timeBlocks: newTimeBlock ? [newTimeBlock] : [],
             dirty: true, 
             deleted: false, 
             eventId: null,
             syncFailed: false
         }); 
         saveNotes(); 
+        syncSingleTask(newNoteId);
         handleSearch(); 
     }
     closeTaskModal();
@@ -1836,9 +1834,9 @@ function renderNotes(searchQuery = '') {
     updateQuickTags();
 }
 
-function completeTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'closed'; note.quadrant = 'closed'; note.dirty = true; saveNotes(); handleSearch(); } }
-function restoreTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'active'; note.quadrant = 'inbox'; note.dirty = true; saveNotes(); handleSearch(); } }
-function deleteTask(id) { const note = notes.find(n => n.id === id); if (note) { note.deleted = true; note.dirty = true; saveNotes(); handleSearch(); } }
+function completeTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'closed'; note.quadrant = 'closed'; note.dirty = true; saveNotes(); syncSingleTask(id); handleSearch(); } }
+function restoreTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'active'; note.quadrant = 'inbox'; note.dirty = true; saveNotes(); syncSingleTask(id); handleSearch(); } }
+function deleteTask(id) { const note = notes.find(n => n.id === id); if (note) { note.deleted = true; note.dirty = true; saveNotes(); syncSingleTask(id); handleSearch(); } }
 
 function checkConfigState() {
     const authorizeButton = document.getElementById('authorize_button');
@@ -2154,10 +2152,24 @@ async function performBackgroundSync() {
             } 
         }
         
+        // --- HYBRID UPDATE 1: Cache list IDs for the Instant Push engine ---
+        localStorage.setItem('quadra_gapi_lists', JSON.stringify(gapiListIds));
+        
         let remoteTaskMap = {};
+        
+        // --- HYBRID UPDATE 2: Fetch the timestamp of our last successful sync ---
+        const lastSync = localStorage.getItem('quadra_last_sync');
+
         for (const quadKey of Object.keys(gapiListIds)) { 
             const listId = gapiListIds[quadKey]; 
-            const tasksReq = await gapi.client.tasks.tasks.list({ tasklist: listId, showHidden: true, maxResults: 100 }); 
+            
+            // --- HYBRID UPDATE 3: SMART PULL - Request deleted tasks and filter by updatedMin ---
+            let reqOpts = { tasklist: listId, showHidden: true, showDeleted: true, maxResults: 100 };
+            if (lastSync) {
+                reqOpts.updatedMin = lastSync; 
+            }
+            
+            const tasksReq = await gapi.client.tasks.tasks.list(reqOpts); 
             const rTasks = tasksReq.result.items || []; 
             rTasks.forEach(t => { 
                 remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; 
@@ -2258,56 +2270,65 @@ async function performBackgroundSync() {
             } else if (!sn.dirty && !sn.deleted) { 
                 const remoteObj = remoteTaskMap[sn.id]; 
                 if (remoteObj) { 
-                    let fullText = remoteObj.task.title || '';
-                    if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
                     
-                    // Transform brackets from Google Tasks natively back to custom checklist blocks
-                    fullText = fullText.replace(/^\[x\]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item completed">$1</li></ul>')
-                                    .replace(/^\[ \]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item">$1</li></ul>');
+                    // --- HYBRID UPDATE 4: Handle tasks deleted remotely from Google ---
+                    if (remoteObj.task.deleted) {
+                        sn.deleted = true;
+                    } else {
+                        let fullText = remoteObj.task.title || '';
+                        if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
+                        
+                        // Transform brackets from Google Tasks natively back to custom checklist blocks
+                        fullText = fullText.replace(/^\[x\]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item completed">$1</li></ul>')
+                                        .replace(/^\[ \]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item">$1</li></ul>');
 
-                    // Clean up consecutive <ul> tags created by multi-line tasks to merge them into a single list
-                    fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
+                        // Clean up consecutive <ul> tags created by multi-line tasks to merge them into a single list
+                        fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
 
-                    if (!/<[a-z][\s\S]*>/i.test(fullText)) {
-                        fullText = fullText.replace(/\n/g, '<br>');
+                        if (!/<[a-z][\s\S]*>/i.test(fullText)) {
+                            fullText = fullText.replace(/\n/g, '<br>');
+                        }
+                        
+                        sn.text = fullText; 
+                        sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
+                        sn.quadrant = remoteObj.quadKey; 
+                        sn.dueDate = remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null; 
+                        sn.syncFailed = false;
                     }
-                    
-                    sn.text = fullText; 
-                    sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
-                    sn.quadrant = remoteObj.quadKey; 
-                    sn.dueDate = remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null; 
-                    sn.syncFailed = false;
                     delete remoteTaskMap[sn.id]; 
                 } 
             }
         }
         
         Object.values(remoteTaskMap).forEach(remoteObj => { 
-            let fullText = remoteObj.task.title || '';
-            if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
-            
-            // Transform brackets from Google Tasks natively back to custom checklist blocks
-            fullText = fullText.replace(/^\[x\]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item completed">$1</li></ul>')
-                            .replace(/^\[ \]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item">$1</li></ul>');
+            // Only add the task if it wasn't deleted remotely
+            if (!remoteObj.task.deleted) {
+                let fullText = remoteObj.task.title || '';
+                if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
+                
+                // Transform brackets from Google Tasks natively back to custom checklist blocks
+                fullText = fullText.replace(/^\[x\]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item completed">$1</li></ul>')
+                                .replace(/^\[ \]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item">$1</li></ul>');
 
-            // Clean up consecutive <ul> tags created by multi-line tasks to merge them into a single list
-            fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
+                // Clean up consecutive <ul> tags created by multi-line tasks to merge them into a single list
+                fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
 
-            if (!/<[a-z][\s\S]*>/i.test(fullText)) {
-                fullText = fullText.replace(/\n/g, '<br>');
+                if (!/<[a-z][\s\S]*>/i.test(fullText)) {
+                    fullText = fullText.replace(/\n/g, '<br>');
+                }
+                
+                syncSnapshot.push({ 
+                    id: remoteObj.task.id, 
+                    text: fullText, 
+                    quadrant: remoteObj.quadKey, 
+                    status: remoteObj.task.status === 'completed' ? 'closed' : 'active', 
+                    dueDate: remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null, 
+                    eventId: null, 
+                    dirty: false, 
+                    deleted: false,
+                    syncFailed: false
+                });
             }
-            
-            syncSnapshot.push({ 
-                id: remoteObj.task.id, 
-                text: fullText, 
-                quadrant: remoteObj.quadKey, 
-                status: remoteObj.task.status === 'completed' ? 'closed' : 'active', 
-                dueDate: remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null, 
-                eventId: null, 
-                dirty: false, 
-                deleted: false,
-                syncFailed: false
-            }); 
         });
         
         let newNotesArray = []; 
@@ -2332,6 +2353,10 @@ async function performBackgroundSync() {
         
         notes = newNotesArray; 
         saveNotes(); 
+        
+        // --- HYBRID UPDATE 5: Record the exact time of the sync for the next Smart Pull ---
+        localStorage.setItem('quadra_last_sync', new Date().toISOString());
+        
         handleSearch(); 
         
         document.getElementById('sync-banner').style.display = 'none';
@@ -2505,4 +2530,62 @@ function attemptSilentTokenRefresh() {
     // The prompt: '' parameter tells Google to skip the consent screen 
     // if the user is already logged into Chrome/Google.
     tokenClient.requestAccessToken({ prompt: '' });
+}
+// --- Instant Push Engine (Hybrid Sync) ---
+async function syncSingleTask(noteId) {
+    if (!isGoogleSynced || typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks) return;
+    
+    const note = notes.find(n => n.id === noteId);
+    if (!note || note.eventId) return; // Do not push calendar events to Tasks
+
+    // Grab the list IDs cached by our background sync
+    let listCache = JSON.parse(localStorage.getItem('quadra_gapi_lists')) || {};
+    let targetListId = listCache[note.quadrant];
+    
+    // Fallback: If we haven't synced yet, let the background sync handle it later
+    if (!targetListId) return;
+
+    try {
+        if (note.deleted) {
+            await gapi.client.tasks.tasks.delete({ tasklist: targetListId, task: note.id }).catch(()=>{});
+            note.dirty = false;
+            saveNotes();
+            return;
+        }
+
+        const gStatus = note.status === 'closed' ? 'completed' : 'needsAction'; 
+        let plainTextPayload = cleanHTMLToPlainText(note.text);
+        let lines = plainTextPayload.split('\n');
+        
+        let resourceBody = { 
+            title: lines[0].trim() || 'Untitled Task', 
+            notes: lines.slice(1).join('\n').trim(),
+            status: gStatus 
+        }; 
+
+        if (note.dueDate) {
+            const [y, m, d] = note.dueDate.split('-');
+            resourceBody.due = new Date(Date.UTC(y, m - 1, d, 0, 0, 0)).toISOString();
+        }
+
+        // Determine if this is a new local task (id is a timestamp) or an existing Google Task (alphanumeric)
+        const isNew = !isNaN(note.id) || note.id.toString().includes('.'); 
+        
+        if (!isNew) {
+            try {
+                await gapi.client.tasks.tasks.patch({ tasklist: targetListId, task: note.id, resource: resourceBody });
+                note.dirty = false;
+            } catch(e) {
+                // If it fails (e.g., moved to another list externally), let the background sync handle the move
+                if (e.status === 404) return; 
+            }
+        } else {
+            const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
+            note.id = res.result.id; // Upgrade local ID to Google ID
+            note.dirty = false;
+        }
+        saveNotes();
+    } catch (error) {
+        console.error("Instant push failed, delegating to background sync:", error);
+    }
 }
