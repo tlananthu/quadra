@@ -99,10 +99,10 @@ function syncNotesToSQLite() {
 // --- Google Drive AppData Sync ---
 async function downloadDatabaseFromDrive() {
     try {
-        // 1. Search the hidden appDataFolder for our database file
+        // 1. Search the user's visible Drive for the database file
         const response = await gapi.client.drive.files.list({
-            spaces: 'appDataFolder',
-            q: "name='quadra.sqlite'",
+            // Removed spaces: 'appDataFolder'
+            q: "name='quadra.sqlite' and trashed=false", // Ensures we don't grab a deleted file
             fields: 'files(id, name)'
         });
         
@@ -134,7 +134,7 @@ async function uploadDatabaseToDrive() {
         return;
     }
     
-    // 1. Initialize SQLite if not yet initialized, then flush latest notes into it
+    // 1. Ensure SQLite instance exists and flush current notes
     if (!db) {
         await initSQLite(null);
     }
@@ -144,29 +144,33 @@ async function uploadDatabaseToDrive() {
     if (banner) banner.style.display = 'block';
 
     try {
-        // 2. Export the SQLite database into a binary blob
         const binaryData = db.export();
         const blob = new Blob([binaryData], { type: 'application/x-sqlite3' });
         const token = gapi.client.getToken().access_token;
         
-        // 3. Build multipart metadata and form payload
-        const metadata = {
-            name: 'quadra.sqlite',
-            parents: ['appDataFolder']
-        };
+        let url;
+        let method;
+        let metadata;
+
+        if (driveFileId) {
+            // Updating existing file
+            url = `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`;
+            method = 'PATCH';
+            metadata = {
+                name: 'quadra.sqlite'
+            };
+        } else {
+            // Creating new file: Removed the 'parents' array so it saves to the visible 'My Drive' root
+            url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+            method = 'POST';
+            metadata = {
+                name: 'quadra.sqlite'
+            };
+        }
         
         const form = new FormData();
         form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
         form.append('file', blob);
-        
-        let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-        let method = 'POST'; // Default: create new file
-        
-        if (driveFileId) {
-            // Overwrite existing file in AppData folder
-            url = `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`;
-            method = 'PATCH'; 
-        }
         
         const res = await fetch(url, {
             method: method,
@@ -174,12 +178,16 @@ async function uploadDatabaseToDrive() {
             body: form
         });
         
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.error?.message || "Upload request failed");
+        }
+        
         const result = await res.json();
         if (result.id) driveFileId = result.id;
         
         if (banner) banner.style.display = 'none';
         showToast("💾 Saved SQLite database to Google Drive!");
-        console.log("Database successfully backed up to Google Drive AppData!");
         
     } catch (e) {
         if (banner) banner.style.display = 'none';
@@ -208,7 +216,7 @@ function toggleDocMode() {
     }
 }
 
-const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata';
+const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.file';
 
 const defaultSchedule = [
     { title: 'Out of office hours', startHour: 14, endHour: 29 }, 
