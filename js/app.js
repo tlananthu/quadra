@@ -118,6 +118,7 @@ async function downloadDatabaseFromDrive() {
             
             // 3. Boot SQLite with the downloaded data
             await initSQLite(arrayBuffer);
+            setCloudSyncIcon('saved');
         } else {
             // No file exists yet in Drive, boot a fresh database
             await initSQLite(null);
@@ -130,18 +131,17 @@ async function downloadDatabaseFromDrive() {
 
 async function uploadDatabaseToDrive() {
     if (!isGoogleSynced) {
-        showToast("Please sign in to Google first to save to Drive.");
+        setCloudSyncIcon('error');
         return;
     }
     
-    // 1. Ensure SQLite instance exists and flush current notes
+    // 1. Change UI to "Saving" state immediately
+    setCloudSyncIcon('saving');
+    
     if (!db) {
         await initSQLite(null);
     }
     syncNotesToSQLite();
-
-    const banner = document.getElementById('sync-banner');
-    if (banner) banner.style.display = 'block';
 
     try {
         const binaryData = db.export();
@@ -153,19 +153,13 @@ async function uploadDatabaseToDrive() {
         let metadata;
 
         if (driveFileId) {
-            // Updating existing file
             url = `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`;
             method = 'PATCH';
-            metadata = {
-                name: 'quadra.sqlite'
-            };
+            metadata = { name: 'quadra.sqlite' };
         } else {
-            // Creating new file: Removed the 'parents' array so it saves to the visible 'My Drive' root
             url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
             method = 'POST';
-            metadata = {
-                name: 'quadra.sqlite'
-            };
+            metadata = { name: 'quadra.sqlite' };
         }
         
         const form = new FormData();
@@ -186,13 +180,13 @@ async function uploadDatabaseToDrive() {
         const result = await res.json();
         if (result.id) driveFileId = result.id;
         
-        if (banner) banner.style.display = 'none';
-        showToast("💾 Saved SQLite database to Google Drive!");
+        // 2. Change UI to "Saved" state on success
+        setCloudSyncIcon('saved');
         
     } catch (e) {
-        if (banner) banner.style.display = 'none';
         console.error("Failed to upload DB to Drive:", e);
-        showToast("Failed to save to Google Drive.");
+        // 3. Change UI to "Error" state on failure
+        setCloudSyncIcon('error');
     }
 }
 
@@ -488,6 +482,7 @@ function setTrackerMode(mode) {
 
 function saveNotes() { 
     localStorage.setItem('quadra_notes', JSON.stringify(notes)); 
+    setCloudSyncIcon('unsaved');
 }
 
 function startLiveClock() {
@@ -2777,5 +2772,29 @@ async function syncSingleTask(noteId) {
         saveNotes();
     } catch (error) {
         console.error("Instant push failed, delegating to background sync:", error);
+    }
+}
+
+// --- Cloud Sync Status UI ---
+function setCloudSyncIcon(state) {
+    const icon = document.getElementById('cloudSyncIcon');
+    if (!icon) return;
+
+    if (state === 'saving') {
+        icon.innerHTML = '☁️ ⏳'; // Hourglass or spinner
+        icon.style.color = '#3B82F6'; // Blue
+        icon.title = 'Saving to Google Drive...';
+    } else if (state === 'saved') {
+        icon.innerHTML = '☁️ ✓';
+        icon.style.color = '#10B981'; // Green
+        icon.title = 'Saved to Google Drive';
+    } else if (state === 'unsaved') {
+        icon.innerHTML = '☁️ •';
+        icon.style.color = '#F59E0B'; // Orange
+        icon.title = 'Unsaved changes (Press Ctrl+S)';
+    } else if (state === 'error') {
+        icon.innerHTML = '☁️ ❌';
+        icon.style.color = '#EF4444'; // Red
+        icon.title = 'Error saving to Drive';
     }
 }
