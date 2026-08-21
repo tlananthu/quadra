@@ -1,5 +1,8 @@
 // --- Core Settings & Config ---
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
+let isDocMode = false;
+let tokenHeartbeatId = null;
+
 if (!appConfig.ignoreKeywords) appConfig.ignoreKeywords = 'out of office, ooo, away, vacation, holiday';
 if (!appConfig.calSource) appConfig.calSource = 'google';
 if (!appConfig.icsUrl) appConfig.icsUrl = '';
@@ -1850,7 +1853,10 @@ function checkConfigState() {
         signoutButton.style.display = 'inline-block';
         isGoogleSynced = true;
         if (typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: savedTokenData.token });
+        
         loadCalendars(); 
+        startTokenHeartbeat(); // NEW: Start the background monitor
+        
     } else {
         authorizeButton.style.display = 'inline-block';
         signoutButton.style.display = 'none';
@@ -1985,6 +1991,9 @@ function handleSignoutClick() {
     } 
     localStorage.removeItem('quadra_gapi_token_v2'); 
     isGoogleSynced = false; 
+    
+    if (tokenHeartbeatId) clearInterval(tokenHeartbeatId); // NEW: Kill the heartbeat
+    
     document.getElementById('auth-overlay').style.display = 'none';
     document.getElementById('authorize_button').style.display = 'inline-block'; 
     document.getElementById('signout_button').style.display = 'none'; 
@@ -2464,4 +2473,36 @@ function insertCodeBlock() {
     sel.addRange(range);
 
     triggerAutoSaveInterval();
+}
+// --- Google API Token Heartbeat ---
+function startTokenHeartbeat() {
+    if (tokenHeartbeatId) clearInterval(tokenHeartbeatId);
+    
+    // Check the token health every 1 minute
+    tokenHeartbeatId = setInterval(() => {
+        const savedTokenData = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+        
+        if (savedTokenData && isGoogleSynced) {
+            const timeRemaining = savedTokenData.expires_at - Date.now();
+            const fiveMinutes = 5 * 60 * 1000;
+            
+            // If we have less than 5 minutes left, silently request a new token
+            if (timeRemaining > 0 && timeRemaining < fiveMinutes) {
+                console.log("Token expiring soon. Attempting silent refresh...");
+                attemptSilentTokenRefresh();
+            } else if (timeRemaining <= 0) {
+                // If it already expired while the computer was asleep, log them out safely
+                handleSignoutClick();
+                showToast("Google session expired. Please sign in again.");
+            }
+        }
+    }, 60000);
+}
+
+function attemptSilentTokenRefresh() {
+    if (!tokenClient || typeof google === 'undefined') return;
+    
+    // The prompt: '' parameter tells Google to skip the consent screen 
+    // if the user is already logged into Chrome/Google.
+    tokenClient.requestAccessToken({ prompt: '' });
 }
