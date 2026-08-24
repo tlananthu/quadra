@@ -1,4 +1,4 @@
-let version = '3.28';
+let version = '3.29';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2354,20 +2354,11 @@ async function importCalendarEvents() {
 
 async function performBackgroundSync() {
     const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-    if (!savedToken || !savedToken.token) return showToast("Please sign in first to sync with Google Tasks.");
+    if (!savedToken || !savedToken.token) return;
     try {
-        document.getElementById('sync-banner').style.display = 'block';
-
-        if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks || !gapi.client.tasks.tasklists || !gapi.client.tasks.tasks) {
-            document.getElementById('sync-banner').style.display = 'none';
-            return showToast("Google APIs are still loading. Please try again in a moment.");
-        }
-
-        if(typeof gapi !== 'undefined' && gapi.client && typeof gapi.client.setToken === 'function' && !gapi.client.getToken()) {
-            gapi.client.setToken({ access_token: savedToken.token });
-        }
+        if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks || !gapi.client.tasks.tasklists) return;
+        if (!gapi.client.getToken()) gapi.client.setToken({ access_token: savedToken.token });
         
-        // 1. TASK SYNC LOGIC
         const response = await gapi.client.tasks.tasklists.list();
         const remoteLists = response.result.items || [];
         const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
@@ -2383,28 +2374,18 @@ async function performBackgroundSync() {
             } 
         }
         
-        // --- HYBRID UPDATE 1: Cache list IDs for the Instant Push engine ---
         localStorage.setItem('quadra_gapi_lists', JSON.stringify(gapiListIds));
-        
         let remoteTaskMap = {};
-        
-        // --- HYBRID UPDATE 2: Fetch the timestamp of our last successful sync ---
         const lastSync = localStorage.getItem('quadra_last_sync');
 
         for (const quadKey of Object.keys(gapiListIds)) { 
             const listId = gapiListIds[quadKey]; 
-            
-            // --- HYBRID UPDATE 3: SMART PULL - Request deleted tasks and filter by updatedMin ---
             let reqOpts = { tasklist: listId, showHidden: true, showDeleted: true, maxResults: 100 };
-            if (lastSync) {
-                reqOpts.updatedMin = lastSync; 
-            }
+            if (lastSync) reqOpts.updatedMin = lastSync; 
             
             const tasksReq = await gapi.client.tasks.tasks.list(reqOpts); 
             const rTasks = tasksReq.result.items || []; 
-            rTasks.forEach(t => { 
-                remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; 
-            }); 
+            rTasks.forEach(t => { remoteTaskMap[t.id] = { task: t, listId: listId, quadKey: quadKey }; }); 
         }
         
         const syncSnapshot = JSON.parse(JSON.stringify(notes));
@@ -2412,21 +2393,23 @@ async function performBackgroundSync() {
         for (let sn of syncSnapshot) {
             if (sn.eventId) continue; 
             
-            if (sn.deleted && sn.dirty) { 
+            // --- THE STRANDED TASK FIX ---
+            // If the ID is a pure number (timestamp), it means it was created locally but NEVER reached Google.
+            const isStrandedLocal = !isNaN(sn.id) || sn.id.toString().includes('.');
+            
+            if (sn.deleted && (sn.dirty || isStrandedLocal)) { 
                 if (remoteTaskMap[sn.id]) { 
                     try { 
                         await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); 
-                        sn.syncFailed = false;
-                    } catch(e){
-                        console.error("Error deleting remote task:", e);
-                        sn.syncFailed = true;
-                    } 
+                    } catch(e){} 
                 } 
+                sn.syncFailed = false;
                 sn.dirty = false; 
                 continue; 
             }
             
-            if (sn.dirty && !sn.deleted) {
+            // Forcefully push stranded tasks, even if they aren't marked "dirty"
+            if ((sn.dirty || isStrandedLocal) && !sn.deleted) {
                 const targetListId = gapiListIds[sn.quadrant]; 
                 const remoteObj = remoteTaskMap[sn.id]; 
                 const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; 
@@ -2436,108 +2419,67 @@ async function performBackgroundSync() {
                 let tTitle = lines[0].trim() || 'Untitled Task';
                 let tNotes = lines.slice(1).join('\n').trim();
 
-                const resourceBody = { 
-                    title: tTitle, 
-                    notes: tNotes,
-                    status: gStatus 
-                }; 
+                if (tTitle.length > 1000) tTitle = tTitle.substring(0, 1000) + '...';
+                if (tNotes.length > 8100) tNotes = tNotes.substring(0, 8100) + '\n\n[...Truncated for Google Tasks]';
+
+                const resourceBody = { title: tTitle, notes: tNotes, status: gStatus }; 
                 
                 if (sn.dueDate) {
                     const [y, m, d] = sn.dueDate.split('-');
-                    const dueDt = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
-                    resourceBody.due = dueDt.toISOString();
-                } else if (remoteObj && remoteObj.task.due) {
-                    resourceBody.due = null;
+                    resourceBody.due = new Date(Date.UTC(y, m - 1, d, 0, 0, 0)).toISOString();
                 }
 
                 if (remoteObj) { 
                     if (remoteObj.listId !== targetListId) { 
                         try { 
-                            await gapi.client.tasks.tasks.delete({ 
-                                tasklist: remoteObj.listId, 
-                                task: sn.id 
-                            }); 
-                            const res = await gapi.client.tasks.tasks.insert({ 
-                                tasklist: targetListId,
-                                resource: resourceBody
-                            }); 
-                            sn.tempId = sn.id; 
-                            sn.id = res.result.id;
-                            sn.syncFailed = false;
-                        } catch(e){
-                            console.error("Error moving task:", e);
-                            sn.syncFailed = true;
-                        } 
+                            await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); 
+                            const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
+                            sn.tempId = sn.id; sn.id = res.result.id; sn.syncFailed = false;
+                        } catch(e){ sn.syncFailed = true; } 
                     } else { 
                         try { 
-                            await gapi.client.tasks.tasks.patch({ 
-                                tasklist: remoteObj.listId,
-                                task: sn.id,
-                                resource: resourceBody
-                            }); 
+                            await gapi.client.tasks.tasks.patch({ tasklist: remoteObj.listId, task: sn.id, resource: resourceBody }); 
                             sn.syncFailed = false;
-                        } catch(e){
-                            console.error("Error patching task:", e);
-                            sn.syncFailed = true;
-                        } 
+                        } catch(e){ sn.syncFailed = true; } 
                     } 
                     delete remoteTaskMap[sn.id]; 
                     if (sn.tempId) delete remoteTaskMap[sn.tempId]; 
                 } else { 
-                    // --- FIX 2: Smart Pull Safety Check ---
-                    const isNew = !isNaN(sn.id) || sn.id.toString().includes('.'); 
-                    
-                    if (!isNew) {
-                        // It's an existing Google Task, it was just filtered out by updatedMin. We MUST patch.
+                    if (!isStrandedLocal) {
                         try { 
-                            await gapi.client.tasks.tasks.patch({ 
-                                tasklist: targetListId, // Assume it's in the correct target list
-                                task: sn.id,
-                                resource: resourceBody
-                            }); 
+                            await gapi.client.tasks.tasks.patch({ tasklist: targetListId, task: sn.id, resource: resourceBody }); 
                             sn.syncFailed = false;
                         } catch(e) {
-                            console.error("Error patching old task:", e);
-                            sn.syncFailed = true;
+                            if (e.status === 404 || (e.result && e.result.error && e.result.error.code === 404)) {
+                                try { 
+                                    const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
+                                    sn.tempId = sn.id; sn.id = res.result.id; sn.syncFailed = false;
+                                } catch(err){ sn.syncFailed = true; }
+                            } else {
+                                sn.syncFailed = true;
+                            }
                         }
                     } else {
-                        // It genuinely is a brand new local task
                         try { 
-                            const res = await gapi.client.tasks.tasks.insert({ 
-                                tasklist: targetListId,
-                                resource: resourceBody
-                            }); 
-                            sn.tempId = sn.id; 
-                            sn.id = res.result.id; 
-                            sn.syncFailed = false;
-                        } catch(e){
-                            console.error("Error inserting task:", e);
-                            sn.syncFailed = true;
-                        } 
+                            const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
+                            sn.tempId = sn.id; sn.id = res.result.id; sn.syncFailed = false;
+                        } catch(e){ sn.syncFailed = true; } 
                     }
                 }
                 sn.dirty = false;
             } else if (!sn.dirty && !sn.deleted) { 
                 const remoteObj = remoteTaskMap[sn.id]; 
                 if (remoteObj) { 
-                    
-                    // --- HYBRID UPDATE 4: Handle tasks deleted remotely from Google ---
                     if (remoteObj.task.deleted) {
                         sn.deleted = true;
                     } else {
                         let fullText = remoteObj.task.title || '';
                         if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
                         
-                        // Transform brackets from Google Tasks natively back to custom checklist blocks
                         fullText = fullText.replace(/^\[x\]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item completed">$1</li></ul>')
                                         .replace(/^\[ \]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item">$1</li></ul>');
-
-                        // Clean up consecutive <ul> tags created by multi-line tasks to merge them into a single list
                         fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
-
-                        if (!/<[a-z][\s\S]*>/i.test(fullText)) {
-                            fullText = fullText.replace(/\n/g, '<br>');
-                        }
+                        if (!/<[a-z][\s\S]*>/i.test(fullText)) fullText = fullText.replace(/\n/g, '<br>');
                         
                         sn.text = fullText; 
                         sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
@@ -2551,32 +2493,20 @@ async function performBackgroundSync() {
         }
         
         Object.values(remoteTaskMap).forEach(remoteObj => { 
-            // Only add the task if it wasn't deleted remotely
             if (!remoteObj.task.deleted) {
                 let fullText = remoteObj.task.title || '';
                 if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
                 
-                // Transform brackets from Google Tasks natively back to custom checklist blocks
                 fullText = fullText.replace(/^\[x\]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item completed">$1</li></ul>')
                                 .replace(/^\[ \]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item">$1</li></ul>');
-
-                // Clean up consecutive <ul> tags created by multi-line tasks to merge them into a single list
                 fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
-
-                if (!/<[a-z][\s\S]*>/i.test(fullText)) {
-                    fullText = fullText.replace(/\n/g, '<br>');
-                }
+                if (!/<[a-z][\s\S]*>/i.test(fullText)) fullText = fullText.replace(/\n/g, '<br>');
                 
                 syncSnapshot.push({ 
-                    id: remoteObj.task.id, 
-                    text: fullText, 
-                    quadrant: remoteObj.quadKey, 
+                    id: remoteObj.task.id, text: fullText, quadrant: remoteObj.quadKey, 
                     status: remoteObj.task.status === 'completed' ? 'closed' : 'active', 
                     dueDate: remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null, 
-                    eventId: null, 
-                    dirty: false, 
-                    deleted: false,
-                    syncFailed: false
+                    eventId: null, dirty: false, deleted: false, syncFailed: false
                 });
             }
         });
@@ -2603,19 +2533,11 @@ async function performBackgroundSync() {
         
         notes = newNotesArray; 
         saveNotes(); 
-        
-        // --- HYBRID UPDATE 5: Record the exact time of the sync for the next Smart Pull ---
         localStorage.setItem('quadra_last_sync', new Date().toISOString());
-        
         handleSearch(); 
         
-        document.getElementById('sync-banner').style.display = 'none';
-        showToast("✓ Successfully synced with Google Tasks!");
-        
     } catch (e) {
-        document.getElementById('sync-banner').style.display = 'none';
         console.error("Background sync error:", e);
-        showToast("Tasks sync failed. Check your API configuration.");
     }
 }
 
