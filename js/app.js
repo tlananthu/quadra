@@ -1,4 +1,4 @@
-let version = '3.32';
+let version = '3.34';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -599,10 +599,6 @@ function goToToday() {
     renderTrackerTimeline();
 }
 
-// --- NEW: Dedicated Palette Renderer ---
-// --- NEW: Dedicated Palette Renderer (With Planned Indicator) ---
-// --- NEW: Dedicated Palette Renderer (Multi-Day Architecture) ---
-// --- NEW: Dedicated Palette Renderer (Smart Planned Indicator) ---
 function renderTrackerPalette() {
     const globalSearchInput = document.getElementById('searchInput');
     const globalQuery = globalSearchInput ? globalSearchInput.value : '';
@@ -630,8 +626,17 @@ function renderTrackerPalette() {
         paletteNotes.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     }
     
-    // Calculate today's date string once to use for both planned & overdue checks
     const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
+
+    // --- NEW: Quadrant Metadata mapping using CSS Variables ---
+    const quadStyles = {
+        'q1': { color: 'var(--q1-text)', border: 'var(--q1-border)', bg: 'var(--q1-bg)', label: 'Q1 (Urgent)' },
+        'q2': { color: 'var(--q2-text)', border: 'var(--q2-border)', bg: 'var(--q2-bg)', label: 'Q2 (Schedule)' },
+        'q3': { color: 'var(--q3-text)', border: 'var(--q3-border)', bg: 'var(--q3-bg)', label: 'Q3 (Delegate)' },
+        'q4': { color: 'var(--q4-text)', border: 'var(--q4-border)', bg: 'var(--q4-bg)', label: 'Q4 (Later)' },
+        'inbox': { color: 'var(--text-muted)', border: 'var(--border-color)', bg: '#F1F5F9', label: 'Inbox' },
+        'calendar': { color: 'var(--cal-text)', border: 'var(--cal-border)', bg: 'var(--cal-bg)', label: 'Calendar' }
+    };
 
     paletteNotes.forEach(note => {
         const el = document.createElement('div');
@@ -641,12 +646,18 @@ function renderTrackerPalette() {
         el.draggable = true;
         el.ondragstart = (e) => e.dataTransfer.setData('text/plain', note.id);
         
-        // --- UPGRADED: Only show PLANNED if there is a block scheduled for today or the future ---
+        const qStyle = quadStyles[note.quadrant] || { color: 'var(--text-muted)', border: 'var(--border-color)', bg: '#F1F5F9', label: note.quadrant };
+
+        // --- NEW: Apply a thick left border matching the CSS variable ---
+        el.style.borderLeft = `4px solid ${qStyle.border}`;
+
         const isPlannedOnCalendar = note.timeBlocks && note.timeBlocks.some(block => block.date >= todayStr);
         
         if (isPlannedOnCalendar) {
             el.style.backgroundColor = '#F8FAFC';
-            el.style.borderColor = '#E2E8F0';
+            el.style.borderTop = '1px solid var(--border-color)';
+            el.style.borderRight = '1px solid var(--border-color)';
+            el.style.borderBottom = '1px solid var(--border-color)';
         }
         
         const contentWrapper = document.createElement('div');
@@ -664,17 +675,21 @@ function renderTrackerPalette() {
         let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
         contentWrapper.innerHTML = `<div class="note-text">${overdueIndicator}${parseTags(cleanTextTitle)}</div>`;
         
+        // --- NEW: Inject the Quadrant Badge utilizing the full CSS theme ---
+        let metaHTML = `<div style="font-size:11px; margin-top:10px; font-weight:600; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">`;
+        
+        metaHTML += `<span style="color: ${qStyle.color}; background-color: ${qStyle.bg}; border: 1px solid ${qStyle.border}; padding: 2px 6px; border-radius: 4px;">${qStyle.label}</span>`;
+
         if (note.dueDate) {
-            let plannedBadge = isPlannedOnCalendar 
-                ? `<span style="margin-left: auto; background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; letter-spacing: 0.5px;">🕒 PLANNED</span>` 
-                : '';
-                
-            contentWrapper.innerHTML += `
-                <div style="font-size:12px; color:var(--brand-primary); margin-top:8px; font-weight:500; display: flex; align-items: center;">
-                    🗓️ ${note.dueDate.split('T')[0]}
-                    ${plannedBadge}
-                </div>`;
+            metaHTML += `<span style="color: var(--text-muted); display: flex; align-items: center; gap: 4px;">🗓️ ${note.dueDate.split('T')[0]}</span>`;
         }
+        
+        if (isPlannedOnCalendar) {
+            metaHTML += `<span style="margin-left: auto; background: var(--q2-bg); color: var(--q2-text); border: 1px solid var(--q2-border); padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; letter-spacing: 0.5px;">🕒 PLANNED</span>`;
+        }
+
+        metaHTML += `</div>`;
+        contentWrapper.innerHTML += metaHTML;
         
         contentWrapper.onclick = (e) => openTaskModal(null, note.id, e);
         
