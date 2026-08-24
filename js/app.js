@@ -1,4 +1,4 @@
-let version = '3.31';
+let version = '3.32';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1249,7 +1249,7 @@ function handleTimelineClick(ev, dateStr) {
     const y = ev.clientY - rect.top; 
     let dropHour = roundToQuarterHour(y / hourPx);
 
-    openTaskModal('inbox', null, ev, { date: dateStr, startHour: dropHour });
+    openTaskModal('calendar', null, ev, { date: dateStr, startHour: dropHour });
 }
 
 function allowTrackerDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add('drag-over'); }
@@ -1437,7 +1437,6 @@ function clearAutoSaveInterval() {
 function openTaskModal(quadrant = null, noteId = null, event = null, timelineContext = null) {
     if (event) event.stopPropagation();
 
-    // Reset Doc Mode state when opening a modal
     isDocMode = false;
     document.querySelector('#taskModal .modal-content').classList.remove('doc-mode');
     const toggleBtn = document.getElementById('docModeToggleBtn');
@@ -1450,6 +1449,7 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
     const titleInput = document.getElementById('taskTitleInput');
     const infoInput = document.getElementById('taskInfoInput');
     const dueDateInput = document.getElementById('taskDueDate');
+    const quadrantInput = document.getElementById('taskQuadrant'); // <-- NEW
     const completeBtn = document.getElementById('taskModalCompleteBtn');
 
     clearAutoSaveInterval();
@@ -1482,6 +1482,7 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
         formatEditorNodes('taskInfoInput');
 
         dueDateInput.value = note.dueDate || '';
+        if (quadrantInput) quadrantInput.value = note.quadrant || 'inbox'; // <-- NEW
 
         completeBtn.style.display = 'inline-block';
         if (note.status === 'closed') {
@@ -1501,6 +1502,7 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
         titleInput.innerHTML = '';
         infoInput.innerHTML = '';
         dueDateInput.value = timelineContext ? timelineContext.date : '';
+        if (quadrantInput) quadrantInput.value = currentAddingQuadrant; // <-- NEW
         completeBtn.style.display = 'none';
         
         pendingTimelineContext = timelineContext || null;
@@ -1521,6 +1523,10 @@ function saveTaskModal() {
     const titleText = document.getElementById('taskTitleInput').innerHTML; 
     const infoText = document.getElementById('taskInfoInput').innerHTML; 
     const dueDate = document.getElementById('taskDueDate').value;
+    
+    // --- NEW: Grab the selected quadrant ---
+    const quadrantSelect = document.getElementById('taskQuadrant');
+    const selectedQuadrant = quadrantSelect ? quadrantSelect.value : null;
 
     if ((!titleText || titleText === '<br>') && (!infoText || infoText === '<br>')) return closeTaskModal();
 
@@ -1541,23 +1547,34 @@ function saveTaskModal() {
         if (note) { 
             note.text = fullText; 
             note.dueDate = dueDate || null;
+            
+            // --- NEW: Apply the changed quadrant ---
+            if (selectedQuadrant) note.quadrant = selectedQuadrant;
+            
+            if (selectedQuadrant === 'closed') note.status = 'closed';
+            else if (note.status === 'closed' && selectedQuadrant !== 'closed') note.status = 'active';
+
             if (newTimeBlock) {
                 if(!note.timeBlocks) note.timeBlocks = [];
                 note.timeBlocks.push(newTimeBlock);
             }
             note.dirty = true; 
             saveNotes(); 
-            syncSingleTask(note.id); // <-- NEW
+            syncSingleTask(note.id);
             handleSearch(); 
         } 
     } else { 
-        let targetQuad = currentAddingQuadrant || 'inbox';
-        let newNoteId = Date.now().toString(); // Extract ID to variable
+        // --- CHANGED: Use the dropdown value or fallback ---
+        let targetQuad = selectedQuadrant || currentAddingQuadrant || 'inbox';
+        let newNoteId = Date.now().toString(); 
+        
+        let newStatus = targetQuad === 'closed' ? 'closed' : 'active';
+        
         notes.push({ 
             id: newNoteId, 
             text: fullText, 
             quadrant: targetQuad, 
-            status: 'active', 
+            status: newStatus, 
             dueDate: dueDate || null,
             timeBlocks: newTimeBlock ? [newTimeBlock] : [],
             dirty: true, 

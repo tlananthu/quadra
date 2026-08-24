@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v3.31</span>
+                    <span class="version-badge">v3.32</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -405,8 +405,18 @@
             </div>
 
             <div class="form-group form-row-inline">
-                <label>Due Date</label>
-                <input type="date" id="taskDueDate">
+                <div style="display: flex; gap: 10px; align-items: stretch; margin-bottom: 12px;">
+                    <input type="date" id="taskDueDate" class="task-input" style="flex: 1; margin-bottom: 0;">
+                    <select id="taskQuadrant" class="task-input" style="flex: 1; margin-bottom: 0; cursor: pointer; padding-right: 10px;">
+                        <option value="inbox">Inbox</option>
+                        <option value="q1">Do First (Q1)</option>
+                        <option value="q2">Schedule (Q2)</option>
+                        <option value="q3">Delegate (Q3)</option>
+                        <option value="q4">Later (Q4)</option>
+                        <option value="calendar">Calendar Tray</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                </div>
             </div>
 
             <div class="modal-actions" style="justify-content: space-between; align-items: center;">
