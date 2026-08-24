@@ -1,3 +1,4 @@
+let version = '3.28';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2831,13 +2832,10 @@ async function syncSingleTask(noteId) {
     if (!isGoogleSynced || typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks) return;
     
     const note = notes.find(n => n.id === noteId);
-    if (!note || note.eventId) return; // Do not push calendar events to Tasks
+    if (!note || note.eventId) return;
 
-    // Grab the list IDs cached by our background sync
     let listCache = JSON.parse(localStorage.getItem('quadra_gapi_lists')) || {};
     let targetListId = listCache[note.quadrant];
-    
-    // Fallback: If we haven't synced yet, let the background sync handle it later
     if (!targetListId) return;
 
     try {
@@ -2852,18 +2850,20 @@ async function syncSingleTask(noteId) {
         let plainTextPayload = cleanHTMLToPlainText(note.text);
         let lines = plainTextPayload.split('\n');
         
-        let resourceBody = { 
-            title: lines[0].trim() || 'Untitled Task', 
-            notes: lines.slice(1).join('\n').trim(),
-            status: gStatus 
-        }; 
+        let tTitle = lines[0].trim() || 'Untitled Task';
+        let tNotes = lines.slice(1).join('\n').trim();
+
+        // --- PREVENT 400 ERRORS: Graceful Truncation ---
+        if (tTitle.length > 1000) tTitle = tTitle.substring(0, 1000) + '...';
+        if (tNotes.length > 8100) tNotes = tNotes.substring(0, 8100) + '\n\n[...Truncated for Google Tasks]';
+
+        let resourceBody = { title: tTitle, notes: tNotes, status: gStatus }; 
 
         if (note.dueDate) {
             const [y, m, d] = note.dueDate.split('-');
             resourceBody.due = new Date(Date.UTC(y, m - 1, d, 0, 0, 0)).toISOString();
         }
 
-        // Determine if this is a new local task (id is a timestamp) or an existing Google Task (alphanumeric)
         const isNew = !isNaN(note.id) || note.id.toString().includes('.'); 
         
         if (!isNew) {
@@ -2871,27 +2871,26 @@ async function syncSingleTask(noteId) {
                 await gapi.client.tasks.tasks.patch({ tasklist: targetListId, task: note.id, resource: resourceBody });
                 note.dirty = false;
             } catch(e) {
-                // If it fails (e.g., moved to another list externally), let the background sync handle the move
-                if (e.status === 404) return; 
+                // --- PREVENT 404 LOOPS: If task was deleted remotely, recreate it ---
+                if (e.status === 404 || (e.result && e.result.error && e.result.error.code === 404)) {
+                    console.warn("Task missing on Google. Recreating it...");
+                    const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
+                    if (currentEditingId === note.id) currentEditingId = res.result.id;
+                    note.id = res.result.id;
+                    note.dirty = false;
+                    setTimeout(() => handleSearch(), 100); 
+                }
             }
         } else {
             const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
-            
-            // --- FIX 1: Prevent DOM Mismatch Duplication ---
-            // If the user still has the modal open for this task, upgrade their active session ID
-            if (currentEditingId === note.id) {
-                currentEditingId = res.result.id;
-            }
-            
-            note.id = res.result.id; // Upgrade local ID to Google ID
+            if (currentEditingId === note.id) currentEditingId = res.result.id;
+            note.id = res.result.id; 
             note.dirty = false;
-            
-            // Force the UI to re-render so the HTML cards receive the new Google ID
             setTimeout(() => handleSearch(), 100); 
         }
         saveNotes();
     } catch (error) {
-        console.error("Instant push failed, delegating to background sync:", error);
+        console.error("Instant push failed:", error);
     }
 }
 
