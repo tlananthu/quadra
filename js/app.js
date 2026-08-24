@@ -1,4 +1,4 @@
-let version = '3.36';
+let version = '3.37';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
