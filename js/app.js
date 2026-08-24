@@ -2483,18 +2483,37 @@ async function performBackgroundSync() {
                     delete remoteTaskMap[sn.id]; 
                     if (sn.tempId) delete remoteTaskMap[sn.tempId]; 
                 } else { 
-                    try { 
-                        const res = await gapi.client.tasks.tasks.insert({ 
-                            tasklist: targetListId,
-                            resource: resourceBody
-                        }); 
-                        sn.tempId = sn.id; 
-                        sn.id = res.result.id; 
-                        sn.syncFailed = false;
-                    } catch(e){
-                        console.error("Error inserting task:", e);
-                        sn.syncFailed = true;
-                    } 
+                    // --- FIX 2: Smart Pull Safety Check ---
+                    const isNew = !isNaN(sn.id) || sn.id.toString().includes('.'); 
+                    
+                    if (!isNew) {
+                        // It's an existing Google Task, it was just filtered out by updatedMin. We MUST patch.
+                        try { 
+                            await gapi.client.tasks.tasks.patch({ 
+                                tasklist: targetListId, // Assume it's in the correct target list
+                                task: sn.id,
+                                resource: resourceBody
+                            }); 
+                            sn.syncFailed = false;
+                        } catch(e) {
+                            console.error("Error patching old task:", e);
+                            sn.syncFailed = true;
+                        }
+                    } else {
+                        // It genuinely is a brand new local task
+                        try { 
+                            const res = await gapi.client.tasks.tasks.insert({ 
+                                tasklist: targetListId,
+                                resource: resourceBody
+                            }); 
+                            sn.tempId = sn.id; 
+                            sn.id = res.result.id; 
+                            sn.syncFailed = false;
+                        } catch(e){
+                            console.error("Error inserting task:", e);
+                            sn.syncFailed = true;
+                        } 
+                    }
                 }
                 sn.dirty = false;
             } else if (!sn.dirty && !sn.deleted) { 
@@ -2857,8 +2876,18 @@ async function syncSingleTask(noteId) {
             }
         } else {
             const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
+            
+            // --- FIX 1: Prevent DOM Mismatch Duplication ---
+            // If the user still has the modal open for this task, upgrade their active session ID
+            if (currentEditingId === note.id) {
+                currentEditingId = res.result.id;
+            }
+            
             note.id = res.result.id; // Upgrade local ID to Google ID
             note.dirty = false;
+            
+            // Force the UI to re-render so the HTML cards receive the new Google ID
+            setTimeout(() => handleSearch(), 100); 
         }
         saveNotes();
     } catch (error) {
