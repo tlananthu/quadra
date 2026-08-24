@@ -1,4 +1,4 @@
-let version = '3.29';
+let version = '3.30';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2355,8 +2355,13 @@ async function importCalendarEvents() {
 async function performBackgroundSync() {
     const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
     if (!savedToken || !savedToken.token) return;
+    
     try {
         if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks || !gapi.client.tasks.tasklists) return;
+        
+        const syncBanner = document.getElementById('sync-banner');
+        if (syncBanner) syncBanner.style.display = 'block';
+
         if (!gapi.client.getToken()) gapi.client.setToken({ access_token: savedToken.token });
         
         const response = await gapi.client.tasks.tasklists.list();
@@ -2393,14 +2398,42 @@ async function performBackgroundSync() {
         for (let sn of syncSnapshot) {
             if (sn.eventId) continue; 
             
-            // --- THE STRANDED TASK FIX ---
-            // If the ID is a pure number (timestamp), it means it was created locally but NEVER reached Google.
+            const remoteObj = remoteTaskMap[sn.id];
             const isStrandedLocal = !isNaN(sn.id) || sn.id.toString().includes('.');
             
+            // --- CONFLICT RESOLUTION: GOOGLE WINS ---
+            // If the task was updated on Google since last sync, pull it and overwrite local
+            // UNLESS the user is actively typing in this exact task's modal right now.
+            if (remoteObj && currentEditingId !== sn.id) {
+                if (remoteObj.task.deleted) {
+                    sn.deleted = true;
+                    sn.dirty = false;
+                } else {
+                    let fullText = remoteObj.task.title || '';
+                    if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
+                    
+                    fullText = fullText.replace(/^\[x\]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item completed">$1</li></ul>')
+                                    .replace(/^\[ \]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item">$1</li></ul>');
+                    fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
+                    if (!/<[a-z][\s\S]*>/i.test(fullText)) fullText = fullText.replace(/\n/g, '<br>');
+                    
+                    sn.text = fullText; 
+                    sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
+                    sn.quadrant = remoteObj.quadKey; 
+                    sn.dueDate = remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null; 
+                    sn.dirty = false; 
+                    sn.syncFailed = false;
+                }
+                delete remoteTaskMap[sn.id];
+                if (sn.tempId) delete remoteTaskMap[sn.tempId];
+                continue; // Skip the push logic!
+            }
+
+            // --- DELETIONS ---
             if (sn.deleted && (sn.dirty || isStrandedLocal)) { 
-                if (remoteTaskMap[sn.id]) { 
+                if (remoteObj) { 
                     try { 
-                        await gapi.client.tasks.tasks.delete({ tasklist: remoteTaskMap[sn.id].listId, task: sn.id }); 
+                        await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); 
                     } catch(e){} 
                 } 
                 sn.syncFailed = false;
@@ -2408,10 +2441,9 @@ async function performBackgroundSync() {
                 continue; 
             }
             
-            // Forcefully push stranded tasks, even if they aren't marked "dirty"
+            // --- PUSH LOCAL CHANGES ---
             if ((sn.dirty || isStrandedLocal) && !sn.deleted) {
                 const targetListId = gapiListIds[sn.quadrant]; 
-                const remoteObj = remoteTaskMap[sn.id]; 
                 const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; 
                 
                 let plainTextPayload = cleanHTMLToPlainText(sn.text);
@@ -2429,7 +2461,8 @@ async function performBackgroundSync() {
                     resourceBody.due = new Date(Date.UTC(y, m - 1, d, 0, 0, 0)).toISOString();
                 }
 
-                if (remoteObj) { 
+                if (remoteObj && currentEditingId === sn.id) { 
+                    // User is actively editing a conflict. Quadra wins this specific edge case.
                     if (remoteObj.listId !== targetListId) { 
                         try { 
                             await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); 
@@ -2467,29 +2500,7 @@ async function performBackgroundSync() {
                     }
                 }
                 sn.dirty = false;
-            } else if (!sn.dirty && !sn.deleted) { 
-                const remoteObj = remoteTaskMap[sn.id]; 
-                if (remoteObj) { 
-                    if (remoteObj.task.deleted) {
-                        sn.deleted = true;
-                    } else {
-                        let fullText = remoteObj.task.title || '';
-                        if (remoteObj.task.notes) fullText += '\n' + remoteObj.task.notes;
-                        
-                        fullText = fullText.replace(/^\[x\]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item completed">$1</li></ul>')
-                                        .replace(/^\[ \]\s+(.*)$/gm, '<ul class="todo-list"><li class="todo-item">$1</li></ul>');
-                        fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
-                        if (!/<[a-z][\s\S]*>/i.test(fullText)) fullText = fullText.replace(/\n/g, '<br>');
-                        
-                        sn.text = fullText; 
-                        sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
-                        sn.quadrant = remoteObj.quadKey; 
-                        sn.dueDate = remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null; 
-                        sn.syncFailed = false;
-                    }
-                    delete remoteTaskMap[sn.id]; 
-                } 
-            }
+            } 
         }
         
         Object.values(remoteTaskMap).forEach(remoteObj => { 
@@ -2536,8 +2547,14 @@ async function performBackgroundSync() {
         localStorage.setItem('quadra_last_sync', new Date().toISOString());
         handleSearch(); 
         
+        if (syncBanner) syncBanner.style.display = 'none';
+        showToast("✓ Successfully synced with Google Tasks!");
+        
     } catch (e) {
         console.error("Background sync error:", e);
+        const syncBanner = document.getElementById('sync-banner');
+        if (syncBanner) syncBanner.style.display = 'none';
+        showToast("Tasks sync failed. Check your network or API configuration.");
     }
 }
 
