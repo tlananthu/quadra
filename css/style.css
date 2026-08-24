@@ -12,7 +12,11 @@
     --q1-bg: #FFE4E6; --q1-border: #FDA4AF; --q1-text: #9F1239;
     --q2-bg: #E0F2FE; --q2-border: #7DD3FC; --q2-text: #0369A1;
     --q3-bg: #FEF3C7; --q3-border: #FCD34D; --q3-text: #B45309;
-    --q4-bg: #2e363d; --q4-border: #CBD5E1; --q4-text: #475569;
+    --q4-bg: #F8FAFC; --q4-border: #94A3B8; --q4-text: #334155; /* Fixed from #2e363d */
+    
+    /* Missing Timeline Colors */
+    --cal-bg: #F3E8FF; --cal-border: #D8B4FE; --cal-text: #6B21A8;
+    --closed-bg: #F1F5F9; --closed-border: #CBD5E1; --closed-text: #94A3B8;
     --bg-main: #F9FAFB;
     --text-main: #111827;
     --text-muted: #6B7280;
@@ -1126,14 +1130,18 @@ header h1 {
     min-height: 15px; 
 }
 
-.logged-block.q1 { background-color: var(--q1-bg); border-color: var(--q1-border); color: var(--q1-text); }
-.logged-block.q2 { background-color: var(--q2-bg); border-color: var(--q2-border); color: var(--q2-text); }
-.logged-block.q3 { background-color: var(--q3-bg); border-color: var(--q3-border); color: var(--q3-text); }
-.logged-block.q4 { background-color: var(--q4-bg); border-color: var(--q4-border); color: var(--q4-text); }
-.logged-block.is-meeting { background-color: var(--q2-bg); border-color: var(--q2-border); color: var(--q2-text); }
+.logged-block.q1 { background-color: var(--q1-bg); border-left: 4px solid var(--q1-border); color: var(--q1-text); }
+.logged-block.q2 { background-color: var(--q2-bg); border-left: 4px solid var(--q2-border); color: var(--q2-text); }
+.logged-block.q3 { background-color: var(--q3-bg); border-left: 4px solid var(--q3-border); color: var(--q3-text); }
+.logged-block.q4 { background-color: var(--q4-bg); border-left: 4px solid var(--q4-border); color: var(--q4-text); }
+.logged-block.calendar { background-color: var(--cal-bg); border-left: 4px solid var(--cal-border); color: var(--cal-text); }
+.logged-block.is-meeting { background-color: var(--q2-bg); border-left: 4px solid var(--brand-meeting); color: var(--q2-text); }
 
 .logged-block.is-closed { 
-    opacity: 0.6; 
+    background-color: var(--closed-bg); 
+    border-left: 4px solid var(--closed-border); 
+    color: var(--closed-text);
+    opacity: 0.7; 
 }
 .logged-block.is-closed .block-title { 
     text-decoration: line-through; 
