@@ -1293,10 +1293,47 @@ document.addEventListener('keydown', (e) => {
     }
 
     const isEditingText = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
-    if (isEditingText && e.ctrlKey && e.key === '1') {
-        e.preventDefault();
-        toggleChecklistFormatting();
-        return; 
+    
+    if (isEditingText) {
+        // --- NEW: Rich Text Formatting Shortcuts ---
+        
+        // Ctrl+Alt+Shift+S : Code Block
+        if ((e.ctrlKey || e.metaKey) && e.altKey && e.shiftKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            insertCodeBlock();
+            return;
+        }
+        
+        // Ctrl+Shift+X : Strikethrough
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'x' && !e.altKey) {
+            e.preventDefault();
+            document.execCommand('strikeThrough', false, null);
+            triggerAutoSaveInterval();
+            return;
+        }
+        
+        // Ctrl+B : Bold
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b' && !e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            document.execCommand('bold', false, null);
+            triggerAutoSaveInterval();
+            return;
+        }
+        
+        // Ctrl+I : Italics
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i' && !e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            document.execCommand('italic', false, null);
+            triggerAutoSaveInterval();
+            return;
+        }
+
+        // Existing custom Ctrl+1 checklist shortcut
+        if (e.ctrlKey && e.key === '1' && !e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            toggleChecklistFormatting();
+            return; 
+        }
     }
 
     if (e.key === 'Escape') {
@@ -2624,19 +2661,65 @@ function toggleChecklistFormatting() {
 }
 
 // --- Live Tag Formatting for Editor ---
+// --- Live Tag & Markdown Formatting for Editor ---
 ['taskTitleInput', 'taskInfoInput'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
-        // Trigger formatting when hitting Space or Enter
         el.addEventListener('keyup', function(e) {
+            // Standard tag formatting
             if (e.key === ' ' || e.key === 'Enter') {
                 formatEditorNodes(id);
+                
+                // --- UPDATED: Markdown Auto-formatting (Strict Line Start) ---
+                if (e.key === ' ') {
+                    const sel = window.getSelection();
+                    if (!sel.rangeCount) return;
+                    
+                    let range = sel.getRangeAt(0);
+                    let node = range.startContainer;
+                    
+                    if (node.nodeType === 3) { 
+                        let offset = range.startOffset;
+                        let textBeforeCursor = node.textContent.substring(0, offset);
+                        
+                        // Check if the current text matches our exact triggers
+                        if (textBeforeCursor === '* ' || textBeforeCursor === '- ' || textBeforeCursor === '1. ') {
+                            
+                            // Verify the text node is physically at column 0 of the line
+                            let isStartOfLine = false;
+                            
+                            // Condition 1: It is the very first node in its block container
+                            if (!node.previousSibling) {
+                                isStartOfLine = true;
+                            } 
+                            // Condition 2: The element immediately before it is a soft line break
+                            else if (node.previousSibling && node.previousSibling.tagName === 'BR') {
+                                isStartOfLine = true;
+                            }
+                            // Condition 3: It's wrapped in a format tag (like a span) that is the first child
+                            else if (node.parentNode && node.parentNode !== el && !node.parentNode.previousSibling) {
+                                 isStartOfLine = true;
+                            }
+
+                            if (isStartOfLine) {
+                                range.setStart(node, 0);
+                                range.setEnd(node, offset);
+                                range.deleteContents(); // Erase the trigger characters
+                                
+                                if (textBeforeCursor === '1. ') {
+                                    document.execCommand('insertOrderedList', false, null);
+                                } else {
+                                    document.execCommand('insertUnorderedList', false, null);
+                                }
+                                triggerAutoSaveInterval();
+                            }
+                        }
+                    }
+                }
             }
         });
         
-        // Trigger formatting when pasting text to catch multiple tags at once
         el.addEventListener('paste', function(e) {
-            // Give the browser a 10ms tick to actually insert the pasted text before formatting
             setTimeout(() => {
                 formatEditorNodes(id);
             }, 10);
