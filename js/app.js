@@ -1,4 +1,4 @@
-let version = '3.30';
+let version = '3.31';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2238,6 +2238,7 @@ async function importCalendarEvents() {
         .filter(k => k.length > 0);
 
     let importedCount = 0;
+    let updatedCount = 0;
     let ignoredCount = 0;
 
     try {
@@ -2250,11 +2251,28 @@ async function importCalendarEvents() {
             if (!res.ok) throw new Error("Failed to fetch ICS feed via Apps Script bridge");
             
             const icsText = await res.text();
-            // Relying on global appConfig.primaryTz in lib
             const icsEvents = parseICS(icsText, dateStr, ignoreKeywords, appConfig.primaryTz);
 
             icsEvents.forEach(ev => {
-                if (notes.find(n => n.eventId === ev.id)) return;
+                const existingNote = notes.find(n => n.eventId === ev.id);
+                
+                // --- UPDATE EXISTING ICS EVENT ---
+                if (existingNote) {
+                    let changed = false;
+                    if (existingNote.dueTime !== ev.startHour) { existingNote.dueTime = ev.startHour; changed = true; }
+                    if (existingNote.dueDuration !== ev.duration) { existingNote.dueDuration = ev.duration; changed = true; }
+                    
+                    const newText = `${ev.summary} #meeting`;
+                    if (existingNote.text !== newText) { existingNote.text = newText; changed = true; }
+                    
+                    if (changed) { 
+                        existingNote.dirty = true; 
+                        updatedCount++; 
+                    }
+                    return; // Move to the next event
+                }
+
+                // --- INSERT NEW ICS EVENT ---
                 notes.push({
                     id: Date.now().toString() + Math.random(),
                     eventId: ev.id,
@@ -2315,8 +2333,25 @@ async function importCalendarEvents() {
                 const startHour = roundToQuarterHour(rawStartHour);
                 const duration = Math.max(0.25, roundToQuarterHour(rawDuration));
                 
-                if (notes.find(n => n.eventId === event.id)) return; 
+                const existingNote = notes.find(n => n.eventId === event.id);
                 
+                // --- UPDATE EXISTING GOOGLE EVENT ---
+                if (existingNote) {
+                    let changed = false;
+                    if (existingNote.dueTime !== startHour) { existingNote.dueTime = startHour; changed = true; }
+                    if (existingNote.dueDuration !== duration) { existingNote.dueDuration = duration; changed = true; }
+                    
+                    const newText = `${event.summary || 'Meeting'} #meeting`;
+                    if (existingNote.text !== newText) { existingNote.text = newText; changed = true; }
+                    
+                    if (changed) { 
+                        existingNote.dirty = true; 
+                        updatedCount++; 
+                    }
+                    return; // Move to the next event
+                }
+                
+                // --- INSERT NEW GOOGLE EVENT ---
                 const newNote = {
                     id: Date.now().toString() + Math.random(),
                     eventId: event.id, 
@@ -2337,12 +2372,13 @@ async function importCalendarEvents() {
         }
         
         document.getElementById('sync-banner').style.display = 'none';
-        if (importedCount > 0 || ignoredCount > 0) {
+        
+        if (importedCount > 0 || updatedCount > 0 || ignoredCount > 0) {
             saveNotes();
             renderTrackerTimeline(); 
-            showToast(`${importedCount} imported, ${ignoredCount} ignored.`);
+            showToast(`${importedCount} imported, ${updatedCount} updated, ${ignoredCount} ignored.`);
         } else {
-            showToast("No new meetings found for this date.");
+            showToast("No new meetings found or updated for this date.");
         }
         
     } catch(e) {
@@ -2402,8 +2438,6 @@ async function performBackgroundSync() {
             const isStrandedLocal = !isNaN(sn.id) || sn.id.toString().includes('.');
             
             // --- CONFLICT RESOLUTION: GOOGLE WINS ---
-            // If the task was updated on Google since last sync, pull it and overwrite local
-            // UNLESS the user is actively typing in this exact task's modal right now.
             if (remoteObj && currentEditingId !== sn.id) {
                 if (remoteObj.task.deleted) {
                     sn.deleted = true;
@@ -2420,16 +2454,18 @@ async function performBackgroundSync() {
                     sn.text = fullText; 
                     sn.status = remoteObj.task.status === 'completed' ? 'closed' : 'active'; 
                     sn.quadrant = remoteObj.quadKey; 
+                    
+                    // STRICT DUE DATE SYNC: Updates the badge on the card, completely ignores timeBlocks
                     sn.dueDate = remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null; 
+
                     sn.dirty = false; 
                     sn.syncFailed = false;
                 }
                 delete remoteTaskMap[sn.id];
                 if (sn.tempId) delete remoteTaskMap[sn.tempId];
-                continue; // Skip the push logic!
+                continue; 
             }
 
-            // --- DELETIONS ---
             if (sn.deleted && (sn.dirty || isStrandedLocal)) { 
                 if (remoteObj) { 
                     try { 
@@ -2441,7 +2477,6 @@ async function performBackgroundSync() {
                 continue; 
             }
             
-            // --- PUSH LOCAL CHANGES ---
             if ((sn.dirty || isStrandedLocal) && !sn.deleted) {
                 const targetListId = gapiListIds[sn.quadrant]; 
                 const gStatus = sn.status === 'closed' ? 'completed' : 'needsAction'; 
@@ -2462,7 +2497,6 @@ async function performBackgroundSync() {
                 }
 
                 if (remoteObj && currentEditingId === sn.id) { 
-                    // User is actively editing a conflict. Quadra wins this specific edge case.
                     if (remoteObj.listId !== targetListId) { 
                         try { 
                             await gapi.client.tasks.tasks.delete({ tasklist: remoteObj.listId, task: sn.id }); 
@@ -2513,10 +2547,12 @@ async function performBackgroundSync() {
                 fullText = fullText.replace(/<\/ul>\s*<ul class="todo-list">/g, '');
                 if (!/<[a-z][\s\S]*>/i.test(fullText)) fullText = fullText.replace(/\n/g, '<br>');
                 
+                // For brand new tasks from Google, initialize with empty timeBlocks array
                 syncSnapshot.push({ 
                     id: remoteObj.task.id, text: fullText, quadrant: remoteObj.quadKey, 
                     status: remoteObj.task.status === 'completed' ? 'closed' : 'active', 
                     dueDate: remoteObj.task.due ? remoteObj.task.due.split('T')[0] : null, 
+                    timeBlocks: [], 
                     eventId: null, dirty: false, deleted: false, syncFailed: false
                 });
             }
