@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v3.35</span>
+                    <span class="version-badge">v3.36</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -34,7 +34,13 @@
         </div>
         
         <div class="header-actions">
-            <button class="btn btn-outline" onclick="performBackgroundSync()" title="Sync tasks with Google Tasks">🔄</button>
+            <div style="display: flex; align-items: center; gap: 8px; margin-right: 12px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Due Only</span>
+                <label class="switch" title="Show only tasks with due dates">
+                    <input type="checkbox" id="dueFilterToggle" onchange="toggleDueFilter()">
+                    <span class="slider round"></span>
+                </label>
+            </div>
             <div class="view-toggle" id="viewToggleGroup">
                 <button id="btnGrid" title="Quadrant View" onclick="setLayout('grid')">🚩</button>
                 <button id="btnKanban" title="Kanban View" onclick="setLayout('kanban')">⏸️</button>

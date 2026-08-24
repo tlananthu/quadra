@@ -1,4 +1,4 @@
-let version = '3.35';
+let version = '3.36';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1059,7 +1059,7 @@ function toggleDueFilter() {
     const toggle = document.getElementById('dueFilterToggle');
     if (toggle) {
         localStorage.setItem('quadra_due_filter', toggle.checked);
-        renderTrackerPalette();
+        handleSearch(); 
     }
 }
 
@@ -2016,8 +2016,16 @@ function renderNotes(searchQuery = '') {
     
     let filteredNotes = notes.filter(note => {
         if (note.deleted) return false;
+        
         const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
         if (isCalendarEvent) return true;
+        
+        // --- NEW: Apply Global Due Only Filter ---
+        const dueToggle = document.getElementById('dueFilterToggle');
+        if (dueToggle && dueToggle.checked && !note.dueDate) {
+            return false; 
+        }
+
         return matchesSearchQuery(note.text, searchQuery);
     });
 
