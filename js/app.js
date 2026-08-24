@@ -1,4 +1,4 @@
-let version = '3.34';
+let version = '3.35';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -623,9 +623,27 @@ function renderTrackerPalette() {
     const dueToggle = document.getElementById('dueFilterToggle');
     if (dueToggle && dueToggle.checked) {
         paletteNotes = paletteNotes.filter(n => n.dueDate);
-        paletteNotes.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     }
     
+    // --- UPDATED: Advanced Sorting (Date -> Quadrant) ---
+    const quadPriority = { 'q1': 1, 'q2': 2, 'q3': 3, 'q4': 4, 'inbox': 5, 'calendar': 6 };
+    
+    paletteNotes.sort((a, b) => {
+        // 1. Sort by Date first (if both have dates)
+        if (a.dueDate && b.dueDate) {
+            const dateCompare = a.dueDate.localeCompare(b.dueDate);
+            if (dateCompare !== 0) return dateCompare;
+        } 
+        // 2. Prioritize tasks with dates over tasks without dates
+        else if (a.dueDate && !b.dueDate) return -1;
+        else if (!a.dueDate && b.dueDate) return 1;
+        
+        // 3. If dates are identical (or both are missing), sub-sort by Quadrant Priority
+        const pA = quadPriority[a.quadrant] || 99;
+        const pB = quadPriority[b.quadrant] || 99;
+        return pA - pB;
+    });
+
     const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
 
     // --- NEW: Quadrant Metadata mapping using CSS Variables ---
