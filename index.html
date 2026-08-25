@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v3.37</span>
+                    <span class="version-badge">v3.38</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -39,6 +39,7 @@
                     <span class="slider round"></span>
                 </label>
 
+                <button class="btn btn-outline" onclick="performBackgroundSync()" title="Sync tasks with Google Tasks">🔄</button>
                 <div class="view-toggle" id="viewToggleGroup">
                 <button id="btnGrid" title="Quadrant View" onclick="setLayout('grid')">🚩</button>
                 <button id="btnKanban" title="Kanban View" onclick="setLayout('kanban')">⏸️</button>
