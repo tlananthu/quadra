@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v3.38</span>
+                    <span class="version-badge">v3.39</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -45,6 +45,7 @@
                 <button id="btnKanban" title="Kanban View" onclick="setLayout('kanban')">⏸️</button>
                 <button id="btnOverdue" title="Overdue Tasks" onclick="setLayout('overdue')">⚠️</button>
                 <button id="btnTracker" title="Calendar View (C)" onclick="setLayout('tracker')">📅</button>
+                <button onclick="switchLayout('notebook')" id="btn-layout-notebook" title="Notebook View">📓</button>
             </div>
             <button id="authorize_button" class="btn" onclick="handleAuthClick()">Sign In</button>
             <button id="signout_button" class="btn btn-outline icon-button" onclick="handleSignoutClick()" title="Sign out of Google">⏻</button>
@@ -118,6 +119,24 @@
                     <button class="btn btn-outline" onclick="setLayout(appConfig.defaultView)">← Back to Default</button>
                 </div>
                 <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;">
+                </div>
+            </div>
+        </div>
+
+        <div id="notebook-view" style="display: none; flex-grow: 1; flex-direction: column; overflow-y: auto; background: #F8FAFC; padding: 40px 20px;">
+            <div style="max-width: 1200px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+                    <h2 style="font-size: 22px; font-weight: 700; color: #1E293B;">My Notes</h2>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <div class="tracker-control-group" style="padding: 2px;">
+                            <button class="btn-outline" onclick="toggleNotebookLayout('grid')" id="notebook-grid-btn" style="background: white; border-color: #3B82F6; color: #3B82F6;">⊞ Grid</button>
+                            <button class="btn-outline" onclick="toggleNotebookLayout('list')" id="notebook-list-btn" style="border: transparent;">☰ List</button>
+                        </div>
+                        <button class="btn" onclick="openTaskModal('notes', null, event)">+ New Note</button>
+                    </div>
+                </div>
+                <div id="notebook-container" class="notebook-grid">
+                    <!-- Notes will be injected here -->
                 </div>
             </div>
         </div>
@@ -412,6 +431,7 @@
                         <option value="q3">Delegate (Q3)</option>
                         <option value="q4">Later (Q4)</option>
                         <option value="calendar">Calendar Tray</option>
+                        <option value="notes">Notebook</option>
                         <option value="closed">Closed</option>
                     </select>
                 </div>

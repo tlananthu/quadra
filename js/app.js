@@ -1,7 +1,8 @@
-let version = '3.37';
+let version = '3.39';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
+let currentNotebookLayout = 'grid';
 
 if (!appConfig.ignoreKeywords) appConfig.ignoreKeywords = 'out of office, ooo, away, vacation, holiday';
 if (!appConfig.calSource) appConfig.calSource = 'google';
@@ -1550,6 +1551,27 @@ function closeTaskModal() {
     pendingTimelineContext = null; 
 }
 
+function updateModalForQuadrant() {
+    const quadrantInput = document.getElementById('taskQuadrant');
+    const dueDateInput = document.getElementById('taskDueDate');
+    const completeBtn = document.getElementById('taskModalCompleteBtn');
+    
+    if (!quadrantInput || !dueDateInput) return;
+    
+    const isNotes = quadrantInput.value === 'notes';
+    dueDateInput.style.display = isNotes ? 'none' : 'block';
+    
+    if (completeBtn && currentEditingId) {
+        completeBtn.style.display = isNotes ? 'none' : 'inline-block';
+    }
+}
+
+// Add the listener right after DOM load or just float it in the global scope:
+document.addEventListener('DOMContentLoaded', () => {
+    const quadrantInput = document.getElementById('taskQuadrant');
+    if (quadrantInput) quadrantInput.addEventListener('change', updateModalForQuadrant);
+});
+
 // --- NEW: Save Modal (Multi-Day Architecture) ---
 function saveTaskModal() {
     clearAutoSaveInterval();
@@ -1557,13 +1579,19 @@ function saveTaskModal() {
     const infoText = document.getElementById('taskInfoInput').innerHTML; 
     const dueDate = document.getElementById('taskDueDate').value;
     
-    // --- NEW: Grab the selected quadrant ---
-    const quadrantSelect = document.getElementById('taskQuadrant');
-    const selectedQuadrant = quadrantSelect ? quadrantSelect.value : null;
-
     if ((!titleText || titleText === '<br>') && (!infoText || infoText === '<br>')) return closeTaskModal();
 
     const fullText = titleText + (infoText && infoText !== '<br>' ? ('\n' + infoText) : '');
+
+    // --- NEW: Auto-append #note if in the Notes quadrant ---
+    const quadrantSelect = document.getElementById('taskQuadrant');
+    const selectedQuadrant = quadrantSelect ? quadrantSelect.value : null;
+    let targetQuadForNote = selectedQuadrant || currentAddingQuadrant || 'inbox';
+    
+    let finalPayloadText = fullText;
+    if (targetQuadForNote === 'notes' && !finalPayloadText.includes('#note')) {
+        finalPayloadText += ' #note';
+    }
 
     let newTimeBlock = null;
     if (pendingTimelineContext && pendingTimelineContext.startHour !== undefined) {
@@ -2460,8 +2488,8 @@ async function performBackgroundSync() {
         
         const response = await gapi.client.tasks.tasklists.list();
         const remoteLists = response.result.items || [];
-        const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'closed': 'Quadra: Completed' };
-        let gapiListIds = { inbox: null, q1: null, q2: null, q3: null, q4: null, closed: null };
+        const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'notes': 'Quadra: Notes', 'closed': 'Quadra: Completed' };
+        let gapiListIds = { inbox: null, q1: null, q2: null, q3: null, q4: null, notes: null, closed: null };
         
         for (const quadKey of Object.keys(GAPI_LIST_NAMES)) { 
             const existingList = remoteLists.find(l => l.title === GAPI_LIST_NAMES[quadKey]); 
@@ -2950,4 +2978,86 @@ function setCloudSyncIcon(state) {
         icon.style.color = '#EF4444'; // Red
         icon.title = 'Error saving to Drive';
     }
+}
+
+function switchLayout(layout) {
+    currentLayout = layout;
+    localStorage.setItem('quadra_layout', layout);
+
+    // --- FIX: Target 'matrix' instead of 'matrix-view' ---
+    const matrixContainer = document.getElementById('matrix');
+    if (matrixContainer) {
+        matrixContainer.style.display = (layout === 'grid' || layout === 'kanban') ? 'flex' : 'none';
+    }
+
+    const trackerView = document.getElementById('tracker-view');
+    if (trackerView) trackerView.style.display = (layout === 'tracker') ? 'flex' : 'none';
+    
+    const overdueView = document.getElementById('overdue-view');
+    if (overdueView) overdueView.style.display = (layout === 'overdue') ? 'flex' : 'none';
+    
+    const settingsView = document.getElementById('settings-view');
+    if (settingsView) settingsView.style.display = (layout === 'settings') ? 'flex' : 'none';
+    
+    const notebookView = document.getElementById('notebook-view');
+    if (notebookView) notebookView.style.display = (layout === 'notebook') ? 'flex' : 'none';
+
+    // Update active button states
+    ['grid', 'kanban', 'tracker', 'overdue', 'notebook'].forEach(type => {
+        const btn = document.getElementById('btn-layout-' + type);
+        if (btn) btn.classList.toggle('active', layout === type);
+    });
+
+    // --- FIX: Apply class to 'matrix' safely ---
+    if (layout === 'grid' || layout === 'kanban') {
+        if (matrixContainer) {
+            matrixContainer.className = 'matrix-container ' + (layout === 'grid' ? 'layout-grid' : 'layout-kanban');
+        }
+    }
+    
+    handleSearch(); // triggers a re-render
+}
+
+function toggleNotebookLayout(layout) {
+    currentNotebookLayout = layout;
+    const container = document.getElementById('notebook-container');
+    
+    const gridBtn = document.getElementById('notebook-grid-btn');
+    const listBtn = document.getElementById('notebook-list-btn');
+
+    if (layout === 'grid') {
+        container.className = 'notebook-grid';
+        gridBtn.style.borderColor = '#3B82F6'; gridBtn.style.color = '#3B82F6'; gridBtn.style.background = 'white';
+        listBtn.style.borderColor = 'transparent'; listBtn.style.color = 'var(--text-muted)'; listBtn.style.background = 'transparent';
+    } else {
+        container.className = 'notebook-list';
+        listBtn.style.borderColor = '#3B82F6'; listBtn.style.color = '#3B82F6'; listBtn.style.background = 'white';
+        gridBtn.style.borderColor = 'transparent'; gridBtn.style.color = 'var(--text-muted)'; gridBtn.style.background = 'transparent';
+    }
+}
+
+function renderNotebookView() {
+    const container = document.getElementById('notebook-container');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    // Grab only notes that belong to the 'notes' quadrant
+    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, searchQuery));
+    
+    notebookNotes.forEach(note => {
+        const card = document.createElement('div');
+        card.className = 'notebook-card';
+        card.onclick = (e) => openTaskModal(null, note.id, e);
+        
+        let cleanText = cleanHTMLToPlainText(note.text);
+        let lines = cleanText.split('\n');
+        let title = lines[0] || 'Untitled Note';
+        let bodyText = lines.slice(1).join('<br>') || '';
+
+        card.innerHTML = `
+            <div class="notebook-card-title">${parseTags(title)}</div>
+            <div class="notebook-card-body">${parseTags(bodyText)}</div>
+        `;
+        container.appendChild(card);
+    });
 }
