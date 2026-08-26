@@ -1,4 +1,4 @@
-let version = '3.45';
+let version = '3.46';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2203,12 +2203,10 @@ function renderNotes(searchQuery = '') {
     const notesBadge = document.getElementById('badge-notes');
     if (notesBadge) notesBadge.innerText = filteredCounts.notes;
     
-    ['q1', 'q2', 'q3', 'q4'].forEach(q => {
-        const badge = document.getElementById(`badge-${q}`);
-        if (badge) badge.innerText = filteredCounts[q];
-    });
-    
     if (currentLayout === 'tracker') renderTrackerTimeline();
+    if (currentLayout === 'notebook') renderNotebookView(); 
+    if (currentLayout === 'overdue') renderOverdueTasksPage(); 
+    
     updateQuickTags();
 }
 
