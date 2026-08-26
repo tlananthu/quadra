@@ -1,4 +1,4 @@
-let version = '3.46';
+let version = '3.47';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -110,7 +110,6 @@ function syncNotesToSQLite() {
     stmt.free();
 }
 
-// --- Google Drive AppData Sync ---
 // --- Google Drive AppData Sync ---
 async function downloadDatabaseFromDrive() {
     // --- FIXED: True Promise-based await for the anti-race condition ---
@@ -633,9 +632,18 @@ function dropQuad(e) {
 
 function changeTrackerDay(offset) {
     const dateInput = document.getElementById('trackerDate');
-    const d = new Date(dateInput.value);
-    d.setDate(d.getDate() + offset);
-    dateInput.value = d.toLocaleDateString('en-CA').split('T')[0];
+    
+    // Split to explicitly force local time instead of UTC midnight
+    const [y, m, d] = dateInput.value.split('-'); 
+    const dateObj = new Date(y, m - 1, d);
+    
+    dateObj.setDate(dateObj.getDate() + offset);
+    
+    const localY = dateObj.getFullYear();
+    const localM = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const localD = String(dateObj.getDate()).padStart(2, '0');
+    
+    dateInput.value = `${localY}-${localM}-${localD}`;
     renderTrackerTimeline();
 }
 
@@ -666,10 +674,10 @@ function renderTrackerPalette() {
     
     let paletteNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId);
     
-    const dueToggle = document.getElementById('dueFilterToggle');
+    /*const dueToggle = document.getElementById('dueFilterToggle');
     if (dueToggle && dueToggle.checked) {
         paletteNotes = paletteNotes.filter(n => n.dueDate);
-    }
+    }*/
     
     // --- UPDATED: Advanced Sorting (Date -> Quadrant) ---
     const quadPriority = { 'q1': 1, 'q2': 2, 'q3': 3, 'q4': 4, 'inbox': 5, 'calendar': 6 };
@@ -692,7 +700,6 @@ function renderTrackerPalette() {
 
     const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
 
-    // --- NEW: Quadrant Metadata mapping using CSS Variables ---
     const quadStyles = {
         'q1': { color: 'var(--q1-text)', border: 'var(--q1-border)', bg: 'var(--q1-bg)', label: 'Q1 (Urgent)' },
         'q2': { color: 'var(--q2-text)', border: 'var(--q2-border)', bg: 'var(--q2-bg)', label: 'Q2 (Schedule)' },
@@ -1746,15 +1753,25 @@ function exportTimesheet() {
     datesToExport.forEach(dateStr => {
         let dailyLog = "";
         let itemFound = false;
+        
         notes.forEach(note => {
             if (note.deleted || note.status === 'closed') return;
-            if (note.dueDate === dateStr) {
-                itemFound = true;
-                let cleanText = cleanHTMLToPlainText(note.text);
-                const tags = cleanText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
-                let identifier = tags ? tags.join(' ') : cleanText.substring(0, 40).replace(/\n/g, ' ') + '...';
-                dailyLog += `- [${identifier}] ${decToTime(note.dueTime)} (${note.dueDuration}h)\n`;
+            
+            // Accommodate both standard tasks and imported Google events
+            let blocksToProcess = note.timeBlocks || [];
+            if (note.eventId && note.dueTime !== undefined) {
+                blocksToProcess = [{ date: note.dueDate, startHour: note.dueTime, duration: note.dueDuration }];
             }
+
+            blocksToProcess.forEach(tb => {
+                if (tb.date === dateStr) {
+                    itemFound = true;
+                    let cleanText = cleanHTMLToPlainText(note.text);
+                    const tags = cleanText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
+                    let identifier = tags ? tags.join(' ') : cleanText.substring(0, 40).replace(/\n/g, ' ') + '...';
+                    dailyLog += `- [${identifier}] ${decToTime(tb.startHour)} (${tb.duration}h)\n`;
+                }
+            });
         });
         
         if (itemFound || currentTrackerMode === 'day') {
