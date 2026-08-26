@@ -542,9 +542,13 @@ header h1 {
 }
 .matrix-container.layout-grid #tray-inbox,
 .matrix-container.layout-grid #tray-calendar,
+.matrix-container.layout-grid #notes, 
 .matrix-container.layout-grid #tray-closed { 
-    width: calc(33.333% - 16px); 
+    width: calc(25% - 18px); /* Adjusted for 4 columns */
 }
+
+/* Background color for the new Notes quadrant on the board */
+#notes { background-color: #F8FAFC; border: 1px solid #E2E8F0; }
 
 /* Layout Kanban specific defaults */
 .matrix-container.layout-kanban .quadrant { 

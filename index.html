@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v3.40</span>
+                    <span class="version-badge">v3.41</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -103,12 +103,23 @@
                 <div class="task-list" id="list-calendar"></div>
                 <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-calendar')" title="Drag edge to resize width"></div>
             </div>
+
+            <div class="quadrant" id="notes" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)">
+                <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'notes')"></div>
+                <div class="quadrant-header" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)">
+                    <h3>📓 Notebook</h3>
+                    <span class="quadrant-badge" id="badge-notes">0</span>
+                    <button class="quadrant-add-btn" onclick="openTaskModal('notes', null, event)" title="Add Note">+</button>
+                </div>
+                <div class="task-list" id="list-notes"></div>
+            </div>
             
             <div class="quadrant" id="tray-closed" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
                 <div class="q-header"><h2>Completed <span class="q-badge" id="badge-closed">0</span></h2></div>
                 <div class="task-list" id="list-closed"></div>
                 <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-closed')" title="Drag edge to resize width"></div>
             </div>
+
             
         </div>
 

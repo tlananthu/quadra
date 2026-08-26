@@ -1,4 +1,4 @@
-let version = '3.40';
+let version = '3.41';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -12,7 +12,7 @@ if (appConfig.viewsEnabled.notebook === undefined) appConfig.viewsEnabled.notebo
 if (!appConfig.defaultView) appConfig.defaultView = 'grid';
 if (!appConfig.primaryTz) appConfig.primaryTz = 'local';
 if (!appConfig.secondaryTz) appConfig.secondaryTz = 'none';
-if (!appConfig.quadrantOrder) appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'q4', 'tray-inbox', 'tray-calendar', 'tray-closed'];
+if (!appConfig.quadrantOrder) appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'q4', 'tray-inbox', 'tray-calendar', 'notes', 'tray-closed'];
 if (!appConfig.quadrantWidths) appConfig.quadrantWidths = {};
 
 let tokenClient;
@@ -596,6 +596,11 @@ function dropQuad(e) {
         
         if (note && note.status === 'active' && note.quadrant !== targetKey) { 
             if (targetKey === 'closed') note.status = 'closed';
+            
+            if (targetKey === 'notes' && !note.text.includes('#note')) {
+                note.text += ' #note';
+            }
+            
             note.quadrant = targetKey; 
             note.dirty = true; 
             saveNotes();
@@ -2062,7 +2067,7 @@ function handleSearch() {
 
 
 function renderNotes(searchQuery = '') {
-    ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'closed'].forEach(q => { 
+    ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'notes', 'closed'].forEach(q => { 
         const el = document.getElementById(`list-${q}`); 
         if (el) el.innerHTML = ''; 
     });
@@ -2160,6 +2165,9 @@ function renderNotes(searchQuery = '') {
     document.getElementById('badge-closed').innerText = notes.filter(n => !n.deleted && n.status === 'closed' && !n.eventId).length;
     document.getElementById('badge-inbox').innerText = filteredCounts.inbox;
     document.getElementById('badge-calendar').innerText = filteredCounts.calendar;
+    
+    const notesBadge = document.getElementById('badge-notes');
+    if (notesBadge) notesBadge.innerText = filteredCounts.notes;
     
     ['q1', 'q2', 'q3', 'q4'].forEach(q => {
         const badge = document.getElementById(`badge-${q}`);
