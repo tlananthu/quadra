@@ -1,4 +1,4 @@
-let version = '3.39';
+let version = '3.40';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -7,7 +7,8 @@ let currentNotebookLayout = 'grid';
 if (!appConfig.ignoreKeywords) appConfig.ignoreKeywords = 'out of office, ooo, away, vacation, holiday';
 if (!appConfig.calSource) appConfig.calSource = 'google';
 if (!appConfig.icsUrl) appConfig.icsUrl = '';
-if (!appConfig.viewsEnabled) appConfig.viewsEnabled = { grid: true, kanban: true, overdue: true, tracker: true };
+if (!appConfig.viewsEnabled) appConfig.viewsEnabled = { grid: true, kanban: true, overdue: true, tracker: true, notebook: true };
+if (appConfig.viewsEnabled.notebook === undefined) appConfig.viewsEnabled.notebook = true;
 if (!appConfig.defaultView) appConfig.defaultView = 'grid';
 if (!appConfig.primaryTz) appConfig.primaryTz = 'local';
 if (!appConfig.secondaryTz) appConfig.secondaryTz = 'none';
@@ -357,15 +358,17 @@ if (!appConfig.viewsEnabled[currentLayout]) {
 }
 
 function applyViewVisibility() {
-    const btnGrid = document.getElementById('btnGrid');
-    const btnKanban = document.getElementById('btnKanban');
-    const btnTracker = document.getElementById('btnTracker');
-    const btnOverdue = document.getElementById('btnOverdue');
+    const btnGrid = document.getElementById('btnGrid') || document.getElementById('btn-layout-grid');
+    const btnKanban = document.getElementById('btnKanban') || document.getElementById('btn-layout-kanban');
+    const btnTracker = document.getElementById('btnTracker') || document.getElementById('btn-layout-tracker');
+    const btnOverdue = document.getElementById('btnOverdue') || document.getElementById('btn-layout-overdue');
+    const btnNotebook = document.getElementById('btnNotebook') || document.getElementById('btn-layout-notebook');
     
     if (btnGrid) btnGrid.style.display = appConfig.viewsEnabled.grid ? '' : 'none';
     if (btnKanban) btnKanban.style.display = appConfig.viewsEnabled.kanban ? '' : 'none';
     if (btnTracker) btnTracker.style.display = appConfig.viewsEnabled.tracker ? '' : 'none';
     if (btnOverdue) btnOverdue.style.display = appConfig.viewsEnabled.overdue ? '' : 'none';
+    if (btnNotebook) btnNotebook.style.display = appConfig.viewsEnabled.notebook ? '' : 'none';
     
     if (!appConfig.viewsEnabled[currentLayout]) {
         const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
@@ -383,21 +386,26 @@ function setLayout(layout) {
     const tracker = document.getElementById('tracker-view');
     const overdue = document.getElementById('overdue-view');
     const settingsView = document.getElementById('settings-view');
+    const notebookView = document.getElementById('notebook-view'); 
     
-    const btnGrid = document.getElementById('btnGrid');
-    const btnKanban = document.getElementById('btnKanban');
-    const btnOverdue = document.getElementById('btnOverdue');
-    const btnTracker = document.getElementById('btnTracker');
+    const btnGrid = document.getElementById('btnGrid') || document.getElementById('btn-layout-grid');
+    const btnKanban = document.getElementById('btnKanban') || document.getElementById('btn-layout-kanban');
+    const btnOverdue = document.getElementById('btnOverdue') || document.getElementById('btn-layout-overdue');
+    const btnTracker = document.getElementById('btnTracker') || document.getElementById('btn-layout-tracker');
+    const btnNotebook = document.getElementById('btnNotebook') || document.getElementById('btn-layout-notebook');
 
     if (btnGrid) btnGrid.classList.toggle('active', layout === 'grid');
     if (btnKanban) btnKanban.classList.toggle('active', layout === 'kanban');
     if (btnOverdue) btnOverdue.classList.toggle('active', layout === 'overdue');
     if (btnTracker) btnTracker.classList.toggle('active', layout === 'tracker');
+    if (btnNotebook) btnNotebook.classList.toggle('active', layout === 'notebook');
     
+    // ENSURE ALL VIEWS ARE HIDDEN FIRST
     if(settingsView) settingsView.style.display = 'none';
     if(matrix) matrix.style.display = 'none';
     if(tracker) tracker.style.display = 'none';
     if(overdue) overdue.style.display = 'none';
+    if(notebookView) notebookView.style.display = 'none'; 
 
     if (layout === 'tracker') {
         if(tracker) tracker.style.display = 'block'; 
@@ -410,6 +418,11 @@ function setLayout(layout) {
         document.body.classList.remove('sidebar-open');
         renderOverdueTasksPage();
         stopLiveClock();
+    } else if (layout === 'notebook') {
+        if(notebookView) notebookView.style.display = 'flex';
+        document.body.classList.remove('sidebar-open');
+        renderNotebookView();
+        stopLiveClock();
     } else {
         if(matrix) {
             matrix.style.display = ''; 
@@ -418,11 +431,16 @@ function setLayout(layout) {
         }
         stopLiveClock();
     }
+    
     document.getElementById('quick-tags-bar').style.display = 'flex';
     document.getElementById('searchHeaderContainer').style.display = 'block';
     document.getElementById('viewToggleGroup').style.display = 'flex';
     document.getElementById('settingsNavBtn').style.display = 'inline-block';
     document.getElementById('backNavBtn').style.display = 'none';
+}
+
+function switchLayout(layout) {
+    setLayout(layout);
 }
 
 function adjustTimelineZoom(amount) {
@@ -463,6 +481,7 @@ function openSettingsPage() {
     document.getElementById('configViewKanban').checked = appConfig.viewsEnabled.kanban !== false;
     document.getElementById('configViewTracker').checked = appConfig.viewsEnabled.tracker !== false;
     document.getElementById('configViewOverdue').checked = appConfig.viewsEnabled.overdue !== false;
+    document.getElementById('configViewNotebook').checked = appConfig.viewsEnabled.notebook !== false;
     
     toggleCalSourceFields(appConfig.calSource || 'google');
     loadCalendars();
@@ -1403,9 +1422,14 @@ document.addEventListener('keydown', (e) => {
         } else if (e.key.toLowerCase() === 'o' && appConfig.viewsEnabled.overdue) {
             e.preventDefault();
             setLayout('overdue');
+        } else if (e.key.toLowerCase() === 'n' && appConfig.viewsEnabled.notebook) {
+            // --- NEW: Direct shortcut for Notebook ---
+            e.preventDefault();
+            setLayout('notebook');
         } else if (e.key === '`' || e.key === '~') {
             e.preventDefault();
-            const allViews = ['grid', 'kanban', 'overdue', 'tracker'];
+            // --- UPDATED: Added 'notebook' to the traversal array ---
+            const allViews = ['grid', 'kanban', 'notebook', 'overdue', 'tracker'];
             const views = allViews.filter(v => appConfig.viewsEnabled[v]);
             if (views.length === 0) return; 
             
@@ -1843,7 +1867,8 @@ function saveSettings() {
         grid: document.getElementById('configViewGrid').checked,
         kanban: document.getElementById('configViewKanban').checked,
         tracker: document.getElementById('configViewTracker').checked,
-        overdue: document.getElementById('configViewOverdue').checked
+        overdue: document.getElementById('configViewOverdue').checked,
+        notebook: document.getElementById('configViewNotebook').checked
     };
     
     if (!appConfig.viewsEnabled[appConfig.defaultView]) {
@@ -2978,44 +3003,6 @@ function setCloudSyncIcon(state) {
         icon.style.color = '#EF4444'; // Red
         icon.title = 'Error saving to Drive';
     }
-}
-
-function switchLayout(layout) {
-    currentLayout = layout;
-    localStorage.setItem('quadra_layout', layout);
-
-    // --- FIX: Target 'matrix' instead of 'matrix-view' ---
-    const matrixContainer = document.getElementById('matrix');
-    if (matrixContainer) {
-        matrixContainer.style.display = (layout === 'grid' || layout === 'kanban') ? 'flex' : 'none';
-    }
-
-    const trackerView = document.getElementById('tracker-view');
-    if (trackerView) trackerView.style.display = (layout === 'tracker') ? 'flex' : 'none';
-    
-    const overdueView = document.getElementById('overdue-view');
-    if (overdueView) overdueView.style.display = (layout === 'overdue') ? 'flex' : 'none';
-    
-    const settingsView = document.getElementById('settings-view');
-    if (settingsView) settingsView.style.display = (layout === 'settings') ? 'flex' : 'none';
-    
-    const notebookView = document.getElementById('notebook-view');
-    if (notebookView) notebookView.style.display = (layout === 'notebook') ? 'flex' : 'none';
-
-    // Update active button states
-    ['grid', 'kanban', 'tracker', 'overdue', 'notebook'].forEach(type => {
-        const btn = document.getElementById('btn-layout-' + type);
-        if (btn) btn.classList.toggle('active', layout === type);
-    });
-
-    // --- FIX: Apply class to 'matrix' safely ---
-    if (layout === 'grid' || layout === 'kanban') {
-        if (matrixContainer) {
-            matrixContainer.className = 'matrix-container ' + (layout === 'grid' ? 'layout-grid' : 'layout-kanban');
-        }
-    }
-    
-    handleSearch(); // triggers a re-render
 }
 
 function toggleNotebookLayout(layout) {
