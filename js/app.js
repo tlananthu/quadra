@@ -1,4 +1,4 @@
-let version = '3.41';
+let version = '3.42';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -12,7 +12,18 @@ if (appConfig.viewsEnabled.notebook === undefined) appConfig.viewsEnabled.notebo
 if (!appConfig.defaultView) appConfig.defaultView = 'grid';
 if (!appConfig.primaryTz) appConfig.primaryTz = 'local';
 if (!appConfig.secondaryTz) appConfig.secondaryTz = 'none';
-if (!appConfig.quadrantOrder) appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'q4', 'tray-inbox', 'tray-calendar', 'notes', 'tray-closed'];
+if (!appConfig.quadrantOrder) {
+    appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'q4', 'tray-inbox', 'notes', 'tray-calendar', 'tray-closed'];
+} else if (!appConfig.quadrantOrder.includes('notes')) {
+    // Force inject 'notes' after 'tray-inbox' for existing saved layouts
+    const inboxIdx = appConfig.quadrantOrder.indexOf('tray-inbox');
+    if (inboxIdx !== -1) {
+        appConfig.quadrantOrder.splice(inboxIdx + 1, 0, 'notes');
+    } else {
+        appConfig.quadrantOrder.push('notes');
+    }
+    localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+}
 if (!appConfig.quadrantWidths) appConfig.quadrantWidths = {};
 
 let tokenClient;
@@ -1433,8 +1444,10 @@ document.addEventListener('keydown', (e) => {
             setLayout('notebook');
         } else if (e.key === '`' || e.key === '~') {
             e.preventDefault();
-            // --- UPDATED: Added 'notebook' to the traversal array ---
-            const allViews = ['grid', 'kanban', 'notebook', 'overdue', 'tracker'];
+            
+            // --- FIX: Matched to the new visual order (Grid, Kanban, Overdue, Tracker, Notebook) ---
+            const allViews = ['grid', 'kanban', 'overdue', 'tracker', 'notebook'];
+            
             const views = allViews.filter(v => appConfig.viewsEnabled[v]);
             if (views.length === 0) return; 
             
@@ -2089,7 +2102,7 @@ function renderNotes(searchQuery = '') {
 
     filteredNotes.sort((a, b) => { if (!a.dueDate && !b.dueDate) return 0; if (!a.dueDate) return -1; if (!b.dueDate) return 1; return a.dueDate.localeCompare(b.dueDate); });
 
-    let filteredCounts = { q1: 0, q2: 0, q3: 0, q4: 0, inbox: 0, calendar: 0, closed: 0 };
+    let filteredCounts = { q1: 0, q2: 0, q3: 0, q4: 0, inbox: 0, calendar: 0, notes: 0, closed: 0 };
 
     filteredNotes.forEach(note => {
         let targetListId = `list-${note.quadrant}`;
