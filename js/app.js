@@ -1,4 +1,4 @@
-let version = '3.42';
+let version = '3.43';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -170,18 +170,28 @@ async function uploadDatabaseToDrive() {
         const blob = new Blob([binaryData], { type: 'application/x-sqlite3' });
         const token = gapi.client.getToken().access_token;
         
+        // --- FIX: Prevent duplicates by double-checking Drive if driveFileId is missing ---
+        if (!driveFileId && gapi.client.drive) {
+            const searchRes = await gapi.client.drive.files.list({
+                q: "name='quadra.sqlite' and trashed=false",
+                fields: 'files(id, name)',
+                orderBy: 'createdTime desc'
+            });
+            if (searchRes.result.files && searchRes.result.files.length > 0) {
+                driveFileId = searchRes.result.files[0].id;
+            }
+        }
+        
         let url;
         let method;
-        let metadata;
+        let metadata = { name: 'quadra.sqlite' };
 
         if (driveFileId) {
             url = `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`;
             method = 'PATCH';
-            metadata = { name: 'quadra.sqlite' };
         } else {
             url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
             method = 'POST';
-            metadata = { name: 'quadra.sqlite' };
         }
         
         const form = new FormData();
@@ -1351,6 +1361,7 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('keydown', (e) => {
     // --- NEW: Intercept Ctrl+S / Cmd+S globally ---
+    // --- NEW: Intercept Ctrl+S / Cmd+S globally ---
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault(); // Stop default browser "Save Webpage" dialog
         
@@ -1359,6 +1370,10 @@ document.addEventListener('keydown', (e) => {
         
         // 2. Trigger SQLite backup to Google Drive AppData
         uploadDatabaseToDrive();
+        
+        // 3. Trigger Google Tasks Sync
+        performBackgroundSync();
+        
         return;
     }
 
@@ -2715,8 +2730,11 @@ async function performBackgroundSync() {
         localStorage.setItem('quadra_last_sync', new Date().toISOString());
         handleSearch(); 
         
+        // --- NEW: Also trigger a SQLite backup to Drive when Tasks sync completes ---
+        uploadDatabaseToDrive();
+        
         if (syncBanner) syncBanner.style.display = 'none';
-        showToast("✓ Successfully synced with Google Tasks!");
+        showToast("✓ Successfully synced with Google Tasks & Drive!");
         
     } catch (e) {
         console.error("Background sync error:", e);
