@@ -1,4 +1,4 @@
-let version = '3.44';
+let version = '3.45';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3073,8 +3073,12 @@ function renderNotebookView() {
     if (!container) return;
     container.innerHTML = '';
     
+    // --- FIX: Safely fetch the search query ---
+    const searchInput = document.getElementById('searchInput');
+    const globalQuery = searchInput ? searchInput.value : '';
+    
     // Grab only notes that belong to the 'notes' quadrant
-    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, searchQuery));
+    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, globalQuery));
     
     notebookNotes.forEach(note => {
         const card = document.createElement('div');
