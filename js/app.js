@@ -1,4 +1,4 @@
-let version = '3.43';
+let version = '3.44';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -923,10 +923,11 @@ function renderTrackerTimeline() {
 
         notes.forEach(note => {
             if (note.deleted) return; 
+            
+            if (!matchesSearchQuery(note.text, globalQuery)) return;
+            
             const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-            if (!isCalendarEvent && !matchesSearchQuery(note.text, globalQuery)) return;
 
-            // --- NEW: Loop through timeBlocks array ---
             let blocksToProcess = note.timeBlocks || [];
             
             // Dynamic fallback for Imported Google Events
@@ -2050,16 +2051,21 @@ function updateQuickTags() {
         btn.innerText = `${tag} (${count})`;
         
         btn.onclick = () => {
-            let currentWords = searchInput.value.split(/\s+/);
+            // Clean up trailing spaces to standardize the array
+            let currentVal = searchInput.value.replace(/\s+$/, '');
+            let words = currentVal ? currentVal.split(/\s+/) : [];
             
-            if (currentWords[currentWords.length - 1].startsWith('#') || currentWords[currentWords.length - 1].startsWith('@') || currentWords[currentWords.length - 1] === '') {
-                currentWords.pop();
+            if (words.length > 0 && (words[words.length - 1].startsWith('#') || words[words.length - 1].startsWith('@'))) {
+                words.pop();
             }
             
-            currentWords.push(tag);
-            searchInput.value = currentWords.join(' ') + ' ';
+            words.push(tag);
+            
+            searchInput.value = words.join(' ') + ' ';
             
             searchInput.focus();
+            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+            
             handleSearch();
         };
         tagsBar.appendChild(btn);
@@ -2104,14 +2110,14 @@ function renderNotes(searchQuery = '') {
         if (note.deleted) return false;
         
         const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-        if (isCalendarEvent) return true;
         
-        // --- NEW: Apply Global Due Only Filter ---
+        // Apply Global Due Only Filter (Exempting Notes and Calendar Events)
         const dueToggle = document.getElementById('dueFilterToggle');
-        if (dueToggle && dueToggle.checked && !note.dueDate) {
+        if (dueToggle && dueToggle.checked && !note.dueDate && note.quadrant !== 'notes' && !isCalendarEvent) {
             return false; 
         }
 
+        // Apply the search query to EVERYTHING (including calendar events)
         return matchesSearchQuery(note.text, searchQuery);
     });
 
