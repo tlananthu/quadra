@@ -1,4 +1,4 @@
-let version = '3.48';
+let version = '3.49';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1967,20 +1967,21 @@ function saveSettings() {
     if (currentLayout === 'tracker') renderTrackerTimeline();
 }
 
-// --- Updated Quick Tags Function (With AND/OR Logic, Counts & Sorting) ---
-// --- Updated Quick Tags Function (With Real-Time Filtering & Smart Append) ---
-// --- Updated Quick Tags Function (Case-Insensitive Tag Merging) ---
 function updateQuickTags() {
     const tagsBar = document.getElementById('quick-tags-bar');
     const searchInput = document.getElementById('searchInput');
     if (!tagsBar || !searchInput) return;
     
     let tagCounts = new Map();
-    // Added 'i' flag to regex to ensure lowercase hex colors are also caught safely
     const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/i; 
+    
+    const dueToggle = document.getElementById('dueFilterToggle');
+    const isDueFilterOn = dueToggle && dueToggle.checked;
     
     notes.forEach(note => {
         if (note.deleted || note.eventId) return;
+        
+        if (isDueFilterOn && !note.dueDate && note.quadrant !== 'notes') return;
         
         let tempDiv = document.createElement('div');
         tempDiv.innerHTML = note.text || '';
@@ -2341,20 +2342,6 @@ window.addEventListener('load', () => {
                 document.activeElement.click();
             }
         });
-    }
-
-    // --- NEW: Load the saved state for the Due Only toggle ---
-    // Using !== 'false' ensures it defaults to true on the very first visit
-    const savedDueFilter = localStorage.getItem('quadra_due_filter') !== 'false';
-    const dueToggle = document.getElementById('dueFilterToggle');
-
-    if (dueToggle) {
-        dueToggle.checked = savedDueFilter;
-        
-        // If it defaulted to true on the first visit, trigger the filter immediately
-        if (savedDueFilter && !localStorage.getItem('quadra_due_filter')) {
-            toggleDueFilter();
-        }
     }
 });
 
@@ -2768,6 +2755,17 @@ async function performBackgroundSync() {
 // --- Execute Initial Render logic with Search Preservation ---
 setLayout(currentLayout); 
 
+// 1. Restore Due Filter Toggle state BEFORE rendering
+const savedDueFilter = localStorage.getItem('quadra_due_filter') !== 'false';
+const dueToggleEl = document.getElementById('dueFilterToggle');
+if (dueToggleEl) {
+    dueToggleEl.checked = savedDueFilter;
+    if (savedDueFilter && !localStorage.getItem('quadra_due_filter')) {
+        localStorage.setItem('quadra_due_filter', 'true');
+    }
+}
+
+// 2. Restore Search State
 const savedSearch = localStorage.getItem('quadra_search') || '';
 const searchInputEl = document.getElementById('searchInput');
 if (searchInputEl && savedSearch) {
@@ -2775,6 +2773,7 @@ if (searchInputEl && savedSearch) {
     document.getElementById('clearSearchBtn').style.display = 'block';
 }
 
+// 3. Render safely
 renderNotes(savedSearch);
 
 // --- Editor Toolbar Logic ---
