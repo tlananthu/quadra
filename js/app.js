@@ -1,4 +1,4 @@
-let version = '4.0';
+let version = '4.01';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -78,7 +78,6 @@ async function initSQLite(binaryData = null) {
     }
 }
 
-// --- Sync Memory Notes into SQLite Database ---
 function syncNotesToSQLite() {
     if (!db) return;
 
@@ -112,7 +111,7 @@ function syncNotesToSQLite() {
             note.dueDate || null,
             JSON.stringify(note.timeBlocks || []),
             note.deleted ? 1 : 0,
-            note.projectId
+            JSON.stringify(note.projectIds || [note.projectId || 'p_default'])
         ]);
     });
 
@@ -940,7 +939,7 @@ function renderTrackerTimeline() {
         notes.forEach(note => {
             if (note.deleted) return; 
             
-            if (!isProjectVisible(note.projectId)) return; 
+            if (!isProjectVisible(note)) return; 
                         
             if (!matchesSearchQuery(note.text, globalQuery)) return;
             
@@ -1561,7 +1560,7 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
     const titleInput = document.getElementById('taskTitleInput');
     const infoInput = document.getElementById('taskInfoInput');
     const dueDateInput = document.getElementById('taskDueDate');
-    const quadrantInput = document.getElementById('taskQuadrant'); // <-- NEW
+    const quadrantInput = document.getElementById('taskQuadrant');
     const completeBtn = document.getElementById('taskModalCompleteBtn');
 
     clearAutoSaveInterval();
@@ -1594,7 +1593,7 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
         formatEditorNodes('taskInfoInput');
 
         dueDateInput.value = note.dueDate || '';
-        if (quadrantInput) quadrantInput.value = note.quadrant || 'inbox'; // <-- NEW
+        if (quadrantInput) quadrantInput.value = note.quadrant || 'inbox'; 
 
         completeBtn.style.display = 'inline-block';
         if (note.status === 'closed') {
@@ -1614,30 +1613,34 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
         titleInput.innerHTML = '';
         infoInput.innerHTML = '';
         dueDateInput.value = timelineContext ? timelineContext.date : '';
-        if (quadrantInput) quadrantInput.value = currentAddingQuadrant; // <-- NEW
+        if (quadrantInput) quadrantInput.value = currentAddingQuadrant; 
         completeBtn.style.display = 'none';
         
         pendingTimelineContext = timelineContext || null;
     }
+    
+    // --- UPDATED: Populate Project Dropdown with "All" Option ---
     const projectInput = document.getElementById('taskProject');
     if (projectInput) {
-        projectInput.innerHTML = '';
+        projectInput.innerHTML = '<option value="all">🌐 All Projects (Global)</option>';
         appConfig.projects.forEach(p => {
             const opt = document.createElement('option');
-            opt.value = p.id; opt.innerText = p.name;
+            opt.value = p.id; 
+            opt.innerText = p.name;
             projectInput.appendChild(opt);
         });
         
-        // --- FIX: Safely retrieve the note again if it exists ---
         if (noteId) {
             const activeNote = notes.find(n => n.id === noteId);
-            projectInput.value = activeNote && activeNote.projectId ? activeNote.projectId : 'p_default';
+            const assigned = activeNote?.projectIds?.[0] || activeNote?.projectId || 'p_default';
+            projectInput.value = assigned;
         } else {
-            // NEW: If adding a task, default to the currently visible project (if only 1 is selected)
+            // If adding a task, default to the currently visible project
             const visibleProjects = appConfig.projects.filter(p => p.visible);
             projectInput.value = visibleProjects.length === 1 ? visibleProjects[0].id : 'p_default';
         }
     }
+    
     modal.style.display = 'flex'; 
     setTimeout(() => titleInput.focus(), 100);
 }
@@ -1680,7 +1683,6 @@ function saveTaskModal() {
 
     const fullText = titleText + (infoText && infoText !== '<br>' ? ('\n' + infoText) : '');
 
-    // Auto-append #note if in the Notes quadrant
     const quadrantSelect = document.getElementById('taskQuadrant');
     const selectedQuadrant = quadrantSelect ? quadrantSelect.value : null;
     let targetQuadForNote = selectedQuadrant || currentAddingQuadrant || 'inbox';
@@ -1700,13 +1702,16 @@ function saveTaskModal() {
         };
     }
 
+    // --- UPDATED: Extract Target Projects ---
     const projectSelect = document.getElementById('taskProject');
-    const targetProject = projectSelect ? projectSelect.value : 'p_default';
+    const selectedVal = projectSelect ? projectSelect.value : 'p_default';
+    const targetProjects = [selectedVal];
 
     if (currentEditingId) { 
         const note = notes.find(n => n.id === currentEditingId); 
         if (note) { 
-            note.projectId = targetProject;
+            note.projectIds = targetProjects;
+            note.projectId = selectedVal; // Backward compatibility
             note.text = finalPayloadText; 
             note.dueDate = dueDate || null;
             
@@ -1740,7 +1745,8 @@ function saveTaskModal() {
             deleted: false, 
             eventId: null,
             syncFailed: false,
-            projectId: targetProject
+            projectId: selectedVal, // Backward compatibility
+            projectIds: targetProjects
         }); 
         saveNotes(); 
         syncSingleTask(newNoteId);
@@ -2015,7 +2021,7 @@ function updateQuickTags() {
     notes.forEach(note => {
         if (note.deleted || note.eventId) return;
         
-        if (!isProjectVisible(note.projectId)) return; 
+        if (!isProjectVisible(note)) return; 
         
         if (isDueFilterOn && !note.dueDate && note.quadrant !== 'notes') return;
         
@@ -2195,16 +2201,20 @@ function renderProjectTabs() {
             handleSearch();
         };
         
-        // --- NEW: Double-click to Rename or Delete ---
+        // --- NEW: Double-click to Rename or Delete (Allows Renaming Default) ---
         tab.ondblclick = (e) => {
             e.stopPropagation();
-            if (proj.id === 'p_default') return showToast("Cannot modify the Default project.");
             
             const action = prompt(`Edit project '${proj.name}':\nType a new name to rename, or type 'DELETE' to remove it.`);
             if (!action) return;
             
             if (action.trim().toUpperCase() === 'DELETE') {
-                if (confirm(`Are you sure you want to delete '${proj.name}'? All associated tasks will be moved to the Default project.`)) {
+                // --- FIX: Prevent deletion of the fallback project, but allow renaming ---
+                if (proj.id === 'p_default') {
+                    return showToast("Cannot delete the Default project, but you can rename it.");
+                }
+
+                if (confirm(`Are you sure you want to delete '${proj.name}'? All associated tasks will be moved to your primary project.`)) {
                     // Migrate orphaned tasks
                     notes.forEach(n => { 
                         if (n.projectId === proj.id) {
@@ -2247,9 +2257,23 @@ function addNewProject() {
 }
 
 // Global filter check for views
-function isProjectVisible(projectId) {
-    const p = appConfig.projects.find(p => p.id === (projectId || 'p_default'));
-    return p ? p.visible !== false : false;
+function isProjectVisible(note) {
+    if (!note) return false;
+    
+    // Normalize into an array of project IDs
+    let pIds = note.projectIds;
+    if (!pIds) {
+        pIds = note.projectId ? [note.projectId] : ['p_default'];
+    }
+
+    // Wildcard: visible across all project tabs
+    if (pIds.includes('all')) return true;
+
+    // Check if at least one assigned project is currently visible
+    return pIds.some(pid => {
+        const p = appConfig.projects.find(proj => proj.id === pid);
+        return p ? p.visible !== false : false;
+    });
 }
 
 
@@ -2262,7 +2286,7 @@ function renderNotes(searchQuery = '') {
     let filteredNotes = notes.filter(note => {
         if (note.deleted) return false;
         
-        if (!isProjectVisible(note.projectId)) return false;
+        if (!isProjectVisible(note)) return false;
         
         const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
         
@@ -2351,6 +2375,10 @@ function renderNotes(searchQuery = '') {
         }
     });
 
+    document.getElementById('badge-q1').innerText = filteredCounts.q1;
+    document.getElementById('badge-q2').innerText = filteredCounts.q2;
+    document.getElementById('badge-q3').innerText = filteredCounts.q3;
+    document.getElementById('badge-q4').innerText = filteredCounts.q4;
     document.getElementById('badge-closed').innerText = notes.filter(n => !n.deleted && n.status === 'closed' && !n.eventId).length;
     document.getElementById('badge-inbox').innerText = filteredCounts.inbox;
     document.getElementById('badge-calendar').innerText = filteredCounts.calendar;
