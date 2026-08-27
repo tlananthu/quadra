@@ -1,4 +1,4 @@
-let version = '4.04';
+let version = '4.05';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1143,8 +1143,8 @@ function renderOverdueTasksPage() {
     const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
     const todayObj = new Date();
     
-    // 1. Filter eligible notes (Not closed, not deleted, not meetings, matches project)
-    const activeNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && !n.eventId && isProjectVisible(n));
+    // 1. Filter eligible notes (Not closed, deleted, meetings, OR Notebook notes)
+    const activeNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && !n.eventId && n.quadrant !== 'notes' && isProjectVisible(n));
     
     // 2. Identify Backlog (Overdue OR Unscheduled)
     const backlogNotes = activeNotes.filter(n => {
@@ -1186,13 +1186,10 @@ function renderOverdueTasksPage() {
         const subLabel = dayNames[dayOfWeek];
         const mainLabel = `${monthNames[d.getMonth()]} ${d.getDate()}` + (isToday ? ' (Today)' : '');
         
-        // --- NEW: Check OOO status and apply classes ---
         const isOOO = appConfig.oooDates && appConfig.oooDates.includes(dateStr);
         
         const col = document.createElement('div');
         col.className = `day-col ${isWeekend ? 'weekend' : ''} ${isOOO ? 'ooo-day' : ''}`;
-        
-        // --- NEW: Inject the Palm Tree toggle button into the header ---
         col.innerHTML = `
             <div class="day-header ${isToday ? 'today' : ''}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
