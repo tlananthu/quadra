@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.02"]{
+[version="4.03"]{
     display:none;
 }
 
@@ -1720,6 +1720,7 @@ input:checked + .slider:after {
     border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); font-size: 13px; 
     font-weight: 500; cursor: grab; color: #334155; line-height: 1.4; 
     transition: transform 0.15s, box-shadow 0.15s; position: relative; overflow: hidden; 
+    flex-shrink: 0; /* <-- FIX: Prevents tasks from squishing together */
 }
 .triage-task:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.06); border-color: #CBD5E1; }
 .triage-task:active { cursor: grabbing; }
