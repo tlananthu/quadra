@@ -1,4 +1,4 @@
-let version = '4.02';
+let version = '4.04';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -23,6 +23,9 @@ if (!appConfig.quadrantOrder) {
         appConfig.quadrantOrder.push('notes');
     }
     localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+}
+if (!appConfig.oooDates) {
+    appConfig.oooDates = [];
 }
 if (!appConfig.quadrantWidths) appConfig.quadrantWidths = {};
 
@@ -1183,12 +1186,20 @@ function renderOverdueTasksPage() {
         const subLabel = dayNames[dayOfWeek];
         const mainLabel = `${monthNames[d.getMonth()]} ${d.getDate()}` + (isToday ? ' (Today)' : '');
         
+        // --- NEW: Check OOO status and apply classes ---
+        const isOOO = appConfig.oooDates && appConfig.oooDates.includes(dateStr);
+        
         const col = document.createElement('div');
-        col.className = `day-col ${isWeekend ? 'weekend' : ''}`;
+        col.className = `day-col ${isWeekend ? 'weekend' : ''} ${isOOO ? 'ooo-day' : ''}`;
+        
+        // --- NEW: Inject the Palm Tree toggle button into the header ---
         col.innerHTML = `
             <div class="day-header ${isToday ? 'today' : ''}">
-                <div class="sub">${subLabel}</div>
-                ${mainLabel}
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                    <div class="sub">${subLabel}</div>
+                    <button class="ooo-btn ${isOOO ? 'active' : ''}" onclick="toggleOOODay('${dateStr}')" title="Mark Out of Office">🌴</button>
+                </div>
+                <div>${mainLabel}</div>
             </div>
             <div class="day-content" ondragover="allowHorizonDrop(event)" ondragleave="dragLeaveHorizon(event)" ondrop="dropToHorizon(event, '${dateStr}')"></div>
         `;
@@ -1234,6 +1245,21 @@ function createTriageCard(note, todayStr) {
 }
 
 // --- Triage Drag & Drop Handlers ---
+function toggleOOODay(dateStr) {
+    if (!appConfig.oooDates) appConfig.oooDates = [];
+    const idx = appConfig.oooDates.indexOf(dateStr);
+    
+    // Toggle the date in the array
+    if (idx > -1) {
+        appConfig.oooDates.splice(idx, 1);
+    } else {
+        appConfig.oooDates.push(dateStr);
+    }
+    
+    // Save and re-render
+    localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+    renderOverdueTasksPage();
+}
 function allowHorizonDrop(ev) {
     ev.preventDefault();
     ev.currentTarget.parentElement.classList.add('drag-over');
