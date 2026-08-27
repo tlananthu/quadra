@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v4.01</span>
+                    <span class="version-badge">v4.02</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -43,7 +43,7 @@
                 <div class="view-toggle" id="viewToggleGroup">
                 <button id="btnGrid" title="Quadrant View" onclick="setLayout('grid')">🚩</button>
                 <button id="btnKanban" title="Kanban View" onclick="setLayout('kanban')">⏸️</button>
-                <button id="btnOverdue" title="Overdue Tasks" onclick="setLayout('overdue')">⚠️</button>
+                <button id="btnOverdue" title="Due Tasks (Triage)" onclick="setLayout('overdue')">⚡</button>
                 <button id="btnTracker" title="Calendar View (C)" onclick="setLayout('tracker')">📅</button>
                 <button onclick="switchLayout('notebook')" id="btn-layout-notebook" title="Notebook View">📓</button>
             </div>
@@ -123,13 +123,21 @@
             
         </div>
 
-        <div id="overdue-view">
-            <div class="overdue-container">
-                <div class="overdue-header">
-                    <h2>⚠️ Overdue Tasks (<span id="overdue-count-badge">0</span>)</h2>
-                    <button class="btn btn-outline" onclick="setLayout(appConfig.defaultView)">← Back to Default</button>
+        <div id="overdue-view" style="display: none; flex-grow: 1; overflow: hidden; background: #F8FAFC;">
+            <div class="due-layout">
+                <div class="backlog-pane">
+                    <div class="pane-header">
+                        <span>⚠️ Backlog</span>
+                        <span style="font-size: 12px; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 12px; color: #64748B;"><span id="backlog-count">0</span> Tasks</span>
+                    </div>
+                    <div class="pane-content" id="backlog-list" ondragover="allowBacklogDrop(event)" ondragleave="dragLeaveBacklog(event)" ondrop="dropToBacklog(event)">
+                        <!-- Overdue & Unscheduled tasks go here -->
+                    </div>
                 </div>
-                <div id="overdue-list-container" style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="horizon-pane" id="horizon-scroll">
+                    <div class="horizon-container" id="horizon-container">
+                        <!-- Day columns injected here via JS -->
+                    </div>
                 </div>
             </div>
         </div>

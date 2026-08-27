@@ -1,4 +1,4 @@
-let version = '4.01';
+let version = '4.02';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1127,45 +1127,162 @@ function toggleDueFilter() {
     }
 }
 
+// --- DUE TASKS (TRIAGE) ENGINE ---
 function renderOverdueTasksPage() {
-    const container = document.getElementById('overdue-list-container');
-    container.innerHTML = '';
+    const backlogList = document.getElementById('backlog-list');
+    const horizonContainer = document.getElementById('horizon-container');
     
-    const overdueNotes = notes.filter(n => {
-        if (n.deleted || n.status === 'closed' || !n.dueDate || n.eventId) return false;
-        
-        if (!isProjectVisible(n.projectId)) return false;
-        
-        return n.dueDate.split('T')[0] < todayStr;
+    if (!backlogList || !horizonContainer) return;
+    
+    backlogList.innerHTML = '';
+    horizonContainer.innerHTML = '';
+    
+    const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
+    const todayObj = new Date();
+    
+    // 1. Filter eligible notes (Not closed, not deleted, not meetings, matches project)
+    const activeNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && !n.eventId && isProjectVisible(n));
+    
+    // 2. Identify Backlog (Overdue OR Unscheduled)
+    const backlogNotes = activeNotes.filter(n => {
+        if (!n.dueDate) return true; // Unscheduled
+        return n.dueDate < todayStr; // Overdue
     });
-
-    overdueNotes.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-
-    document.getElementById('overdue-count-badge').innerText = overdueNotes.length;
-
-    if (overdueNotes.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 40px;">🎉 No overdue tasks! All caught up.</p>`;
-        return;
-    }
-
-    overdueNotes.forEach(note => {
-        const card = document.createElement('div');
-        card.className = 'overdue-card';
-        card.onclick = (e) => openTaskModal(null, note.id, e);
-        card.style.cursor = 'pointer';
-
-        let title = cleanHTMLToPlainText(note.text).split('\n')[0];
-        let dueDate = note.dueDate.split('T')[0];
-
-        card.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-                <strong style="font-size: 15px; color: #9F1239;">${parseTags(title)}</strong>
-                <span style="font-size: 12px; color: var(--text-muted);">Due: ${dueDate} (${note.quadrant.toUpperCase()})</span>
+    
+    // Sort Backlog: Overdue dates first, then unscheduled
+    backlogNotes.sort((a, b) => {
+        if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+        if (a.dueDate) return -1;
+        if (b.dueDate) return 1;
+        return 0;
+    });
+    
+    document.getElementById('backlog-count').innerText = backlogNotes.length;
+    
+    backlogNotes.forEach(note => {
+        backlogList.appendChild(createTriageCard(note, todayStr));
+    });
+    
+    // 3. Generate Horizon Columns (Today + Next 6 Days)
+    for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(todayObj.getDate() + i);
+        
+        const localY = d.getFullYear();
+        const localM = String(d.getMonth() + 1).padStart(2, '0');
+        const localD = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${localY}-${localM}-${localD}`;
+        
+        const dayOfWeek = d.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const isToday = i === 0;
+        
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        const subLabel = dayNames[dayOfWeek];
+        const mainLabel = `${monthNames[d.getMonth()]} ${d.getDate()}` + (isToday ? ' (Today)' : '');
+        
+        const col = document.createElement('div');
+        col.className = `day-col ${isWeekend ? 'weekend' : ''}`;
+        col.innerHTML = `
+            <div class="day-header ${isToday ? 'today' : ''}">
+                <div class="sub">${subLabel}</div>
+                ${mainLabel}
             </div>
-            <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="completeTask('${note.id}'); event.stopPropagation(); renderOverdueTasksPage();">Complete ✓</button>
+            <div class="day-content" ondragover="allowHorizonDrop(event)" ondragleave="dragLeaveHorizon(event)" ondrop="dropToHorizon(event, '${dateStr}')"></div>
         `;
-        container.appendChild(card);
-    });
+        
+        const contentArea = col.querySelector('.day-content');
+        
+        // Populate tasks scheduled for this specific day
+        const dayNotes = activeNotes.filter(n => n.dueDate === dateStr);
+        dayNotes.forEach(note => {
+            contentArea.appendChild(createTriageCard(note, todayStr));
+        });
+        
+        horizonContainer.appendChild(col);
+    }
+}
+
+function createTriageCard(note, todayStr) {
+    const el = document.createElement('div');
+    el.className = `triage-task ${note.quadrant || 'q2'}`;
+    el.draggable = true;
+    el.ondragstart = (e) => e.dataTransfer.setData('text/plain', note.id);
+    el.onclick = (e) => openTaskModal(null, note.id, e);
+    
+    let title = cleanHTMLToPlainText(note.text).split('\n')[0];
+    let metaText = '';
+    
+    if (note.dueDate && note.dueDate < todayStr) {
+        metaText = `<span style="color: #EF4444; font-weight: 700;">Overdue (${note.dueDate})</span>`;
+    } else if (!note.dueDate) {
+        metaText = `Unscheduled`;
+    } else {
+        metaText = `Due ${note.dueDate}`;
+    }
+    
+    el.innerHTML = `
+        <div style="font-weight: 600;">${parseTags(title)}</div>
+        <div class="triage-task-meta">
+            ${metaText}
+            <button style="background:none; border:none; color:#10B981; cursor:pointer; font-size:14px; font-weight:bold; padding:2px;" onclick="completeTask('${note.id}'); event.stopPropagation(); renderOverdueTasksPage();" title="Complete Task">✓</button>
+        </div>
+    `;
+    return el;
+}
+
+// --- Triage Drag & Drop Handlers ---
+function allowHorizonDrop(ev) {
+    ev.preventDefault();
+    ev.currentTarget.parentElement.classList.add('drag-over');
+}
+function dragLeaveHorizon(ev) {
+    ev.currentTarget.parentElement.classList.remove('drag-over');
+}
+function dropToHorizon(ev, dateStr) {
+    ev.preventDefault(); 
+    ev.currentTarget.parentElement.classList.remove('drag-over');
+    
+    const noteId = ev.dataTransfer.getData("text/plain");
+    const note = notes.find(n => n.id === noteId);
+    
+    if (note) {
+        note.dueDate = dateStr;
+        // Shift existing calendar blocks to match the new day
+        if (note.timeBlocks && note.timeBlocks.length > 0) {
+            note.timeBlocks.forEach(tb => tb.date = dateStr);
+        }
+        note.dirty = true;
+        saveNotes();
+        handleSearch(); 
+    }
+}
+
+function allowBacklogDrop(ev) {
+    ev.preventDefault();
+    ev.currentTarget.classList.add('drag-over');
+}
+function dragLeaveBacklog(ev) {
+    ev.currentTarget.classList.remove('drag-over');
+}
+function dropToBacklog(ev) {
+    ev.preventDefault();
+    ev.currentTarget.classList.remove('drag-over');
+    
+    const noteId = ev.dataTransfer.getData("text/plain");
+    const note = notes.find(n => n.id === noteId);
+    
+    if (note) {
+        note.dueDate = null; // Unschedule the task completely
+        if (note.timeBlocks) {
+            note.timeBlocks = []; 
+        }
+        note.dirty = true;
+        saveNotes();
+        handleSearch();
+    }
 }
 
 // --- Drag & Resize Engine (Multi-Day Architecture) ---

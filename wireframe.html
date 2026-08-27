@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Due Tasks UI Concepts</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #E2E8F0; padding: 40px; color: #1E293B; }
+        h1 { margin-top: 0; font-size: 24px; color: #0F172A; }
+        p { color: #64748B; margin-bottom: 20px; }
+        
+        /* Shared Styles */
+        .concept-window { background: #FFFFFF; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); margin-bottom: 60px; border: 1px solid #CBD5E1; overflow: hidden; }
+        .app-header { background: #4F46E5; color: white; padding: 16px 20px; font-weight: 600; display: flex; justify-content: space-between; }
+        .task { background: #FFFFFF; border: 1px solid #E2E8F0; padding: 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 10px; font-size: 13px; font-weight: 500; cursor: grab; }
+        .task.q1 { border-left: 4px solid #EF4444; }
+        .task.q2 { border-left: 4px solid #3B82F6; }
+        
+        /* Concept 1: Triage Split */
+        .split-layout { display: flex; height: 400px; }
+        .backlog-pane { width: 280px; background: #F8FAFC; border-right: 1px solid #E2E8F0; display: flex; flex-direction: column; }
+        .pane-header { padding: 16px; font-weight: 700; border-bottom: 1px solid #E2E8F0; background: #F1F5F9; color: #9F1239; }
+        .pane-content { padding: 16px; overflow-y: auto; flex-grow: 1; }
+        
+        .horizon-pane { display: flex; flex-grow: 1; overflow-x: auto; background: #FFFFFF; padding: 16px; gap: 16px; }
+        .day-col { min-width: 240px; border-radius: 8px; border: 1px solid #E2E8F0; background: #F8FAFC; display: flex; flex-direction: column; }
+        .day-header { padding: 12px; border-bottom: 1px solid #E2E8F0; font-weight: 600; text-align: center; }
+        .day-header.today { background: #EFF6FF; color: #1D4ED8; border-top: 3px solid #3B82F6; }
+        .day-header .sub { font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 1px; }
+        .day-content { padding: 12px; flex-grow: 1; overflow-y: auto; }
+        
+        /* Concept 2: Vertical Swimlanes */
+        .swimlane-layout { display: flex; flex-direction: column; padding: 20px; gap: 16px; background: #F8FAFC; height: 400px; overflow-y: auto; }
+        .lane { display: flex; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .lane-header { width: 140px; padding: 16px; background: #F1F5F9; border-right: 1px solid #E2E8F0; display: flex; flex-direction: column; justify-content: center; }
+        .lane-header.overdue { background: #FFF1F2; color: #9F1239; }
+        .lane-header.today { background: #EFF6FF; color: #1D4ED8; border-left: 4px solid #3B82F6; }
+        .lane-tasks { display: flex; gap: 12px; padding: 16px; flex-grow: 1; overflow-x: auto; }
+        .lane-tasks .task { margin-bottom: 0; min-width: 200px; }
+    </style>
+</head>
+<body>
+
+    <h1>Alternative 1: The "Triage Split"</h1>
+    <p>A static vertical backlog on the left, with an infinite horizontally scrolling calendar on the right. Best for quickly dumping old tasks into future dates without drag friction.</p>
+    
+    <div class="concept-window">
+        <div class="app-header">
+            <span>Quadra Planning Board</span>
+            <span>⊞ Views</span>
+        </div>
+        <div class="split-layout">
+            <div class="backlog-pane">
+                <div class="pane-header">⚠️ Overdue Backlog (3)</div>
+                <div class="pane-content">
+                    <div class="task q1">Call Bank regarding fee<br><span style="color:#94A3B8; font-size:11px;">Due 2 days ago</span></div>
+                    <div class="task q2">Email John layout files<br><span style="color:#94A3B8; font-size:11px;">Due yesterday</span></div>
+                    <div class="task q1">Pay electricity bill<br><span style="color:#94A3B8; font-size:11px;">Due 3 days ago</span></div>
+                </div>
+            </div>
+            <div class="horizon-pane">
+                <div class="day-col">
+                    <div class="day-header today"><div class="sub">Thu</div>Aug 27 (Today)</div>
+                    <div class="day-content">
+                        <div class="task q2">Gym session (Legs)</div>
+                    </div>
+                </div>
+                <div class="day-col">
+                    <div class="day-header"><div class="sub">Fri</div>Aug 28</div>
+                    <div class="day-content">
+                        <div class="task q2">Project meeting</div>
+                    </div>
+                </div>
+                <div class="day-col" style="background: repeating-linear-gradient(45deg, #F1F5F9, #F1F5F9 10px, #F8FAFC 10px, #F8FAFC 20px);">
+                    <div class="day-header"><div class="sub">Sat</div>Aug 29 (Weekend)</div>
+                    <div class="day-content"></div>
+                </div>
+                <div class="day-col" style="background: repeating-linear-gradient(45deg, #F1F5F9, #F1F5F9 10px, #F8FAFC 10px, #F8FAFC 20px);">
+                    <div class="day-header"><div class="sub">Sun</div>Aug 30 (Weekend)</div>
+                    <div class="day-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h1>Alternative 2: Vertical Swimlanes</h1>
+    <p>A completely vertical approach. Overdue tasks are pinned at the top. You scroll down naturally through the upcoming days and drop tasks into horizontal lanes.</p>
+
+    <div class="concept-window">
+        <div class="app-header">
+            <span>Quadra Planning Board</span>
+            <span>⊞ Views</span>
+        </div>
+        <div class="swimlane-layout">
+            <div class="lane">
+                <div class="lane-header overdue">
+                    <strong style="font-size: 14px;">⚠️ Overdue</strong>
+                    <span style="font-size: 11px; margin-top: 4px;">3 Tasks Pending</span>
+                </div>
+                <div class="lane-tasks">
+                    <div class="task q1">Call Bank regarding fee</div>
+                    <div class="task q2">Email John layout files</div>
+                    <div class="task q1">Pay electricity bill</div>
+                </div>
+            </div>
+            
+            <div class="lane">
+                <div class="lane-header today">
+                    <strong style="font-size: 14px;">Today</strong>
+                    <span style="font-size: 11px; margin-top: 4px;">Aug 27</span>
+                </div>
+                <div class="lane-tasks">
+                    <div class="task q2">Gym session (Legs)</div>
+                </div>
+            </div>
+
+            <div class="lane">
+                <div class="lane-header">
+                    <strong style="font-size: 14px;">Tomorrow</strong>
+                    <span style="font-size: 11px; margin-top: 4px; color: #64748B;">Aug 28</span>
+                </div>
+                <div class="lane-tasks">
+                    <div class="task q2">Project meeting</div>
+                    <div class="task q1">Approve wireframes</div>
+                </div>
+            </div>
+            
+            <div class="lane" style="background: repeating-linear-gradient(45deg, #F1F5F9, #F1F5F9 10px, #FFFFFF 10px, #FFFFFF 20px);">
+                <div class="lane-header">
+                    <strong style="font-size: 14px;">Saturday</strong>
+                    <span style="font-size: 11px; margin-top: 4px; color: #64748B;">Aug 29</span>
+                </div>
+                <div class="lane-tasks">
+                    <!-- Empty -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
