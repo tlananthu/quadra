@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v3.49</span>
+                    <span class="version-badge">v4.0</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -394,6 +394,10 @@
         </div>
 
     </div>
+    <div id="project-tabs-bar">
+        <div id="project-tabs-container"></div>
+        <button id="add-project-btn" onclick="addNewProject()" title="Add Project">+</button>
+    </div>
 
     <div id="taskModal" class="modal">
         <div class="modal-content">
@@ -446,6 +450,8 @@
                         <option value="calendar">Calendar Tray</option>
                         <option value="notes">Notebook</option>
                         <option value="closed">Closed</option>
+                    </select>
+                    <select id="taskProject" class="task-input" style="flex: 1; margin-bottom: 0; cursor: pointer; padding-right: 10px;">
                     </select>
                 </div>
             </div>

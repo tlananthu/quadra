@@ -1,4 +1,4 @@
-let version = '3.49';
+let version = '4.0';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -25,6 +25,10 @@ if (!appConfig.quadrantOrder) {
     localStorage.setItem('quadra_config', JSON.stringify(appConfig));
 }
 if (!appConfig.quadrantWidths) appConfig.quadrantWidths = {};
+
+if (!appConfig.projects || appConfig.projects.length === 0) {
+    appConfig.projects = [{ id: 'p_default', name: 'Default', visible: true }];
+}
 
 let tokenClient;
 let isGoogleSynced = false;
@@ -65,9 +69,11 @@ async function initSQLite(binaryData = null) {
                 status TEXT,
                 dueDate TEXT,
                 timeBlocks TEXT,
-                deleted INTEGER DEFAULT 0
+                deleted INTEGER DEFAULT 0,
+                projectId TEXT DEFAULT 'p_default'
             );
         `);
+        try { db.run(`ALTER TABLE tasks ADD COLUMN projectId TEXT DEFAULT 'p_default'`); } catch (e) {}
         console.log("Created fresh SQLite database in memory.");
     }
 }
@@ -85,14 +91,16 @@ function syncNotesToSQLite() {
             status TEXT,
             dueDate TEXT,
             timeBlocks TEXT,
-            deleted INTEGER DEFAULT 0
+            deleted INTEGER DEFAULT 0,
+            projectId TEXT DEFAULT 'p_default'
         );
     `);
+    try { db.run(`ALTER TABLE tasks ADD COLUMN projectId TEXT DEFAULT 'p_default'`); } catch (e) {}
 
     // Prepare a statement to insert or replace task records
     const stmt = db.prepare(`
-        INSERT OR REPLACE INTO tasks (id, text, quadrant, status, dueDate, timeBlocks, deleted)
-        VALUES (?, ?, ?, ?, ?, ?, ?);
+        INSERT OR REPLACE INTO tasks (id, text, quadrant, status, dueDate, timeBlocks, deleted, projectId)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
     `);
 
     notes.forEach(note => {
@@ -103,7 +111,8 @@ function syncNotesToSQLite() {
             note.status || 'active',
             note.dueDate || null,
             JSON.stringify(note.timeBlocks || []),
-            note.deleted ? 1 : 0
+            note.deleted ? 1 : 0,
+            note.projectId
         ]);
     });
 
@@ -672,7 +681,7 @@ function renderTrackerPalette() {
     
     paletteList.innerHTML = '';
     
-    let paletteNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId);
+    let paletteNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId && isProjectVisible(n.projectId));
     
     /*const dueToggle = document.getElementById('dueFilterToggle');
     if (dueToggle && dueToggle.checked) {
@@ -931,6 +940,8 @@ function renderTrackerTimeline() {
         notes.forEach(note => {
             if (note.deleted) return; 
             
+            if (!isProjectVisible(note.projectId)) return; 
+                        
             if (!matchesSearchQuery(note.text, globalQuery)) return;
             
             const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
@@ -1123,6 +1134,9 @@ function renderOverdueTasksPage() {
     
     const overdueNotes = notes.filter(n => {
         if (n.deleted || n.status === 'closed' || !n.dueDate || n.eventId) return false;
+        
+        if (!isProjectVisible(n.projectId)) return false;
+        
         return n.dueDate.split('T')[0] < todayStr;
     });
 
@@ -1369,7 +1383,6 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('keydown', (e) => {
     // --- NEW: Intercept Ctrl+S / Cmd+S globally ---
-    // --- NEW: Intercept Ctrl+S / Cmd+S globally ---
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault(); // Stop default browser "Save Webpage" dialog
         
@@ -1606,6 +1619,25 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
         
         pendingTimelineContext = timelineContext || null;
     }
+    const projectInput = document.getElementById('taskProject');
+    if (projectInput) {
+        projectInput.innerHTML = '';
+        appConfig.projects.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id; opt.innerText = p.name;
+            projectInput.appendChild(opt);
+        });
+        
+        // --- FIX: Safely retrieve the note again if it exists ---
+        if (noteId) {
+            const activeNote = notes.find(n => n.id === noteId);
+            projectInput.value = activeNote && activeNote.projectId ? activeNote.projectId : 'p_default';
+        } else {
+            // NEW: If adding a task, default to the currently visible project (if only 1 is selected)
+            const visibleProjects = appConfig.projects.filter(p => p.visible);
+            projectInput.value = visibleProjects.length === 1 ? visibleProjects[0].id : 'p_default';
+        }
+    }
     modal.style.display = 'flex'; 
     setTimeout(() => titleInput.focus(), 100);
 }
@@ -1637,7 +1669,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (quadrantInput) quadrantInput.addEventListener('change', updateModalForQuadrant);
 });
 
-// --- NEW: Save Modal (Multi-Day Architecture) ---
+// --- 1. NEW: Save Modal (Multi-Day Architecture & Projects) ---
 function saveTaskModal() {
     clearAutoSaveInterval();
     const titleText = document.getElementById('taskTitleInput').innerHTML; 
@@ -1648,7 +1680,7 @@ function saveTaskModal() {
 
     const fullText = titleText + (infoText && infoText !== '<br>' ? ('\n' + infoText) : '');
 
-    // --- NEW: Auto-append #note if in the Notes quadrant ---
+    // Auto-append #note if in the Notes quadrant
     const quadrantSelect = document.getElementById('taskQuadrant');
     const selectedQuadrant = quadrantSelect ? quadrantSelect.value : null;
     let targetQuadForNote = selectedQuadrant || currentAddingQuadrant || 'inbox';
@@ -1668,13 +1700,16 @@ function saveTaskModal() {
         };
     }
 
+    const projectSelect = document.getElementById('taskProject');
+    const targetProject = projectSelect ? projectSelect.value : 'p_default';
+
     if (currentEditingId) { 
         const note = notes.find(n => n.id === currentEditingId); 
         if (note) { 
-            note.text = fullText; 
+            note.projectId = targetProject;
+            note.text = finalPayloadText; 
             note.dueDate = dueDate || null;
             
-            // --- NEW: Apply the changed quadrant ---
             if (selectedQuadrant) note.quadrant = selectedQuadrant;
             
             if (selectedQuadrant === 'closed') note.status = 'closed';
@@ -1690,15 +1725,13 @@ function saveTaskModal() {
             handleSearch(); 
         } 
     } else { 
-        // --- CHANGED: Use the dropdown value or fallback ---
         let targetQuad = selectedQuadrant || currentAddingQuadrant || 'inbox';
         let newNoteId = Date.now().toString(); 
-        
         let newStatus = targetQuad === 'closed' ? 'closed' : 'active';
         
         notes.push({ 
             id: newNoteId, 
-            text: fullText, 
+            text: finalPayloadText, 
             quadrant: targetQuad, 
             status: newStatus, 
             dueDate: dueDate || null,
@@ -1706,7 +1739,8 @@ function saveTaskModal() {
             dirty: true, 
             deleted: false, 
             eventId: null,
-            syncFailed: false
+            syncFailed: false,
+            projectId: targetProject
         }); 
         saveNotes(); 
         syncSingleTask(newNoteId);
@@ -1981,6 +2015,8 @@ function updateQuickTags() {
     notes.forEach(note => {
         if (note.deleted || note.eventId) return;
         
+        if (!isProjectVisible(note.projectId)) return; 
+        
         if (isDueFilterOn && !note.dueDate && note.quadrant !== 'notes') return;
         
         let tempDiv = document.createElement('div');
@@ -2117,6 +2153,105 @@ function handleSearch() {
     renderNotes(query);
 }
 
+// --- 3. UPDATED: Project Tabs Engine (With Rename/Delete) ---
+function renderProjectTabs() {
+    const container = document.getElementById('project-tabs-container');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    appConfig.projects.forEach(proj => {
+        const tab = document.createElement('div');
+        tab.className = `project-tab ${proj.visible ? 'active-view' : ''}`;
+        
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = proj.visible !== false;
+        
+        // Checkbox toggles visibility (allows multi-select)
+        cb.onclick = (e) => {
+            e.stopPropagation();
+            proj.visible = cb.checked;
+            if (!appConfig.projects.some(p => p.visible)) {
+                proj.visible = true; // Revert: At least one project must be visible
+                showToast("At least one project must be visible.");
+            } else {
+                localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+                renderProjectTabs();
+                handleSearch(); // Refresh the board
+            }
+        };
+        
+        const label = document.createElement('span');
+        label.innerText = proj.name;
+        
+        tab.appendChild(cb);
+        tab.appendChild(label);
+        
+        // Clicking the tab background isolates it (single-select view)
+        tab.onclick = () => {
+            appConfig.projects.forEach(p => p.visible = (p.id === proj.id));
+            localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+            renderProjectTabs();
+            handleSearch();
+        };
+        
+        // --- NEW: Double-click to Rename or Delete ---
+        tab.ondblclick = (e) => {
+            e.stopPropagation();
+            if (proj.id === 'p_default') return showToast("Cannot modify the Default project.");
+            
+            const action = prompt(`Edit project '${proj.name}':\nType a new name to rename, or type 'DELETE' to remove it.`);
+            if (!action) return;
+            
+            if (action.trim().toUpperCase() === 'DELETE') {
+                if (confirm(`Are you sure you want to delete '${proj.name}'? All associated tasks will be moved to the Default project.`)) {
+                    // Migrate orphaned tasks
+                    notes.forEach(n => { 
+                        if (n.projectId === proj.id) {
+                            n.projectId = 'p_default';
+                            n.dirty = true;
+                        }
+                    });
+                    saveNotes();
+                    
+                    // Remove the project and ensure UI safety
+                    appConfig.projects = appConfig.projects.filter(p => p.id !== proj.id);
+                    if (!appConfig.projects.some(p => p.visible)) appConfig.projects[0].visible = true;
+                    
+                    localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+                    renderProjectTabs();
+                    handleSearch();
+                }
+            } else {
+                proj.name = action.trim();
+                localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+                renderProjectTabs();
+            }
+        };
+        
+        container.appendChild(tab);
+    });
+}
+
+function addNewProject() {
+    const name = prompt("Enter new project name:");
+    if (name && name.trim()) {
+        const newId = 'p_' + Date.now();
+        // Make the new project the only visible one immediately
+        appConfig.projects.forEach(p => p.visible = false);
+        appConfig.projects.push({ id: newId, name: name.trim(), visible: true });
+        localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+        renderProjectTabs();
+        handleSearch();
+    }
+}
+
+// Global filter check for views
+function isProjectVisible(projectId) {
+    const p = appConfig.projects.find(p => p.id === (projectId || 'p_default'));
+    return p ? p.visible !== false : false;
+}
+
 
 function renderNotes(searchQuery = '') {
     ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'notes', 'closed'].forEach(q => { 
@@ -2126,6 +2261,8 @@ function renderNotes(searchQuery = '') {
     
     let filteredNotes = notes.filter(note => {
         if (note.deleted) return false;
+        
+        if (!isProjectVisible(note.projectId)) return false;
         
         const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
         
@@ -2260,6 +2397,8 @@ function triggerImport() { document.getElementById('importFile').click(); }
 function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const importedNotes = JSON.parse(e.target.result); if (Array.isArray(importedNotes)) { const noteMap = new Map(notes.map(n => [n.id, n])); importedNotes.forEach(inNote => { inNote.dirty = true; noteMap.set(inNote.id, inNote); }); notes = Array.from(noteMap.values()); saveNotes(); handleSearch(); showToast("Tasks merged!"); closeSettingsPage(); } else showToast("Invalid format."); } catch (err) { showToast("Error reading file."); } event.target.value = ''; }; reader.readAsText(file); }
 
 window.addEventListener('load', () => {
+    renderProjectTabs();
+    
     const matrixContainer = document.getElementById('matrix');
     
     if (appConfig.quadrantOrder && appConfig.quadrantOrder.length > 0) {
@@ -2384,6 +2523,7 @@ function handleSignoutClick() {
     showToast("Signed out successfully.");
 }
 
+// --- 2. UPDATED: Import Calendar Events (Modern Schema) ---
 async function importCalendarEvents() {
     const dateStr = document.getElementById('trackerDate').value;
     const ignoreKeywords = (appConfig.ignoreKeywords || 'out of office, ooo, away, vacation, holiday')
@@ -2414,8 +2554,17 @@ async function importCalendarEvents() {
                 // --- UPDATE EXISTING ICS EVENT ---
                 if (existingNote) {
                     let changed = false;
-                    if (existingNote.dueTime !== ev.startHour) { existingNote.dueTime = ev.startHour; changed = true; }
-                    if (existingNote.dueDuration !== ev.duration) { existingNote.dueDuration = ev.duration; changed = true; }
+                    
+                    if (!existingNote.timeBlocks) existingNote.timeBlocks = [];
+                    let calBlock = existingNote.timeBlocks.find(b => b.blockId === 'cal' || b.date === dateStr);
+                    
+                    if (!calBlock) {
+                        existingNote.timeBlocks.push({ blockId: 'cal', date: dateStr, startHour: ev.startHour, duration: ev.duration });
+                        changed = true;
+                    } else {
+                        if (calBlock.startHour !== ev.startHour) { calBlock.startHour = ev.startHour; changed = true; }
+                        if (calBlock.duration !== ev.duration) { calBlock.duration = ev.duration; changed = true; }
+                    }
                     
                     const newText = `${ev.summary} #meeting`;
                     if (existingNote.text !== newText) { existingNote.text = newText; changed = true; }
@@ -2424,7 +2573,7 @@ async function importCalendarEvents() {
                         existingNote.dirty = true; 
                         updatedCount++; 
                     }
-                    return; // Move to the next event
+                    return;
                 }
 
                 // --- INSERT NEW ICS EVENT ---
@@ -2437,8 +2586,13 @@ async function importCalendarEvents() {
                     dirty: false,
                     deleted: false,
                     dueDate: dateStr,
-                    dueTime: ev.startHour,
-                    dueDuration: ev.duration,
+                    timeBlocks: [{
+                        blockId: 'cal', 
+                        date: dateStr, 
+                        startHour: ev.startHour,
+                        duration: ev.duration
+                    }],
+                    projectId: 'p_default',
                     syncFailed: false
                 });
                 importedCount++;
@@ -2493,8 +2647,17 @@ async function importCalendarEvents() {
                 // --- UPDATE EXISTING GOOGLE EVENT ---
                 if (existingNote) {
                     let changed = false;
-                    if (existingNote.dueTime !== startHour) { existingNote.dueTime = startHour; changed = true; }
-                    if (existingNote.dueDuration !== duration) { existingNote.dueDuration = duration; changed = true; }
+                    
+                    if (!existingNote.timeBlocks) existingNote.timeBlocks = [];
+                    let calBlock = existingNote.timeBlocks.find(b => b.blockId === 'cal' || b.date === dateStr);
+                    
+                    if (!calBlock) {
+                        existingNote.timeBlocks.push({ blockId: 'cal', date: dateStr, startHour: startHour, duration: duration });
+                        changed = true;
+                    } else {
+                        if (calBlock.startHour !== startHour) { calBlock.startHour = startHour; changed = true; }
+                        if (calBlock.duration !== duration) { calBlock.duration = duration; changed = true; }
+                    }
                     
                     const newText = `${event.summary || 'Meeting'} #meeting`;
                     if (existingNote.text !== newText) { existingNote.text = newText; changed = true; }
@@ -2503,11 +2666,11 @@ async function importCalendarEvents() {
                         existingNote.dirty = true; 
                         updatedCount++; 
                     }
-                    return; // Move to the next event
+                    return;
                 }
                 
                 // --- INSERT NEW GOOGLE EVENT ---
-                const newNote = {
+                notes.push({
                     id: Date.now().toString() + Math.random(),
                     eventId: event.id, 
                     text: `${event.summary || 'Meeting'} #meeting`,
@@ -2516,12 +2679,15 @@ async function importCalendarEvents() {
                     dirty: false, 
                     deleted: false,
                     dueDate: dateStr,
-                    dueTime: startHour,
-                    dueDuration: duration,
+                    timeBlocks: [{
+                        blockId: 'cal', 
+                        date: dateStr, 
+                        startHour: startHour,
+                        duration: duration
+                    }],
+                    projectId: 'p_default',
                     syncFailed: false
-                };
-                
-                notes.push(newNote);
+                });
                 importedCount++;
             });
         }
@@ -3040,7 +3206,6 @@ async function syncSingleTask(noteId) {
 }
 
 // --- Cloud Sync Status UI ---
-// --- Cloud Sync Status UI ---
 function setCloudSyncIcon(state) {
     const icon = document.getElementById('cloudSyncIcon');
     if (!icon) return;
@@ -3092,7 +3257,7 @@ function renderNotebookView() {
     const globalQuery = searchInput ? searchInput.value : '';
     
     // Grab only notes that belong to the 'notes' quadrant
-    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, globalQuery));
+    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, globalQuery) && isProjectVisible(n.projectId));
     
     notebookNotes.forEach(note => {
         const card = document.createElement('div');
@@ -3111,3 +3276,4 @@ function renderNotebookView() {
         container.appendChild(card);
     });
 }
+
