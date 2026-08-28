@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.04"]{
+[version="4.06"]{
     display:none;
 }
 
@@ -422,17 +422,18 @@ header h1 {
 
 .quadrant { 
     position: relative;
-    border-radius: 16px; 
-    padding: 20px; 
+    border-radius: 12px; 
+    padding: 0;
+    background: #F8FAFC;
     display: flex; 
     flex-direction: column; 
-    border: 1px solid rgba(0,0,0,0.05); 
+    border: 1px solid var(--border-color); 
     min-height: 400px; 
     max-height: calc(100vh - 120px);
     transition: box-shadow 0.2s; 
     flex-shrink: 0;
     cursor: grab;
-    overflow: visible; 
+    overflow: hidden; 
     min-width: 260px;
 }
 
@@ -440,18 +441,35 @@ header h1 {
     cursor: grabbing; 
 }
 
-.quadrant-header {
+.quadrant-header, .q-header {
     display: flex;
     align-items: center;
-    padding-bottom: 12px;
+    justify-content: space-between;
+    padding: 16px;
+    background: #FFFFFF;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0;
 }
 
-.quadrant-header h3 {
+.quadrant-header h3, .q-header h2 {
     margin: 0;
     font-size: 15px;
     font-weight: 700;
-    color: #1E293B; /* Crisp dark slate */
+    color: #1E293B;
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
 }
+
+/* Kanban Column Top-Borders */
+#q1 { border-top: 4px solid var(--q1-border); } 
+#q2 { border-top: 4px solid var(--q2-border); } 
+#q3 { border-top: 4px solid var(--q3-border); } 
+#q4 { border-top: 4px solid var(--q4-border); }
+#tray-inbox { border-top: 4px solid #818CF8; }
+#tray-calendar { border-top: 4px solid var(--cal-border); }
+#tray-closed { border-top: 4px solid var(--closed-border); }
+#notes { border-top: 4px solid #94A3B8; }
 
 /* The counter pill next to the title */
 .quadrant-badge {
@@ -544,12 +562,6 @@ header h1 {
     width: calc(50% - 12px); 
     flex-grow: 1; 
 }
-.matrix-container.layout-grid #tray-inbox,
-.matrix-container.layout-grid #tray-calendar,
-.matrix-container.layout-grid #notes, 
-.matrix-container.layout-grid #tray-closed { 
-    width: calc(25% - 18px); /* Adjusted for 4 columns */
-}
 
 /* Background color for the new Notes quadrant on the board */
 #notes { background-color: #F8FAFC; border: 1px solid #E2E8F0; }
@@ -566,14 +578,6 @@ header h1 {
     box-shadow: 0 0 0 2px var(--brand-primary) inset, 0 0 20px rgba(79, 70, 229, 0.2); 
     background-color: rgba(79, 70, 229, 0.05) !important; 
 }
-
-#q1 { background-color: var(--q1-bg); } 
-#q2 { background-color: var(--q2-bg); } 
-#q3 { background-color: var(--q3-bg); } 
-#q4 { background-color: #F1F5F9; border: 1px solid #E2E8F0; }
-#tray-inbox { background-color: #F1F5F9; border: 1px solid #E2E8F0; }
-#tray-calendar { background-color: #F1F5F9; border: 1px solid #E2E8F0; }
-#tray-closed { background-color: #F1F5F9; border: 1px solid #E2E8F0; }
 
 .q-header { 
     display: flex; 
@@ -637,10 +641,9 @@ header h1 {
 .task-list { 
     flex-grow: 1; 
     overflow-y: auto; 
-    padding-bottom: 10px; 
-    padding-right: 6px; /* NEW: Pushes the cards away from the scrollbar */
+    padding: 16px; 
+    padding-bottom: 24px;
     cursor: default; 
-    /* Firefox */
     scrollbar-width: thin; 
     scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
 }
@@ -719,9 +722,9 @@ header h1 {
 
 /* Person Tag Pill */
 .person-tag {
-    background-color: #DCFCE7;
-    color: #15803D;
-    border: 1px solid #BBF7D0;
+    background-color: var(--person-tag-bg);
+    color: var(--person-tag);
+    border: 1px solid rgba(5, 150, 105, 0.2);
     padding: 2px 8px;
     border-radius: 12px;
     font-size: 12px;
@@ -730,16 +733,12 @@ header h1 {
     display: inline-block;
     margin: 0 2px;
     letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
 }
 
-.person-tag { 
-    background-color: var(--person-tag-bg); 
-    color: var(--person-tag); 
-    font-weight: 600; 
-    cursor: pointer; 
-    border-radius: 4px; 
-    padding: 2px 4px; 
-    text-decoration: none; 
+.person-tag:hover {
+    background-color: var(--person-tag-hover);
 }
 
 /* Darkens the purple background slightly on hover for tactile feedback */
@@ -1210,7 +1209,7 @@ header h1 {
 /* --- Overdue Tasks Full Page View --- */
 #overdue-view { 
     display: none; flex-grow: 1; width: 100%; 
-    overflow-y: auto; background: #ffffff; padding: 40px; 
+    overflow-y: auto; background: #ffffff; padding: 0; 
 }
 
 /* --- Settings Page View --- */
@@ -1677,8 +1676,6 @@ input:checked + .slider:after {
     color: var(--text-main);
 }
 
-/* --- Due Tasks (Triage Split) View --- */
-#overdue-view { padding: 0 !important; }
 .due-layout { display: flex; height: 100%; width: 100%; overflow: hidden; }
 
 .backlog-pane { 
@@ -1734,10 +1731,79 @@ input:checked + .slider:after {
 .triage-task:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.06); border-color: #CBD5E1; }
 .triage-task:active { cursor: grabbing; }
 
-/* Quadrant Color Flags */
-.triage-task.q1 { border-left: 4px solid var(--q1-text); }
-.triage-task.q2 { border-left: 4px solid var(--q2-text); }
-.triage-task.q3 { border-left: 4px solid var(--q3-text); }
-.triage-task.q4 { border-left: 4px solid var(--q4-text); }
+/* --- Unify Triage Tasks (Backlog/Due) with Calendar Color Scheme --- */
+.triage-task.q1 { background-color: var(--q1-bg) !important; border: 1px solid var(--q1-border) !important; border-left: 4px solid var(--q1-border) !important; color: var(--q1-text) !important; }
+.triage-task.q2 { background-color: var(--q2-bg) !important; border: 1px solid var(--q2-border) !important; border-left: 4px solid var(--q2-border) !important; color: var(--q2-text) !important; }
+.triage-task.q3 { background-color: var(--q3-bg) !important; border: 1px solid var(--q3-border) !important; border-left: 4px solid var(--q3-border) !important; color: var(--q3-text) !important; }
+.triage-task.q4 { background-color: var(--q4-bg) !important; border: 1px solid var(--q4-border) !important; border-left: 4px solid var(--q4-border) !important; color: var(--q4-text) !important; }
 
-.triage-task-meta { font-size: 11px; color: #94A3B8; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; }
+/* In case tasks from Inbox end up in the Triage view */
+.triage-task.inbox { background-color: #EEF2FF !important; border: 1px solid #C7D2FE !important; border-left: 4px solid #818CF8 !important; color: #3730A3 !important; }
+.triage-task-meta { 
+    font-size: 11px; 
+    opacity: 0.75; /* Inherits the quadrant text color but keeps it subtle */
+    margin-top: 8px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+
+/* 3. Task Cards (Matched identically to Calendar .logged-block style) */
+.note.q1 { background-color: var(--q1-bg) !important; border: 1px solid var(--q1-border) !important; border-left: 4px solid var(--q1-border) !important; }
+.note.q1 .note-text { color: var(--q1-text) !important; }
+
+.note.q2 { background-color: var(--q2-bg) !important; border: 1px solid var(--q2-border) !important; border-left: 4px solid var(--q2-border) !important; }
+.note.q2 .note-text { color: var(--q2-text) !important; }
+
+.note.q3 { background-color: var(--q3-bg) !important; border: 1px solid var(--q3-border) !important; border-left: 4px solid var(--q3-border) !important; }
+.note.q3 .note-text { color: var(--q3-text) !important; }
+
+.note.q4 { background-color: var(--q4-bg) !important; border: 1px solid var(--q4-border) !important; border-left: 4px solid var(--q4-border) !important; }
+.note.q4 .note-text { color: var(--q4-text) !important; }
+
+/* Trays / System Cards */
+.note.inbox { background-color: #EEF2FF !important; border: 1px solid #C7D2FE !important; border-left: 4px solid #818CF8 !important; }
+.note.inbox .note-text { color: #3730A3 !important; }
+
+.note.calendar { background-color: var(--cal-bg) !important; border: 1px solid var(--cal-border) !important; border-left: 4px solid var(--cal-border) !important; }
+.note.calendar .note-text { color: var(--cal-text) !important; }
+
+.note.closed { background-color: var(--closed-bg) !important; border: 1px solid var(--closed-border) !important; border-left: 4px solid var(--closed-border) !important; }
+.note.closed .note-text { color: var(--closed-text) !important; }
+
+/* --- Hide Auxiliary Trays in Grid View --- */
+.matrix-container.layout-grid #tray-inbox,
+.matrix-container.layout-grid #tray-calendar,
+.matrix-container.layout-grid #tray-closed,
+.matrix-container.layout-grid #notes {
+    display: none !important;
+}
+
+/* Ensure the core 4 quadrants take up the full balanced grid space */
+.matrix-container.layout-grid #q1,
+.matrix-container.layout-grid #q2,
+.matrix-container.layout-grid #q3,
+.matrix-container.layout-grid #q4 {
+    width: calc(50% - 12px) !important;
+}
+
+/* --- Unified White Task Cards (Kanban, Grid, & Triage) --- */
+.note.q1, .triage-task.q1 { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--q1-text) !important; color: #334155 !important; }
+.note.q2, .triage-task.q2 { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--q2-text) !important; color: #334155 !important; }
+.note.q3, .triage-task.q3 { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--q3-text) !important; color: #334155 !important; }
+.note.q4, .triage-task.q4 { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--q4-text) !important; color: #334155 !important; }
+
+/* Trays & System Cards */
+.note.inbox, .triage-task.inbox { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid #6366F1 !important; color: #334155 !important; }
+.note.calendar { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--cal-text) !important; color: #334155 !important; }
+.note.closed { background-color: #F8FAFC !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--closed-text) !important; color: var(--closed-text) !important; opacity: 0.7; }
+
+/* Triage Meta Text (Due Dates) */
+.triage-task-meta { 
+    font-size: 11px; 
+    color: #64748B; 
+    margin-top: 8px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}

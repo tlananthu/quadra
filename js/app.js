@@ -1,4 +1,4 @@
-let version = '4.05';
+let version = '4.06';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1143,8 +1143,19 @@ function renderOverdueTasksPage() {
     const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
     const todayObj = new Date();
     
-    // 1. Filter eligible notes (Not closed, deleted, meetings, OR Notebook notes)
-    const activeNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && !n.eventId && n.quadrant !== 'notes' && isProjectVisible(n));
+    // --- FIX: Grab the global search query ---
+    const searchInput = document.getElementById('searchInput');
+    const globalQuery = searchInput ? searchInput.value : '';
+    
+    // 1. Filter eligible notes (Not closed, deleted, meetings, Notebook notes, and MATCHES SEARCH)
+    const activeNotes = notes.filter(n => 
+        !n.deleted && 
+        n.status !== 'closed' && 
+        !n.eventId && 
+        n.quadrant !== 'notes' && 
+        isProjectVisible(n) &&
+        matchesSearchQuery(n.text, globalQuery) // <-- Applied here
+    );
     
     // 2. Identify Backlog (Overdue OR Unscheduled)
     const backlogNotes = activeNotes.filter(n => {
@@ -1221,7 +1232,10 @@ function createTriageCard(note, todayStr) {
     el.onclick = (e) => openTaskModal(null, note.id, e);
     
     let title = cleanHTMLToPlainText(note.text).split('\n')[0];
+        
+    // --- NEW: Calculate Due Date Metadata ---
     let metaText = '';
+    //const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
     
     if (note.dueDate && note.dueDate < todayStr) {
         metaText = `<span style="color: #EF4444; font-weight: 700;">Overdue (${note.dueDate})</span>`;
@@ -1231,12 +1245,10 @@ function createTriageCard(note, todayStr) {
         metaText = `Due ${note.dueDate}`;
     }
     
+    // --- NEW: Render Card without Quadrant Pill ---
     el.innerHTML = `
-        <div style="font-weight: 600;">${parseTags(title)}</div>
-        <div class="triage-task-meta">
-            ${metaText}
-            <button style="background:none; border:none; color:#10B981; cursor:pointer; font-size:14px; font-weight:bold; padding:2px;" onclick="completeTask('${note.id}'); event.stopPropagation(); renderOverdueTasksPage();" title="Complete Task">✓</button>
-        </div>
+        <div style="font-weight: 600; color: #334155; margin-bottom: 4px;">${parseTags(title)}</div>
+        <div style="font-size: 11px; color: #64748B;">${metaText}</div>
     `;
     return el;
 }
@@ -3420,12 +3432,11 @@ function renderNotebookView() {
     if (!container) return;
     container.innerHTML = '';
     
-    // --- FIX: Safely fetch the search query ---
     const searchInput = document.getElementById('searchInput');
     const globalQuery = searchInput ? searchInput.value : '';
     
     // Grab only notes that belong to the 'notes' quadrant
-    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, globalQuery) && isProjectVisible(n.projectId));
+    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, globalQuery) && isProjectVisible(n));
     
     notebookNotes.forEach(note => {
         const card = document.createElement('div');
@@ -3435,13 +3446,14 @@ function renderNotebookView() {
         let cleanText = cleanHTMLToPlainText(note.text);
         let lines = cleanText.split('\n');
         let title = lines[0] || 'Untitled Note';
-        let bodyText = lines.slice(1).join('<br>') || '';
+        
+        // --- FIX: Parse tags on each line individually, THEN join with actual <br> tags ---
+        let bodyText = lines.slice(1).map(line => parseTags(line)).join('<br>') || '';
 
         card.innerHTML = `
             <div class="notebook-card-title">${parseTags(title)}</div>
-            <div class="notebook-card-body">${parseTags(bodyText)}</div>
+            <div class="notebook-card-body">${bodyText}</div>
         `;
         container.appendChild(card);
     });
 }
-
