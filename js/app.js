@@ -1,4 +1,4 @@
-let version = '4.06';
+let version = '4.07';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -252,7 +252,7 @@ function toggleDocMode() {
     }
 }
 
-const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.file';
+const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file';
 
 const defaultSchedule = [
     { title: 'Out of office hours', startHour: 14, endHour: 29 }, 
@@ -500,10 +500,21 @@ function openSettingsPage() {
 
     document.getElementById('configClientId').value = appConfig.clientId || '';
     document.getElementById('configApiKey').value = appConfig.apiKey || '';
-    document.getElementById('configIgnoreKeywords').value = appConfig.ignoreKeywords || '';
-    document.getElementById('configCalSource').value = appConfig.calSource || 'google';
-    document.getElementById('configIcsUrl').value = appConfig.icsUrl || '';
+    document.getElementById('configTimesheetUrl').value = appConfig.timesheetUrl || '';
     
+    // Load toggles
+    if (appConfig.importBehavior === 'palette') {
+        document.getElementById('importPalette').checked = true;
+    } else {
+        document.getElementById('importAuto').checked = true;
+    }
+
+    const ignoreEl = document.getElementById('configIgnoreKeywords');
+    if (ignoreEl) ignoreEl.value = appConfig.ignoreKeywords || '';
+    
+    const calSourceEl = document.getElementById('configCalSource');
+    if (calSourceEl) calSourceEl.value = appConfig.calSource || 'google';
+
     document.getElementById('configPrimaryTz').value = appConfig.primaryTz || 'local';
     document.getElementById('configSecondaryTz').value = appConfig.secondaryTz || 'none';
     
@@ -514,7 +525,6 @@ function openSettingsPage() {
     document.getElementById('configViewOverdue').checked = appConfig.viewsEnabled.overdue !== false;
     document.getElementById('configViewNotebook').checked = appConfig.viewsEnabled.notebook !== false;
     
-    toggleCalSourceFields(appConfig.calSource || 'google');
     loadCalendars();
     renderScheduleSettings();
 }
@@ -1916,64 +1926,139 @@ function clearCalendarCache() {
     }
 }
 
-function exportTimesheet() {
+function openTimesheetModal() {
     const baseDateStr = document.getElementById('trackerDate').value;
     const [y, m, d] = baseDateStr.split('-');
     const baseDate = new Date(y, m - 1, d);
-    let datesToExport = [];
     
-    if (currentTrackerMode === 'day') {
-        datesToExport.push(baseDateStr);
-    } else {
-        const dayOfWeek = baseDate.getDay();
-        const startOfWeek = new Date(baseDate);
-        startOfWeek.setDate(baseDate.getDate() - dayOfWeek);
-        for(let i=0; i<7; i++) {
-            let dateIter = new Date(startOfWeek);
-            dateIter.setDate(startOfWeek.getDate() + i);
-            
-            const localY = dateIter.getFullYear();
-            const localM = String(dateIter.getMonth() + 1).padStart(2, '0');
-            const localD = String(dateIter.getDate()).padStart(2, '0');
-            
-            datesToExport.push(`${localY}-${localM}-${localD}`);
-        }
+    // Find the Monday of the current week
+    const dayOfWeek = baseDate.getDay();
+    const startOfWeek = new Date(baseDate);
+    startOfWeek.setDate(baseDate.getDate() - dayOfWeek); // Moves to Sunday
+    
+    // Collect specific Mon-Fri date strings
+    const workWeekDates = new Set();
+    for (let i = 1; i <= 5; i++) {
+        let dateIter = new Date(startOfWeek);
+        dateIter.setDate(startOfWeek.getDate() + i);
+        const localY = dateIter.getFullYear();
+        const localM = String(dateIter.getMonth() + 1).padStart(2, '0');
+        const localD = String(dateIter.getDate()).padStart(2, '0');
+        workWeekDates.add(`${localY}-${localM}-${localD}`);
     }
 
-    let plainTextLog = `Calendar Report\n`;
-    
-    datesToExport.forEach(dateStr => {
-        let dailyLog = "";
-        let itemFound = false;
-        
-        notes.forEach(note => {
-            if (note.deleted || note.status === 'closed') return;
-            
-            // Accommodate both standard tasks and imported Google events
-            let blocksToProcess = note.timeBlocks || [];
-            if (note.eventId && note.dueTime !== undefined) {
-                blocksToProcess = [{ date: note.dueDate, startHour: note.dueTime, duration: note.dueDuration }];
-            }
+    let projectTotals = {};
+    let totalLogged = 0;
+    let detailedLogs = []; // NEW: Array to hold line-by-line data
 
-            blocksToProcess.forEach(tb => {
-                if (tb.date === dateStr) {
-                    itemFound = true;
-                    let cleanText = cleanHTMLToPlainText(note.text);
-                    const tags = cleanText.match(/(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g);
-                    let identifier = tags ? tags.join(' ') : cleanText.substring(0, 40).replace(/\n/g, ' ') + '...';
-                    dailyLog += `- [${identifier}] ${decToTime(tb.startHour)} (${tb.duration}h)\n`;
-                }
-            });
-        });
+    notes.forEach(note => {
+        if (note.deleted) return;
         
-        if (itemFound || currentTrackerMode === 'day') {
-             plainTextLog += `\nDate: ${dateStr}\n------------------------\n`;
-             if(itemFound) plainTextLog += dailyLog;
-             else plainTextLog += "No tasks scheduled.\n";
+        // Get actual assigned project (fallback to generic if none)
+        const pid = note.projectId || note.projectIds?.[0] || 'p_default';
+        
+        let blocksToProcess = note.timeBlocks || [];
+        // Catch legacy or Google imported formats
+        if (note.eventId && note.dueTime !== undefined) {
+            blocksToProcess = [{ date: note.dueDate, startHour: note.dueTime, duration: note.dueDuration }];
         }
+
+        blocksToProcess.forEach(tb => {
+            if (workWeekDates.has(tb.date)) {
+                const dur = roundToQuarterHour(tb.duration || 0);
+                if (dur > 0) {
+                    // 1. Tally for the UI Summary
+                    if (!projectTotals[pid]) projectTotals[pid] = 0;
+                    projectTotals[pid] += dur;
+                    totalLogged += dur;
+                    
+                    // 2. Log for the Google Sheets Payload
+                    let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+                    detailedLogs.push({
+                        date: tb.date,
+                        projectId: pid,
+                        title: cleanTextTitle,
+                        hours: dur
+                    });
+                }
+            }
+        });
     });
 
-    navigator.clipboard.writeText(plainTextLog).then(() => showToast("Calendar copied to clipboard!")).catch(err => showToast("Copy failed"));
+    const tbody = document.getElementById('timesheetTableBody');
+    tbody.innerHTML = '';
+    
+    Object.keys(projectTotals).forEach(pid => {
+        const pObj = appConfig.projects.find(p => p.id === pid);
+        const pName = pObj ? pObj.name : pid;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${pName}</td><td style="text-align: right;">${projectTotals[pid].toFixed(2)}</td>`;
+        tbody.appendChild(tr);
+    });
+    
+    document.getElementById('timesheetTotalHours').innerText = totalLogged.toFixed(2);
+    
+    // Progress Bar Math
+    const target = 40;
+    const remaining = Math.max(0, target - totalLogged);
+    const pct = Math.min(100, (totalLogged / target) * 100);
+    
+    const remEl = document.getElementById('timesheetRemaining');
+    const barEl = document.getElementById('timesheetProgressBar');
+    
+    remEl.innerText = remaining > 0 ? `${remaining.toFixed(2)} Hours Remaining` : `Target Met!`;
+    remEl.style.color = remaining > 0 ? '#F59E0B' : '#10B981';
+    
+    barEl.style.width = `${pct}%`;
+    barEl.className = 'progress-bar-fill'; 
+    if (pct < 50) barEl.classList.add('danger');
+    else if (pct < 100) barEl.classList.add('warning');
+    
+    document.getElementById('timesheetModal').style.display = 'flex';
+    
+    // --- UPDATED: Pass the detailed logs instead of the summary totals ---
+    document.getElementById('btnSyncTimesheet').onclick = () => confirmAndSyncTimesheet(detailedLogs, baseDateStr);
+}
+
+async function confirmAndSyncTimesheet(payloadData, dateRef) {
+    if (!appConfig.timesheetUrl) {
+        return showToast("❌ Please add your Timesheet Web App URL in Settings first.");
+    }
+
+    const btn = document.getElementById('btnSyncTimesheet');
+    const originalText = btn.innerText;
+    
+    btn.innerText = "Syncing to Sheets...";
+    btn.disabled = true;
+
+    const payload = {
+        weekOf: dateRef,
+        data: payloadData
+    };
+
+    try {
+        const response = await fetch(appConfig.timesheetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            showToast("✅ Timesheet successfully logged to Google Sheets!");
+            document.getElementById('timesheetModal').style.display = 'none';
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (e) {
+        console.error("Timesheet Sync Error:", e);
+        showToast("❌ Sync failed. Check the console or verify your Web App URL.");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
 }
 
 async function loadCalendars() {
@@ -1988,14 +2073,27 @@ async function loadCalendars() {
         if (data.error) return;
 
         const calendars = data.items || [];
-        const select = document.getElementById('configCalendar');
-        const currentVal = appConfig.calendarId;
-        select.innerHTML = '<option value="">-- Select a Calendar --</option>';
+        
+        const sourceSelect = document.getElementById('sourceCalendar');
+        const targetSelect = document.getElementById('targetCalendar');
+        
+        if (!sourceSelect || !targetSelect) return;
+
+        sourceSelect.innerHTML = '<option value="">-- Select Source Calendar --</option>';
+        targetSelect.innerHTML = '<option value="">-- Select Target Calendar --</option>';
+        
         calendars.forEach(cal => {
-            const opt = document.createElement('option');
-            opt.value = cal.id; opt.innerText = cal.summary;
-            if(cal.id === currentVal) opt.selected = true;
-            select.appendChild(opt);
+            // Populate Source Dropdown
+            const opt1 = document.createElement('option');
+            opt1.value = cal.id; opt1.innerText = cal.summary;
+            if(cal.id === appConfig.sourceCalendar) opt1.selected = true;
+            sourceSelect.appendChild(opt1);
+            
+            // Populate Target Dropdown
+            const opt2 = document.createElement('option');
+            opt2.value = cal.id; opt2.innerText = cal.summary;
+            if(cal.id === appConfig.targetCalendar) opt2.selected = true;
+            targetSelect.appendChild(opt2);
         });
     } catch (e) {
         console.error("Auto Calendar Load Error:", e);
@@ -2093,17 +2191,25 @@ function formatEditorNodes(editorId) {
 function saveSettings() {
     appConfig.clientId = document.getElementById('configClientId').value.trim();
     appConfig.apiKey = document.getElementById('configApiKey').value.trim();
-    appConfig.ignoreKeywords = document.getElementById('configIgnoreKeywords').value.trim();
-    appConfig.calSource = document.getElementById('configCalSource').value;
-    appConfig.icsUrl = document.getElementById('configIcsUrl').value.trim();
+    appConfig.timesheetUrl = document.getElementById('configTimesheetUrl').value.trim();
+    
+    const ignoreEl = document.getElementById('configIgnoreKeywords');
+    if (ignoreEl) appConfig.ignoreKeywords = ignoreEl.value.trim();
+    
+    const calSourceEl = document.getElementById('configCalSource');
+    if (calSourceEl) appConfig.calSource = calSourceEl.value;
+    
+    const sourceSelect = document.getElementById('sourceCalendar');
+    if (sourceSelect) appConfig.sourceCalendar = sourceSelect.value;
+    
+    const targetSelect = document.getElementById('targetCalendar');
+    if (targetSelect) appConfig.targetCalendar = targetSelect.value;
+    
+    const importBehavior = document.querySelector('input[name="importBehavior"]:checked');
+    if (importBehavior) appConfig.importBehavior = importBehavior.value;
     
     appConfig.primaryTz = document.getElementById('configPrimaryTz').value;
     appConfig.secondaryTz = document.getElementById('configSecondaryTz').value;
-    
-    const calendarSelect = document.getElementById('configCalendar');
-    if (calendarSelect && calendarSelect.value) {
-        appConfig.calendarId = calendarSelect.value;
-    }
 
     appConfig.defaultView = document.getElementById('configDefaultView').value;
     appConfig.viewsEnabled = {
@@ -2118,15 +2224,12 @@ function saveSettings() {
         const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
         if (firstEnabled) {
             appConfig.defaultView = firstEnabled;
-            const selectEl = document.getElementById('configDefaultView');
-            if (selectEl) selectEl.value = firstEnabled;
+            document.getElementById('configDefaultView').value = firstEnabled;
         } else {
             appConfig.viewsEnabled.grid = true;
             appConfig.defaultView = 'grid';
-            const selectEl = document.getElementById('configDefaultView');
-            if (selectEl) selectEl.value = 'grid';
-            const checkEl = document.getElementById('configViewGrid');
-            if (checkEl) checkEl.checked = true;
+            document.getElementById('configDefaultView').value = 'grid';
+            document.getElementById('configViewGrid').checked = true;
         }
     }
     
@@ -2136,13 +2239,9 @@ function saveSettings() {
     appSchedule = Array.from(rows).map(row => {
         const startStr = row.querySelector('.sched-start').value.split(':');
         const endStr = row.querySelector('.sched-end').value.split(':');
-        
         let startH = parseInt(startStr[0] || 0) + (parseInt(startStr[1] || 0) / 60);
         let endH = parseInt(endStr[0] || 0) + (parseInt(endStr[1] || 0) / 60);
-        
-        if (endH <= startH) {
-            endH += 24;
-        }
+        if (endH <= startH) endH += 24;
 
         return {
             title: row.querySelector('.sched-title').value,
@@ -2703,7 +2802,6 @@ function handleSignoutClick() {
     showToast("Signed out successfully.");
 }
 
-// --- 2. UPDATED: Import Calendar Events (Modern Schema) ---
 async function importCalendarEvents() {
     const dateStr = document.getElementById('trackerDate').value;
     const ignoreKeywords = (appConfig.ignoreKeywords || 'out of office, ooo, away, vacation, holiday')
@@ -2718,116 +2816,65 @@ async function importCalendarEvents() {
 
     try {
         document.getElementById('sync-banner').style.display = 'block';
+        
+        const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+        if (!savedToken || !savedToken.token || savedToken.expires_at < Date.now()) {
+            document.getElementById('sync-banner').style.display = 'none';
+            return showToast("Please sign in to Google first.");
+        }
+        
+        if (!appConfig.sourceCalendar) {
+            document.getElementById('sync-banner').style.display = 'none';
+            return showToast("Please select a Source Calendar in Settings first.");
+        }
+        
+        const [y, m, day] = dateStr.split('-');
+        const timeMin = new Date(y, m-1, day, 0, 0, 0).toISOString();
+        const timeMax = new Date(y, m-1, day, 23, 59, 59).toISOString();
 
-        if (appConfig.calSource === 'outlook' && appConfig.icsUrl) {
-            let fetchUrl = appConfig.icsUrl;
-            
-            const res = await fetch(fetchUrl);
-            if (!res.ok) throw new Error("Failed to fetch ICS feed via Apps Script bridge");
-            
-            const icsText = await res.text();
-            const icsEvents = parseICS(icsText, dateStr, ignoreKeywords, appConfig.primaryTz);
+        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(appConfig.sourceCalendar)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
+            headers: { 'Authorization': `Bearer ${savedToken.token}` }
+        });
+        const data = await res.json();
+        if(data.error) throw new Error(data.error.message);
 
-            icsEvents.forEach(ev => {
-                const existingNote = notes.find(n => n.eventId === ev.id);
-                
-                // --- UPDATE EXISTING ICS EVENT ---
-                if (existingNote) {
-                    let changed = false;
-                    
-                    if (!existingNote.timeBlocks) existingNote.timeBlocks = [];
-                    let calBlock = existingNote.timeBlocks.find(b => b.blockId === 'cal' || b.date === dateStr);
-                    
-                    if (!calBlock) {
-                        existingNote.timeBlocks.push({ blockId: 'cal', date: dateStr, startHour: ev.startHour, duration: ev.duration });
-                        changed = true;
-                    } else {
-                        if (calBlock.startHour !== ev.startHour) { calBlock.startHour = ev.startHour; changed = true; }
-                        if (calBlock.duration !== ev.duration) { calBlock.duration = ev.duration; changed = true; }
-                    }
-                    
-                    const newText = `${ev.summary} #meeting`;
-                    if (existingNote.text !== newText) { existingNote.text = newText; changed = true; }
-                    
-                    if (changed) { 
-                        existingNote.dirty = true; 
-                        updatedCount++; 
-                    }
-                    return;
-                }
+        const autoPlot = appConfig.importBehavior !== 'palette';
+        const events = data.items || [];
+        
+        events.forEach(event => {
+            if (!event.start.dateTime) return; // Skip all-day events
 
-                // --- INSERT NEW ICS EVENT ---
-                notes.push({
-                    id: Date.now().toString() + Math.random(),
-                    eventId: ev.id,
-                    text: `${ev.summary} #meeting`,
-                    quadrant: 'q2',
-                    status: 'active',
-                    dirty: false,
-                    deleted: false,
-                    dueDate: dateStr,
-                    timeBlocks: [{
-                        blockId: 'cal', 
-                        date: dateStr, 
-                        startHour: ev.startHour,
-                        duration: ev.duration
-                    }],
-                    projectId: 'p_default',
-                    syncFailed: false
-                });
-                importedCount++;
-            });
+            const title = (event.summary || '').toLowerCase();
+            const shouldIgnore = ignoreKeywords.some(keyword => title.includes(keyword));
 
-        } else {
-            const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-            if (!savedToken || !savedToken.token || savedToken.expires_at < Date.now()) {
-                document.getElementById('sync-banner').style.display = 'none';
-                return showToast("Please sign in to Google first.");
-            }
-            if (!appConfig.calendarId) {
-                document.getElementById('sync-banner').style.display = 'none';
-                return showToast("Please select a Google calendar in Settings first.");
+            if (shouldIgnore) {
+                ignoredCount++;
+                return;
             }
             
-            const [y, m, day] = dateStr.split('-');
-            const timeMin = new Date(y, m-1, day, 0, 0, 0).toISOString();
-            const timeMax = new Date(y, m-1, day, 23, 59, 59).toISOString();
-
-            const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(appConfig.calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`, {
-                headers: { 'Authorization': `Bearer ${savedToken.token}` }
-            });
-            const data = await res.json();
-            if(data.error) throw new Error(data.error.message);
-
-            const events = data.items || [];
-            events.forEach(event => {
-                if (!event.start.dateTime) return; // Skip all-day events
-
-                const title = (event.summary || '').toLowerCase();
-                const shouldIgnore = ignoreKeywords.some(keyword => title.includes(keyword));
-
-                if (shouldIgnore) {
-                    ignoredCount++;
-                    return;
-                }
+            const start = new Date(event.start.dateTime);
+            const end = new Date(event.end.dateTime);
+            
+            const rawStartHour = start.getHours() + (start.getMinutes() / 60);
+            let rawEndHour = end.getHours() + (end.getMinutes() / 60);
+            if (rawEndHour <= rawStartHour) rawEndHour += 24;
+            
+            const startHour = roundToQuarterHour(rawStartHour);
+            const duration = Math.max(0.25, roundToQuarterHour(rawEndHour - rawStartHour));
+            
+            const existingNote = notes.find(n => n.eventId === event.id);
+            
+            // --- Determine routing for timeBlocks ---
+            let newTimeBlocks = [];
+            if (autoPlot) {
+                newTimeBlocks = [{ blockId: 'cal', date: dateStr, startHour: startHour, duration: duration }];
+            }
+            
+            // --- UPDATE EXISTING GOOGLE EVENT ---
+            if (existingNote) {
+                let changed = false;
                 
-                const start = new Date(event.start.dateTime);
-                const end = new Date(event.end.dateTime);
-                
-                const rawStartHour = start.getHours() + (start.getMinutes() / 60);
-                let rawEndHour = end.getHours() + (end.getMinutes() / 60);
-                if (rawEndHour <= rawStartHour) rawEndHour += 24;
-                const rawDuration = rawEndHour - rawStartHour;
-
-                const startHour = roundToQuarterHour(rawStartHour);
-                const duration = Math.max(0.25, roundToQuarterHour(rawDuration));
-                
-                const existingNote = notes.find(n => n.eventId === event.id);
-                
-                // --- UPDATE EXISTING GOOGLE EVENT ---
-                if (existingNote) {
-                    let changed = false;
-                    
+                if (autoPlot) {
                     if (!existingNote.timeBlocks) existingNote.timeBlocks = [];
                     let calBlock = existingNote.timeBlocks.find(b => b.blockId === 'cal' || b.date === dateStr);
                     
@@ -2838,39 +2885,34 @@ async function importCalendarEvents() {
                         if (calBlock.startHour !== startHour) { calBlock.startHour = startHour; changed = true; }
                         if (calBlock.duration !== duration) { calBlock.duration = duration; changed = true; }
                     }
-                    
-                    const newText = `${event.summary || 'Meeting'} #meeting`;
-                    if (existingNote.text !== newText) { existingNote.text = newText; changed = true; }
-                    
-                    if (changed) { 
-                        existingNote.dirty = true; 
-                        updatedCount++; 
-                    }
-                    return;
                 }
                 
-                // --- INSERT NEW GOOGLE EVENT ---
-                notes.push({
-                    id: Date.now().toString() + Math.random(),
-                    eventId: event.id, 
-                    text: `${event.summary || 'Meeting'} #meeting`,
-                    quadrant: 'q2', 
-                    status: 'active',
-                    dirty: false, 
-                    deleted: false,
-                    dueDate: dateStr,
-                    timeBlocks: [{
-                        blockId: 'cal', 
-                        date: dateStr, 
-                        startHour: startHour,
-                        duration: duration
-                    }],
-                    projectId: 'p_default',
-                    syncFailed: false
-                });
-                importedCount++;
+                const newText = `${event.summary || 'Meeting'} #meeting`;
+                if (existingNote.text !== newText) { existingNote.text = newText; changed = true; }
+                
+                if (changed) { 
+                    existingNote.dirty = true; 
+                    updatedCount++; 
+                }
+                return;
+            }
+            
+            // --- INSERT NEW GOOGLE EVENT ---
+            notes.push({
+                id: Date.now().toString() + Math.random(),
+                eventId: event.id, 
+                text: `${event.summary || 'Meeting'} #meeting`,
+                quadrant: 'q2', 
+                status: 'active',
+                dirty: false, 
+                deleted: false,
+                dueDate: dateStr,
+                timeBlocks: newTimeBlocks,
+                projectId: 'p_default',
+                syncFailed: false
             });
-        }
+            importedCount++;
+        });
         
         document.getElementById('sync-banner').style.display = 'none';
         
@@ -2885,7 +2927,7 @@ async function importCalendarEvents() {
     } catch(e) {
         console.error("Calendar Sync Error:", e);
         document.getElementById('sync-banner').style.display = 'none';
-        showToast("Failed to fetch calendar events. Check your network or Apps Script Web App URL.");
+        showToast("Failed to fetch calendar events.");
     }
 }
 
@@ -3456,4 +3498,127 @@ function renderNotebookView() {
         `;
         container.appendChild(card);
     });
+}
+
+
+// --- TARGET CALENDAR MIRROR SYNC ---
+async function pushWeekToTargetCalendar() {
+    if (!appConfig.targetCalendar) {
+        return showToast("❌ Please select a Target Calendar in Settings first.");
+    }
+    
+    const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+    if (!savedToken || !savedToken.token || savedToken.expires_at < Date.now()) {
+        return showToast("❌ Please sign in to Google first.");
+    }
+
+    const btn = document.getElementById('btnSyncTargetCal');
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) { btn.innerText = "Syncing..."; btn.disabled = true; }
+
+    try {
+        // 1. Determine the current week's dates
+        const baseDateStr = document.getElementById('trackerDate').value;
+        const [y, m, d] = baseDateStr.split('-');
+        const baseDate = new Date(y, m - 1, d);
+        const dayOfWeek = baseDate.getDay();
+        const startOfWeek = new Date(baseDate);
+        startOfWeek.setDate(baseDate.getDate() - dayOfWeek);
+
+        const workWeekDates = new Set();
+        for (let i = 0; i < 7; i++) {
+            let dateIter = new Date(startOfWeek);
+            dateIter.setDate(startOfWeek.getDate() + i);
+            const localY = dateIter.getFullYear();
+            const localM = String(dateIter.getMonth() + 1).padStart(2, '0');
+            const localD = String(dateIter.getDate()).padStart(2, '0');
+            workWeekDates.add(`${localY}-${localM}-${localD}`);
+        }
+
+        let syncCount = 0;
+
+        // 2. Loop through all active notes and their time blocks
+        for (let note of notes) {
+            if (note.deleted || !note.timeBlocks) continue;
+            
+            // Get the project name for the calendar title
+            let pid = note.projectId || note.projectIds?.[0] || 'p_default';
+            let pObj = appConfig.projects.find(p => p.id === pid);
+            let pName = pObj ? pObj.name : pid;
+            let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+            
+            // Format: "[3094] Architecture Review"
+            let eventSummary = `[${pName}] ${cleanTextTitle}`;
+
+            for (let tb of note.timeBlocks) {
+                // Only sync blocks that fall in the current week and have a duration
+                if (workWeekDates.has(tb.date) && tb.duration > 0) {
+                    
+                    // Convert Quadra's decimal time into UTC ISO Strings
+                    const [tY, tM, tD] = tb.date.split('-');
+                    let startH = Math.floor(tb.startHour);
+                    let startM = Math.round((tb.startHour - startH) * 60);
+                    let startDateObj = new Date(tY, tM - 1, tD, startH, startM, 0);
+                    
+                    let endDec = tb.startHour + tb.duration;
+                    let endH = Math.floor(endDec);
+                    let endM = Math.round((endDec - endH) * 60);
+                    let endDateObj = new Date(tY, tM - 1, tD, endH, endM, 0);
+
+                    let resourceBody = {
+                        summary: eventSummary,
+                        start: { dateTime: startDateObj.toISOString() },
+                        end: { dateTime: endDateObj.toISOString() }
+                    };
+
+                    // 3. Push to Google Calendar
+                    try {
+                        if (tb.targetEventId) {
+                            // Update existing event if it was moved/resized
+                            await gapi.client.calendar.events.patch({
+                                calendarId: appConfig.targetCalendar,
+                                eventId: tb.targetEventId,
+                                resource: resourceBody
+                            });
+                        } else {
+                            // Create new event and save the generated Google ID to Quadra
+                            let res = await gapi.client.calendar.events.insert({
+                                calendarId: appConfig.targetCalendar,
+                                resource: resourceBody
+                            });
+                            tb.targetEventId = res.result.id;
+                            note.dirty = true;
+                        }
+                        syncCount++;
+                    } catch (err) {
+                        // If the event was manually deleted on Google Calendar, it will 404. Recreate it.
+                        if (err.status === 404 || (err.result && err.result.error && err.result.error.code === 404)) {
+                            let res = await gapi.client.calendar.events.insert({
+                                calendarId: appConfig.targetCalendar,
+                                resource: resourceBody
+                            });
+                            tb.targetEventId = res.result.id;
+                            note.dirty = true;
+                            syncCount++;
+                        } else {
+                            console.error("Event Sync Error:", err);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (syncCount > 0) {
+            saveNotes();
+            showToast(`✅ Synced ${syncCount} timeline blocks to Target Calendar!`);
+        } else {
+            showToast("No timeline blocks found to sync for this week.");
+        }
+
+    } catch (error) {
+        console.error("Target Calendar Sync Failed:", error);
+        showToast("❌ Failed to sync to Target Calendar.");
+    } finally {
+        if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+    }
 }
