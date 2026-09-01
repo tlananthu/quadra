@@ -1,4 +1,4 @@
-let version = '4.10';
+let version = '4.11';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3721,4 +3721,48 @@ function renderSidebarNotebook() {
         `;
         container.appendChild(card);
     });
+}
+
+// --- Drag & Drop to Quick Notebook Sidebar ---
+function allowSidebarDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+}
+
+function dragLeaveSidebar(e) {
+    e.currentTarget.classList.remove('drag-over');
+}
+
+function dropToSidebar(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    
+    const noteId = e.dataTransfer.getData("text/plain");
+    if (!noteId) return;
+    
+    const note = notes.find(n => n.id === noteId);
+    if (note && note.quadrant !== 'notes') {
+        note.quadrant = 'notes';
+        
+        // Ensure it contains the #note tag
+        if (!note.text.includes('#note')) {
+            note.text += ' #note';
+        }
+        
+        note.dirty = true;
+        saveNotes();
+        syncSingleTask(note.id);
+        handleSearch();
+        renderSidebarNotebook();
+        
+        // Automatically open the drawer so the user gets visual feedback
+        const drawer = document.getElementById('notebookDrawer');
+        const workspace = document.querySelector('.workspace-container');
+        if (!drawer.classList.contains('open')) {
+            drawer.classList.add('open');
+            workspace.classList.add('notebook-open');
+        }
+        
+        showToast("✓ Moved note to Quick Notebook!");
+    }
 }

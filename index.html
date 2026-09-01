@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v4.10</span>
+                    <span class="version-badge">v4.11</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -66,6 +66,9 @@
 
         <div id="quick-tags-bar" class="tags-bar"></div>
 
+        <!-- NEW: Dedicated workspace container below quick-tags -->
+        <div class="workspace-container">
+            
         <div id="matrix" class="matrix-container layout-grid">
             
             <div class="quadrant" id="q1" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
@@ -417,29 +420,31 @@
                 </div>
             </div>
         </div>
-
-        <aside id="rightSidebar" class="right-sticky-sidebar">
+            <!-- Sticky Right Sidebar & Notebook Drawer -->
+        <aside id="rightSidebar" class="right-sticky-sidebar" ondragover="allowSidebarDrop(event)" ondragleave="dragLeaveSidebar(event)" ondrop="dropToSidebar(event)">
             <button class="sidebar-icon-btn" onclick="toggleNotebookSidebar()" title="Toggle Notebook Panel">
                 📓
                 <span id="sidebarNotesBadge" class="sidebar-badge">0</span>
             </button>
         </aside>
 
-        <div id="notebookDrawer" class="notebook-drawer-panel">
-            <div class="drawer-header">
-                <h3>📓 Quick Notebook</h3>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <button class="btn btn-outline" style="padding: 4px 8px; font-size: 12px;" onclick="openTaskModal('notes', null, event)">+ New Note</button>
-                    <button class="drawer-close-btn" onclick="toggleNotebookSidebar()" title="Close">&times;</button>
+            <div id="notebookDrawer" class="notebook-drawer-panel">
+                <div class="drawer-header">
+                    <h3>📓 Quick Notebook</h3>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 12px;" onclick="openTaskModal('notes', null, event)">+ New Note</button>
+                        <button class="drawer-close-btn" onclick="toggleNotebookSidebar()" title="Close">&times;</button>
+                    </div>
+                </div>
+                <div class="drawer-search">
+                    <input type="text" id="drawerSearchInput" placeholder="Search notes..." oninput="renderSidebarNotebook()">
+                </div>
+                <div class="drawer-content" id="drawerNotebookList">
+                    <!-- Notes injected dynamically via JS -->
                 </div>
             </div>
-            <div class="drawer-search">
-                <input type="text" id="drawerSearchInput" placeholder="Search notes..." oninput="renderSidebarNotebook()">
-            </div>
-            <div class="drawer-content" id="drawerNotebookList">
-                <!-- Notes injected dynamically via JS -->
-            </div>
-        </div>
+
+        </div> <!-- End of workspace-container -->
 
     </div>
     <div id="project-tabs-bar">

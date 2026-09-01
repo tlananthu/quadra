@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.10"]{
+[version="4.11"]{
     display:none;
 }
 
@@ -1821,7 +1821,23 @@ input:checked + .slider:after {
 .progress-bar-fill.warning { background: #F59E0B; }
 .progress-bar-fill.danger { background: #EF4444; }
 
-/* --- Scoped Sticky Right Sidebar --- */
+/* --- Workspace Container --- */
+.workspace-container {
+    position: relative;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-right: 0; /* Full width by default when closed */
+    transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* When the notebook drawer opens, dynamically reserve space for the drawer (400px) + sidebar (48px) */
+.workspace-container.notebook-open {
+    margin-right: 448px; 
+}
+
+/* --- Sticky Right Sidebar (Pinned flush to the far right edge) --- */
 .right-sticky-sidebar {
     position: absolute;
     right: 0;
@@ -1835,6 +1851,12 @@ input:checked + .slider:after {
     align-items: center;
     padding-top: 16px;
     z-index: 99;
+}
+
+/* --- Sidebar Drag & Drop States --- */
+.right-sticky-sidebar.drag-over {
+    background-color: rgba(79, 70, 229, 0.15) !important;
+    box-shadow: inset 0 0 0 2px var(--brand-primary);
 }
 
 .sidebar-icon-btn {
@@ -1869,7 +1891,7 @@ input:checked + .slider:after {
     line-height: 1;
 }
 
-/* --- Scoped Push-Pane Notebook Drawer --- */
+/* --- Push-Pane Notebook Drawer --- */
 .notebook-drawer-panel {
     position: absolute;
     top: 0;
@@ -1885,18 +1907,8 @@ input:checked + .slider:after {
     transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* When open, add padding/margin to the inner view content so it shifts left inside the wrapper */
-.main-wrapper.notebook-open #matrix,
-.main-wrapper.notebook-open #tracker-view,
-.main-wrapper.notebook-open #overdue-view,
-.main-wrapper.notebook-open #notebook-view,
-.main-wrapper.notebook-open #settings-view {
-    margin-right: 448px; /* 400px drawer + 48px sidebar */
-    transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 .notebook-drawer-panel.open {
-    right: 48px; /* Stops right beside the 48px sidebar */
+    right: 48px; /* Slides open and rests directly to the left of the 48px sidebar */
 }
 
 .drawer-header {
@@ -1978,11 +1990,4 @@ input:checked + .slider:after {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-}
-
-/* Ensure the main wrapper leaves room for the sticky sidebar on the right */
-.main-wrapper {
-    position: relative;
-    margin-right: 48px;
-    transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
