@@ -1,4 +1,4 @@
-let version = '4.07';
+let version = '4.08';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2642,6 +2642,7 @@ function renderNotes(searchQuery = '') {
     if (currentLayout === 'overdue') renderOverdueTasksPage(); 
     
     updateQuickTags();
+    renderSidebarNotebook();
 }
 
 function completeTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'closed'; note.quadrant = 'closed'; note.dirty = true; saveNotes(); syncSingleTask(id); handleSearch(); } }
@@ -2705,7 +2706,8 @@ window.addEventListener('load', () => {
                 apiKey: appConfig.apiKey, 
                 discoveryDocs: [
                     'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest',
-                    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+                    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+                    'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
                 ] 
             }).catch(() => {});
         });
@@ -3621,4 +3623,66 @@ async function pushWeekToTargetCalendar() {
     } finally {
         if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
     }
+}
+
+// --- Sticky Notebook Drawer Engine ---
+function toggleNotebookSidebar() {
+    const drawer = document.getElementById('notebookDrawer');
+    const overlay = document.getElementById('notebookOverlay');
+    
+    const isOpen = drawer.classList.contains('open');
+    
+    if (isOpen) {
+        drawer.classList.remove('open');
+        overlay.classList.remove('open');
+        setTimeout(() => overlay.style.display = 'none', 300);
+    } else {
+        overlay.style.display = 'block';
+        setTimeout(() => {
+            drawer.classList.add('open');
+            overlay.classList.add('open');
+        }, 10);
+        renderSidebarNotebook();
+    }
+}
+
+function renderSidebarNotebook() {
+    const container = document.getElementById('drawerNotebookList');
+    const searchInput = document.getElementById('drawerSearchInput');
+    const badge = document.getElementById('sidebarNotesBadge');
+    
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const query = searchInput ? searchInput.value.toLowerCase() : '';
+    
+    // Filter notes belonging to the 'notes' quadrant
+    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, query) && isProjectVisible(n));
+    
+    if (badge) badge.innerText = notes.filter(n => !n.deleted && n.quadrant === 'notes').length;
+
+    if (notebookNotes.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 40px;">No notes found.</div>`;
+        return;
+    }
+
+    notebookNotes.forEach(note => {
+        const card = document.createElement('div');
+        card.className = 'drawer-note-card';
+        card.onclick = (e) => {
+            toggleNotebookSidebar(); // Close drawer when opening a note modal
+            openTaskModal(null, note.id, e);
+        };
+        
+        let cleanText = cleanHTMLToPlainText(note.text);
+        let lines = cleanText.split('\n');
+        let title = lines[0] || 'Untitled Note';
+        let bodyText = lines.slice(1).map(line => parseTags(line)).join('<br>') || '';
+
+        card.innerHTML = `
+            <div class="drawer-note-title">${parseTags(title)}</div>
+            <div class="drawer-note-body">${bodyText}</div>
+        `;
+        container.appendChild(card);
+    });
 }

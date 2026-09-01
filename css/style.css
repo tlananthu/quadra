@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.07"]{
+[version="4.08"]{
     display:none;
 }
 
@@ -1820,3 +1820,175 @@ input:checked + .slider:after {
 .progress-bar-fill { height: 100%; background: #10B981; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 .progress-bar-fill.warning { background: #F59E0B; }
 .progress-bar-fill.danger { background: #EF4444; }
+
+/* --- Sticky Right Sidebar --- */
+.right-sticky-sidebar {
+    position: fixed;
+    right: 0;
+    top: 60px; /* Sits right below the main header */
+    width: 48px;
+    height: calc(100vh - 60px);
+    background: #FFFFFF;
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 16px;
+    z-index: 999;
+}
+
+.sidebar-icon-btn {
+    position: relative;
+    background: transparent;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.sidebar-icon-btn:hover {
+    background: var(--bg-main);
+}
+
+.sidebar-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--brand-primary);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 10px;
+    line-height: 1;
+}
+
+/* --- Slide-Out Notebook Drawer Panel --- */
+.notebook-drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.notebook-drawer-panel {
+    position: fixed;
+    top: 0;
+    right: -420px; /* Hidden off-screen by default */
+    width: 400px;
+    height: 100vh;
+    background: #FFFFFF;
+    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.1);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notebook-drawer-panel.open {
+    right: 0;
+}
+
+.notebook-drawer-overlay.open {
+    display: block;
+    opacity: 1;
+}
+
+.drawer-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.drawer-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1E293B;
+    margin: 0;
+}
+
+.drawer-close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-muted);
+    line-height: 1;
+}
+
+.drawer-search {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: #F8FAFC;
+}
+
+.drawer-search input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    background: #FFFFFF;
+}
+
+.drawer-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #F8FAFC;
+}
+
+.drawer-note-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.drawer-note-card:hover {
+    border-color: var(--brand-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.drawer-note-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1E293B;
+    margin-bottom: 4px;
+}
+
+.drawer-note-body {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Adjust main wrapper margin so content doesn't hide behind the 48px sticky sidebar */
+.main-wrapper {
+    margin-right: 48px;
+}
