@@ -1,4 +1,4 @@
-let version = '4.13';
+let version = '4.07';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2642,7 +2642,6 @@ function renderNotes(searchQuery = '') {
     if (currentLayout === 'overdue') renderOverdueTasksPage(); 
     
     updateQuickTags();
-    renderSidebarNotebook();
 }
 
 function completeTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'closed'; note.quadrant = 'closed'; note.dirty = true; saveNotes(); syncSingleTask(id); handleSearch(); } }
@@ -2706,8 +2705,7 @@ window.addEventListener('load', () => {
                 apiKey: appConfig.apiKey, 
                 discoveryDocs: [
                     'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest',
-                    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-                    'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
+                    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
                 ] 
             }).catch(() => {});
         });
@@ -3622,104 +3620,5 @@ async function pushWeekToTargetCalendar() {
         showToast("❌ Failed to sync to Target Calendar.");
     } finally {
         if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
-    }
-}
-
-// --- Sticky Notebook Drawer Engine (Persistent Floating Panel) ---
-function toggleNotebookSidebar() {
-    const drawer = document.getElementById('notebookDrawer');
-    const isOpen = drawer.classList.contains('open');
-    
-    if (isOpen) {
-        drawer.classList.remove('open');
-    } else {
-        drawer.classList.add('open');
-        renderSidebarNotebook();
-    }
-}
-
-function renderSidebarNotebook() {
-    const container = document.getElementById('drawerNotebookList');
-    const searchInput = document.getElementById('drawerSearchInput');
-    const badge = document.getElementById('sidebarNotesBadge');
-    
-    if (!container) return;
-    container.innerHTML = '';
-    
-    const query = searchInput ? searchInput.value.toLowerCase() : '';
-    
-    // Filter notes belonging to the 'notes' quadrant
-    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, query) && isProjectVisible(n));
-    
-    if (badge) badge.innerText = notes.filter(n => !n.deleted && n.quadrant === 'notes').length;
-
-    if (notebookNotes.length === 0) {
-        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 40px;">No notes found.</div>`;
-        return;
-    }
-
-    notebookNotes.forEach(note => {
-        const card = document.createElement('div');
-        card.className = 'drawer-note-card';
-        card.onclick = (e) => {
-            // Opens the task modal for editing, but leaves the notebook drawer open in the background
-            openTaskModal(null, note.id, e);
-        };
-        
-        let cleanText = cleanHTMLToPlainText(note.text);
-        let lines = cleanText.split('\n');
-        let title = lines[0] || 'Untitled Note';
-        let bodyText = lines.slice(1).map(line => parseTags(line)).join('<br>') || '';
-
-        card.innerHTML = `
-            <div class="drawer-note-title">${parseTags(title)}</div>
-            <div class="drawer-note-body">${bodyText}</div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-// --- Drag & Drop to Quick Notebook Sidebar ---
-function allowSidebarDrop(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move'; // Explicitly tells the browser this is a valid drop target
-    e.currentTarget.classList.add('drag-over');
-}
-
-function dragLeaveSidebar(e) {
-    e.currentTarget.classList.remove('drag-over');
-}
-
-function dropToSidebar(e) {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-    
-    const noteId = e.dataTransfer.getData("text/plain");
-    if (!noteId) return;
-    
-    const note = notes.find(n => n.id === noteId);
-    if (note && note.quadrant !== 'notes') {
-        note.quadrant = 'notes';
-        
-        // Ensure it contains the #note tag
-        if (!note.text.includes('#note')) {
-            note.text += ' #note';
-        }
-        
-        note.dirty = true;
-        saveNotes();
-        syncSingleTask(note.id);
-        handleSearch();
-        renderSidebarNotebook();
-        
-        // Automatically slide open the notebook drawer for visual feedback
-        const drawer = document.getElementById('notebookDrawer');
-        const workspace = document.querySelector('.workspace-container');
-        if (drawer && !drawer.classList.contains('open')) {
-            drawer.classList.add('open');
-            if (workspace) workspace.classList.add('notebook-open');
-        }
-        
-        showToast("✓ Moved note to Quick Notebook!");
     }
 }
