@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.09"]{
+[version="4.10"]{
     display:none;
 }
 
@@ -1821,20 +1821,20 @@ input:checked + .slider:after {
 .progress-bar-fill.warning { background: #F59E0B; }
 .progress-bar-fill.danger { background: #EF4444; }
 
-/* --- Sticky Right Sidebar --- */
+/* --- Scoped Sticky Right Sidebar --- */
 .right-sticky-sidebar {
-    position: fixed;
+    position: absolute;
     right: 0;
-    top: 60px; /* Sits below the main header */
+    top: 0;
     width: 48px;
-    height: calc(100vh - 60px);
+    height: 100%;
     background: #FFFFFF;
     border-left: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     align-items: center;
     padding-top: 16px;
-    z-index: 999;
+    z-index: 99;
 }
 
 .sidebar-icon-btn {
@@ -1869,30 +1869,34 @@ input:checked + .slider:after {
     line-height: 1;
 }
 
-/* --- Persistent Push-Pane Notebook Drawer --- */
+/* --- Scoped Push-Pane Notebook Drawer --- */
 .notebook-drawer-panel {
-    position: fixed;
-    top: 60px; /* Aligned below the header */
+    position: absolute;
+    top: 0;
     right: -400px; /* Hidden off-screen by default */
     width: 400px;
-    height: calc(100vh - 60px);
+    height: 100%;
     background: #FFFFFF;
     border-left: 1px solid var(--border-color);
     box-shadow: -4px 0 15px rgba(0, 0, 0, 0.03);
-    z-index: 998;
+    z-index: 98;
     display: flex;
     flex-direction: column;
     transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* When open, push the main wrapper to the left so nothing is hidden */
-body.notebook-open .main-wrapper {
+/* When open, add padding/margin to the inner view content so it shifts left inside the wrapper */
+.main-wrapper.notebook-open #matrix,
+.main-wrapper.notebook-open #tracker-view,
+.main-wrapper.notebook-open #overdue-view,
+.main-wrapper.notebook-open #notebook-view,
+.main-wrapper.notebook-open #settings-view {
     margin-right: 448px; /* 400px drawer + 48px sidebar */
     transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .notebook-drawer-panel.open {
-    right: 48px; /* Stops right beside the 48px sticky sidebar */
+    right: 48px; /* Stops right beside the 48px sidebar */
 }
 
 .drawer-header {
@@ -1976,8 +1980,9 @@ body.notebook-open .main-wrapper {
     overflow: hidden;
 }
 
-/* Default right margin to account for the sticky sidebar */
+/* Ensure the main wrapper leaves room for the sticky sidebar on the right */
 .main-wrapper {
+    position: relative;
     margin-right: 48px;
     transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

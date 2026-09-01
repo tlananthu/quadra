@@ -1,4 +1,4 @@
-let version = '4.08';
+let version = '4.10';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3628,14 +3628,15 @@ async function pushWeekToTargetCalendar() {
 // --- Sticky Notebook Drawer Engine (Persistent Side-Pane) ---
 function toggleNotebookSidebar() {
     const drawer = document.getElementById('notebookDrawer');
+    const wrapper = document.querySelector('.main-wrapper');
     const isOpen = drawer.classList.contains('open');
     
     if (isOpen) {
         drawer.classList.remove('open');
-        document.body.classList.remove('notebook-open');
+        wrapper.classList.remove('notebook-open');
     } else {
         drawer.classList.add('open');
-        document.body.classList.add('notebook-open');
+        wrapper.classList.add('notebook-open');
         renderSidebarNotebook();
     }
 }
