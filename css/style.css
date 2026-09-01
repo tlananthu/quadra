@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.11"]{
+[version="4.12"]{
     display:none;
 }
 
@@ -391,7 +391,7 @@ header h1 {
 /* Unified Flexbox Matrix Layout */
 .matrix-container { 
     display: flex;
-    gap: 24px; 
+    gap: 10px; 
     padding: 10px; 
     flex-grow: 1; 
     transition: all 0.3s ease; 
@@ -1821,23 +1821,17 @@ input:checked + .slider:after {
 .progress-bar-fill.warning { background: #F59E0B; }
 .progress-bar-fill.danger { background: #EF4444; }
 
-/* --- Workspace Container --- */
+/* --- Workspace Container (Maintains full width) --- */
 .workspace-container {
     position: relative;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    margin-right: 0; /* Full width by default when closed */
-    transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-right: 48px; /* Reserves space strictly for the permanent 48px sidebar */
 }
 
-/* When the notebook drawer opens, dynamically reserve space for the drawer (400px) + sidebar (48px) */
-.workspace-container.notebook-open {
-    margin-right: 448px; 
-}
-
-/* --- Sticky Right Sidebar (Pinned flush to the far right edge) --- */
+/* --- Sticky Right Sidebar (Permanent 48px strip) --- */
 .right-sticky-sidebar {
     position: absolute;
     right: 0;
@@ -1851,12 +1845,6 @@ input:checked + .slider:after {
     align-items: center;
     padding-top: 16px;
     z-index: 99;
-}
-
-/* --- Sidebar Drag & Drop States --- */
-.right-sticky-sidebar.drag-over {
-    background-color: rgba(79, 70, 229, 0.15) !important;
-    box-shadow: inset 0 0 0 2px var(--brand-primary);
 }
 
 .sidebar-icon-btn {
@@ -1891,24 +1879,24 @@ input:checked + .slider:after {
     line-height: 1;
 }
 
-/* --- Push-Pane Notebook Drawer --- */
+/* --- Google-Style Floating Notebook Drawer Panel --- */
 .notebook-drawer-panel {
     position: absolute;
     top: 0;
-    right: -400px; /* Hidden off-screen by default */
+    right: -420px; /* Hidden off-screen by default */
     width: 400px;
     height: 100%;
     background: #FFFFFF;
     border-left: 1px solid var(--border-color);
-    box-shadow: -4px 0 15px rgba(0, 0, 0, 0.03);
-    z-index: 98;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08); /* Professional depth shadow */
+    z-index: 105; /* Floats cleanly above matrix and cards */
     display: flex;
     flex-direction: column;
     transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .notebook-drawer-panel.open {
-    right: 48px; /* Slides open and rests directly to the left of the 48px sidebar */
+    right: 48px; /* Slides open and rests directly on top of the right edge */
 }
 
 .drawer-header {
@@ -1988,6 +1976,7 @@ input:checked + .slider:after {
     color: var(--text-muted);
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

@@ -1,4 +1,4 @@
-let version = '4.11';
+let version = '4.12';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3625,18 +3625,15 @@ async function pushWeekToTargetCalendar() {
     }
 }
 
-// --- Sticky Notebook Drawer Engine (Persistent Side-Pane) ---
+// --- Sticky Notebook Drawer Engine (Persistent Floating Panel) ---
 function toggleNotebookSidebar() {
     const drawer = document.getElementById('notebookDrawer');
-    const wrapper = document.querySelector('.main-wrapper');
     const isOpen = drawer.classList.contains('open');
     
     if (isOpen) {
         drawer.classList.remove('open');
-        wrapper.classList.remove('notebook-open');
     } else {
         drawer.classList.add('open');
-        wrapper.classList.add('notebook-open');
         renderSidebarNotebook();
     }
 }
@@ -3665,48 +3662,7 @@ function renderSidebarNotebook() {
         const card = document.createElement('div');
         card.className = 'drawer-note-card';
         card.onclick = (e) => {
-            // Note: We intentionally do NOT close the drawer here so it stays open while you view/edit details
-            openTaskModal(null, note.id, e);
-        };
-        
-        let cleanText = cleanHTMLToPlainText(note.text);
-        let lines = cleanText.split('\n');
-        let title = lines[0] || 'Untitled Note';
-        let bodyText = lines.slice(1).map(line => parseTags(line)).join('<br>') || '';
-
-        card.innerHTML = `
-            <div class="drawer-note-title">${parseTags(title)}</div>
-            <div class="drawer-note-body">${bodyText}</div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-function renderSidebarNotebook() {
-    const container = document.getElementById('drawerNotebookList');
-    const searchInput = document.getElementById('drawerSearchInput');
-    const badge = document.getElementById('sidebarNotesBadge');
-    
-    if (!container) return;
-    container.innerHTML = '';
-    
-    const query = searchInput ? searchInput.value.toLowerCase() : '';
-    
-    // Filter notes belonging to the 'notes' quadrant
-    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, query) && isProjectVisible(n));
-    
-    if (badge) badge.innerText = notes.filter(n => !n.deleted && n.quadrant === 'notes').length;
-
-    if (notebookNotes.length === 0) {
-        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 40px;">No notes found.</div>`;
-        return;
-    }
-
-    notebookNotes.forEach(note => {
-        const card = document.createElement('div');
-        card.className = 'drawer-note-card';
-        card.onclick = (e) => {
-            toggleNotebookSidebar(); // Close drawer when opening a note modal
+            // Opens the task modal for editing, but leaves the notebook drawer open in the background
             openTaskModal(null, note.id, e);
         };
         
