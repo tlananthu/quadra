@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.07"]{
+[version="4.09"]{
     display:none;
 }
 
@@ -332,6 +332,8 @@ header h1 {
 
 .tags-bar { 
     display: flex; 
+    align-items: center; /* Vertically centers the text and tags */
+    min-height: 52px;    /* Locks the exact height of the bar when tags are present */
     gap: 8px; 
     padding: 12px 32px; 
     background: #ffffff; 
@@ -344,6 +346,14 @@ header h1 {
 
 .tags-bar::-webkit-scrollbar { 
     display: none; 
+}
+
+/* Replaces the old display: none rule to show the placeholder instead */
+.tags-bar:empty::before {
+    content: "Your tags will appear here";
+    color: var(--text-muted);
+    font-size: 13px;
+    pointer-events: none;
 }
 
 .tags-bar:empty { 
@@ -449,6 +459,7 @@ header h1 {
     background: #FFFFFF;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 0;
+    min-height: 65px;
 }
 
 .quadrant-header h3, .q-header h2 {

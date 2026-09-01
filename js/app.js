@@ -1,4 +1,4 @@
-let version = '4.08';
+let version = '4.09';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -13,7 +13,7 @@ if (!appConfig.defaultView) appConfig.defaultView = 'grid';
 if (!appConfig.primaryTz) appConfig.primaryTz = 'local';
 if (!appConfig.secondaryTz) appConfig.secondaryTz = 'none';
 if (!appConfig.quadrantOrder) {
-    appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'q4', 'tray-inbox', 'notes', 'tray-calendar', 'tray-closed'];
+    appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'q4', 'tray-inbox', 'tray-calendar', 'tray-closed', 'notes'];
 } else if (!appConfig.quadrantOrder.includes('notes')) {
     // Force inject 'notes' after 'tray-inbox' for existing saved layouts
     const inboxIdx = appConfig.quadrantOrder.indexOf('tray-inbox');
@@ -1613,6 +1613,31 @@ document.addEventListener('keydown', (e) => {
         if (shortcutsModal && shortcutsModal.style.display === 'flex') closeShortcutsModal();
         if (projectModal && projectModal.style.display === 'flex') closeProjectModal();
     } else if (!isEditingText) {
+        // --- NEW: Alt + Up/Down Arrow for Project Traversal ---
+        if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            e.preventDefault();
+            const unarchived = appConfig.projects.filter(p => !p.archived);
+            
+            if (unarchived.length > 1) {
+                let currentIndex = unarchived.findIndex(p => p.visible);
+                if (currentIndex === -1) currentIndex = 0;
+                
+                let newIndex;
+                if (e.key === 'ArrowDown') {
+                    newIndex = (currentIndex + 1) % unarchived.length; // Next project
+                } else {
+                    newIndex = (currentIndex - 1 + unarchived.length) % unarchived.length; // Previous project
+                }
+                
+                const targetProjectId = unarchived[newIndex].id;
+                appConfig.projects.forEach(p => p.visible = (p.id === targetProjectId));
+                
+                localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+                renderProjectTabs();
+                handleSearch();
+            }
+            return;
+        }
         if (e.shiftKey && (e.key === '?' || e.key === '/')) {
             e.preventDefault();
             openShortcutsModal();
