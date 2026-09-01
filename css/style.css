@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.12"]{
+[version="4.13"]{
     display:none;
 }
 
@@ -16,9 +16,9 @@
     --q1-bg: #FFE4E6; --q1-border: #FDA4AF; --q1-text: #9F1239;
     --q2-bg: #E0F2FE; --q2-border: #7DD3FC; --q2-text: #0369A1;
     --q3-bg: #FEF3C7; --q3-border: #FCD34D; --q3-text: #B45309;
-    --q4-bg: #F8FAFC; --q4-border: #94A3B8; --q4-text: #334155; /* Fixed from #2e363d */
+    --q4-bg: #F8FAFC; --q4-border: #94A3B8; --q4-text: #334155;
     
-    /* Missing Timeline Colors */
+    /* Timeline Colors */
     --cal-bg: #F3E8FF; --cal-border: #D8B4FE; --cal-text: #6B21A8;
     --closed-bg: #F1F5F9; --closed-border: #CBD5E1; --closed-text: #94A3B8;
     --bg-main: #F9FAFB;
@@ -37,14 +37,12 @@
 }
 
 body { 
-    /*background-color: var(--bg-main); 
-    color: var(--text-main); */
     height: 100vh; 
     display: flex; 
     flex-direction: column; 
     overflow: hidden; 
-    background-color: #F8FAFC; /* Soft slate/gray */
-    color: #0F172A; /* Crisp, dark slate text */
+    background-color: #F8FAFC; 
+    color: #0F172A; 
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
 }
@@ -95,12 +93,10 @@ header {
     max-width: 900px; 
 }
 
-/* --- Unified Header Buttons --- */
-/* Target the buttons inside that middle group */
 .header-action-group button {
     background-color: #FFFFFF;
     border: 1px solid #E2E8F0;
-    border-radius: 8px; /* Soft squares instead of circles */
+    border-radius: 8px;
     width: 36px;
     height: 36px;
     display: flex;
@@ -110,10 +106,9 @@ header {
     box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     transition: all 0.15s ease;
     cursor: pointer;
-    margin-left: 6px; /* Space them out slightly */
+    margin-left: 6px;
 }
 
-/* Remove the pill-shaped background from their parent container if it exists */
 .header-action-group {
     background: transparent !important;
     border: none !important;
@@ -176,20 +171,12 @@ header h1 {
     color: var(--text-main);
 }
 
-.search-container input:focus {
-    border-color: var(--brand-primary); 
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); 
-    background: #ffffff;
-}
-
-/* --- Modern Search Bar --- */
 #searchHeaderContainer input {
     border: 1px solid #E2E8F0;
     background-color: #F8FAFC;
     transition: all 0.2s ease;
 }
 
-/* Adds a sleek blue glow and crisp border when actively typing */
 #searchHeaderContainer input:focus {
     background-color: #FFFFFF;
     border-color: #3B82F6;
@@ -237,7 +224,7 @@ header h1 {
 .header-action-btn {
     width: 36px;
     height: 36px;
-    border-radius: 8px; /* Consistent soft square */
+    border-radius: 8px;
     border: 1px solid #E2E8F0;
     background: #FFFFFF;
     color: #475569;
@@ -293,7 +280,7 @@ header h1 {
     color: white; 
     border: none; 
     padding: 8px 16px; 
-    border-radius: 8px; /* Changed from 6px to 8px to match icon buttons */
+    border-radius: 8px; 
     cursor: pointer; 
     font-weight: 500; 
     font-size: 14px; 
@@ -388,7 +375,7 @@ header h1 {
     outline-color: var(--person-tag); 
 }
 
-/* Unified Flexbox Matrix Layout */
+/* Matrix Layout */
 .matrix-container { 
     display: flex;
     gap: 10px; 
@@ -409,12 +396,11 @@ header h1 {
 
 .matrix-container.layout-kanban { 
     flex-wrap: nowrap; 
-    align-items: stretch; /* Forces columns to stretch to the bottom */
+    align-items: stretch; 
     padding-bottom: 10px;
-    overflow-y: hidden; /* Prevents the whole canvas from scrolling vertically */
+    overflow-y: hidden; 
 }
 
-/* Locks the kanban columns to the exact height of the container to force internal scrolling */
 .matrix-container.layout-kanban .quadrant {
     height: 100%;
     max-height: 100%;
@@ -461,7 +447,6 @@ header h1 {
     gap: 8px; 
 }
 
-/* Kanban Column Top-Borders */
 #q1 { border-top: 4px solid var(--q1-border); } 
 #q2 { border-top: 4px solid var(--q2-border); } 
 #q3 { border-top: 4px solid var(--q3-border); } 
@@ -471,22 +456,20 @@ header h1 {
 #tray-closed { border-top: 4px solid var(--closed-border); }
 #notes { border-top: 4px solid #94A3B8; }
 
-/* The counter pill next to the title */
 .quadrant-badge {
     margin-left: 8px;
     padding: 2px 8px;
-    background-color: rgba(0, 0, 0, 0.06); /* Soft, universal background */
+    background-color: rgba(0, 0, 0, 0.06); 
     color: #475569;
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
 }
 
-/* Pushes the plus button to the far right */
 .quadrant-add-btn {
     margin-left: auto; 
     background: #FFFFFF;
-    color: #3B82F6; /* Nice modern blue */
+    color: #3B82F6; 
     border: 1px solid #E2E8F0;
     border-radius: 6px;
     width: 24px;
@@ -511,7 +494,7 @@ header h1 {
 }
 
 .quadrant-list:empty::after {
-    content: "📥\A Drop tasks here"; /* Adds the inbox icon and a line break */
+    content: "📥\A Drop tasks here"; 
     white-space: pre;
     text-align: center;
     line-height: 1.6;
@@ -525,7 +508,6 @@ header h1 {
     pointer-events: none;
 }
 
-/* Custom Vertical Resize Handle on Right Edge */
 .quadrant-resize-handle {
     position: absolute;
     top: 0;
@@ -557,16 +539,13 @@ header h1 {
     width: 6px;
 }
 
-/* Layout Grid specific defaults */
 .matrix-container.layout-grid .quadrant { 
     width: calc(50% - 12px); 
     flex-grow: 1; 
 }
 
-/* Background color for the new Notes quadrant on the board */
 #notes { background-color: #F8FAFC; border: 1px solid #E2E8F0; }
 
-/* Layout Kanban specific defaults */
 .matrix-container.layout-kanban .quadrant { 
     width: 350px; 
 }
@@ -648,9 +627,8 @@ header h1 {
     scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
 }
 
-/* Chrome, Edge, Safari */
 .task-list::-webkit-scrollbar {
-    width: 5px; /* Extremely slim */
+    width: 5px; 
 }
 .task-list::-webkit-scrollbar-track {
     background: transparent;
@@ -658,7 +636,7 @@ header h1 {
     margin-bottom: 10px;
 }
 .task-list::-webkit-scrollbar-thumb {
-    background-color: rgba(148, 163, 184, 0.4); /* Soft, semi-transparent slate */
+    background-color: rgba(148, 163, 184, 0.4); 
     border-radius: 10px;
 }
 .task-list::-webkit-scrollbar-thumb:hover {
@@ -675,18 +653,16 @@ header h1 {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     display: flex;
-    justify-content: space-between; /* Keeps actions on the right */
+    justify-content: space-between; 
     align-items: flex-start;
 }
 
-/* Smooth hover effect */
 .note:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
     border-color: #cbd5e1;
 }
 
-/* Modernize the text color (soft dark slate instead of harsh pure black) */
 .note-text {
     color: #334155;
     font-size: 14px;
@@ -704,8 +680,6 @@ header h1 {
     padding: 2px 0; 
 }
 
-/* Full text wrap for note-titles */
-/* Hashtag Pill */
 .hashtag {
     background-color: #F3E8FF;
     color: #7E22CE;
@@ -714,13 +688,12 @@ header h1 {
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
-    text-decoration: none !important; /* Removes the dotted line */
+    text-decoration: none !important; 
     display: inline-block;
     margin: 0 2px;
     letter-spacing: 0.2px;
 }
 
-/* Person Tag Pill */
 .person-tag {
     background-color: var(--person-tag-bg);
     color: var(--person-tag);
@@ -741,13 +714,11 @@ header h1 {
     background-color: var(--person-tag-hover);
 }
 
-/* Darkens the purple background slightly on hover for tactile feedback */
 .hashtag:hover { 
     background-color: #E9D5FF; 
     cursor: pointer;
 }
 
-/* Optional: Do the same for the green Person Tags! */
 .person-tag:hover {
     background-color: #BBF7D0;
     cursor: pointer;
@@ -792,21 +763,7 @@ header h1 {
     cursor: default; 
 }
 
-.sync-cloud-indicator { 
-    font-size: 14px; 
-    user-select: none; 
-}
-
-.sync-cloud-indicator.synced { color: #3B82F6; }
-.sync-cloud-indicator.pending { color: #F59E0B; animation: cloudPulse 2s infinite ease-in-out; }
-.sync-cloud-indicator.failed { color: #EF4444; font-weight: bold; }
-
-@keyframes cloudPulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
-}
-
-/* --- CALENDAR VIEW --- */
+/* Calendar View */
 #tracker-view { 
     display: none; 
     flex-grow: 1; 
@@ -850,24 +807,6 @@ header h1 {
     flex-grow: 1; 
     overflow-y: auto; 
     padding: 16px; 
-}
-
-.palette-note { 
-    background: #fff; 
-    border: 1px solid var(--border-color); 
-    padding: 12px; 
-    border-radius: 8px; 
-    margin-bottom: 8px; 
-    cursor: pointer; 
-    font-size: 13px; 
-    line-height: 1.4; 
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02); 
-    transition: transform 0.1s, border-color 0.2s; 
-}
-
-.palette-note:hover { 
-    border-color: var(--brand-primary); 
-    transform: translateY(-1px); 
 }
 
 .tracker-canvas-wrapper { 
@@ -1004,7 +943,7 @@ header h1 {
 .time-row { 
     position: absolute; 
     width: 100%; 
-    border-top: 1px solid #E2E8F0; /* Solid instead of dashed */
+    border-top: 1px solid #E2E8F0; 
     box-sizing: border-box; 
     display: flex; 
     align-items: flex-start; 
@@ -1121,11 +1060,11 @@ header h1 {
     position: absolute; 
     background: var(--brand-primary); 
     color: white; 
-    border-radius: 8px; /* Slightly rounder */
-    padding: 6px 10px; /* More breathing room */
+    border-radius: 8px; 
+    padding: 6px 10px; 
     font-size: 12px; 
     z-index: 10; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08); /* Soft shadow */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08); 
     border: 1px solid rgba(255, 255, 255, 0.4); 
     overflow: hidden; 
     cursor: pointer; 
@@ -1206,13 +1145,13 @@ header h1 {
     border-radius: 2px; 
 }
 
-/* --- Overdue Tasks Full Page View --- */
+/* Overdue View */
 #overdue-view { 
     display: none; flex-grow: 1; width: 100%; 
     overflow-y: auto; background: #ffffff; padding: 0; 
 }
 
-/* --- Settings Page View --- */
+/* Settings View */
 #settings-view { 
     display: none; 
     flex-grow: 1; 
@@ -1253,11 +1192,19 @@ header h1 {
 }
 
 .modal { 
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.5); 
+    z-index: 1000; 
+    align-items: center; 
+    justify-content: center; 
+    backdrop-filter: blur(2px);
 }
 
-/* --- Modal Entry Animation --- */
 @keyframes modalEntry {
     from {
         opacity: 0;
@@ -1290,7 +1237,6 @@ header h1 {
 .form-row-inline { display: flex; align-items: center; gap: 16px; }
 .form-row-inline label { width: 120px; font-size: 14px; font-weight: 600; color: var(--text-main); flex-shrink: 0; margin-bottom: 0; }
 
-/* WYSIWYG Editor Controls styling */
 .editor-toolbar { 
     display: flex; gap: 4px; padding: 6px 12px; background: #F8FAFC; 
     border: 1px solid var(--border-color); border-bottom: none; 
@@ -1330,7 +1276,7 @@ header h1 {
     cursor: text; pointer-events: none; display: block; 
 }
 
-/* Toast Notification System */
+/* Toast Notifications */
 #toast-container { 
     position: fixed; bottom: 24px; right: 24px; z-index: 9999; 
     display: flex; flex-direction: column; gap: 8px; pointer-events: none; 
@@ -1357,39 +1303,7 @@ header h1 {
 .spin { animation: spin 1s linear infinite; display: inline-block; }
 @keyframes spin { 100% { transform: rotate(360deg); } }
 
-/* --- MOBILE RESPONSIVENESS OVERRIDES --- */
-@media (max-width: 768px) {
-    header { flex-direction: column; align-items: stretch; padding: 16px; gap: 16px; }
-    .header-left { flex-direction: column; align-items: stretch; max-width: 100%; }
-    .search-container { flex: 1; width: 100%; }
-    .search-container input { width: 100%; }
-    .header-actions { flex-wrap: wrap; justify-content: center; width: 100%; }
-    .matrix-container.layout-grid { display: flex; flex-direction: column; min-width: 0; }
-    .matrix-container.layout-grid > .quadrant { width: 100% !important; min-height: 300px; }
-    .quadrant-resize-handle { display: none !important; }
-    .tracker-layout { flex-direction: column; }
-    .tracker-palette { width: 100%; height: 250px; flex-shrink: 0; border-right: none; border-bottom: 1px solid var(--border-color); }
-    .tracker-toolbar { flex-direction: column; align-items: stretch; }
-    .tracker-toolbar-left, .tracker-toolbar-right { justify-content: center; width: 100%; }
-    .form-row-inline { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .form-row-inline label { width: 100%; }
-    .modal-content { padding: 20px; }
-}
-
-.editor-todo-span.todo-checked {
-    background-color: #A855F7 !important;
-    border-color: #A855F7 !important;
-    font-size: 11px !important;
-    font-weight: bold !important;
-    color: #ffffff !important;
-}
-
-.editor-todo-span.todo-checked::after {
-    content: '✓';
-    line-height: 1;
-}
-
-/* --- Clickable Native <ul>/<li> Checklist Styling --- */
+/* Checklists & Tags Styling */
 ul.todo-list {
     list-style: none;
     padding-left: 0;
@@ -1405,7 +1319,6 @@ li.todo-item {
     transition: opacity 0.2s ease;
 }
 
-/* Checkbox pseudo-element */
 li.todo-item::before {
     content: '';
     position: absolute;
@@ -1420,7 +1333,6 @@ li.todo-item::before {
     transition: all 0.15s ease;
 }
 
-/* Completed State */
 li.todo-item.completed {
     text-decoration: line-through;
     color: var(--text-muted);
@@ -1440,7 +1352,6 @@ li.todo-item.completed::before {
     line-height: 1;
 }
 
-/* --- Task Palette Filter Toggle Switch --- */
 .switch {
     position: relative;
     display: inline-block;
@@ -1490,10 +1401,10 @@ input:checked + .slider:before {
 }
 
 .slider:after {
-    content: 'ALL'; /* Changed from 'OFF' */
+    content: 'ALL'; 
     color: var(--text-muted);
     position: absolute;
-    right: 8px; /* Slightly adjusted for balance */
+    right: 8px; 
     top: 50%;
     transform: translateY(-50%);
     font-size: 9px;
@@ -1503,13 +1414,12 @@ input:checked + .slider:before {
 }
 
 input:checked + .slider:after {
-    content: 'DUE'; /* Changed from 'ON' */
+    content: 'DUE'; 
     color: white;
     left: 8px;
     right: auto;
 }
 
-/* --- Doc Mode Styles --- */
 #taskModal .modal-content {
     transition: width 0.2s ease, height 0.2s ease, max-width 0.2s ease;
     display: flex;
@@ -1523,20 +1433,18 @@ input:checked + .slider:after {
     padding: 30px 40px !important;
 }
 
-/* Make the body editor stretch to fill the expanded height */
 #taskModal .modal-content.doc-mode #taskInfoInput {
     flex-grow: 1;
     min-height: 50vh;
     max-height: none;
-    font-size: 15px; /* Slightly larger text for reading comfort */
+    font-size: 15px; 
     line-height: 1.7;
     overflow-y: auto;
     padding-right: 10px;
 }
 
-/* --- Slack-Style Code Block --- */
 .editor-code-block {
-    background-color: #F1F5F9; /* Soft slate background */
+    background-color: #F1F5F9; 
     border: 1px solid #E2E8F0;
     border-radius: 8px;
     padding: 12px 16px;
@@ -1545,18 +1453,17 @@ input:checked + .slider:after {
     line-height: 1.5;
     color: #334155;
     overflow-x: auto;
-    white-space: pre-wrap; /* Allows text wrapping */
+    white-space: pre-wrap; 
     word-wrap: break-word;
     margin: 12px 0;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03); /* Subtle inner depth */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03); 
 }
 
-/* Ensure paragraph breaks immediately after the block look clean */
 .editor-code-block + div {
     margin-top: 8px;
 }
 
-/* --- Notebook / Notes View Styles --- */
+/* Notebook View Styles */
 .notebook-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -1608,7 +1515,7 @@ input:checked + .slider:after {
     overflow: hidden;
 }
 
-/* --- Google Sheets Style Project Tabs --- */
+/* Project Tabs */
 #project-tabs-bar {
     height: 40px;
     background-color: #F8FAFC;
@@ -1646,7 +1553,7 @@ input:checked + .slider:after {
     background-color: #FFFFFF;
     color: var(--brand-primary);
     border-top: 3px solid var(--brand-primary);
-    border-bottom: 1px solid #FFFFFF; /* blends into the body */
+    border-bottom: 1px solid #FFFFFF; 
 }
 .project-tab:hover {
     background-color: #FFFFFF;
@@ -1707,12 +1614,10 @@ input:checked + .slider:after {
 
 .day-content { padding: 12px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 100px; }
 
-/* Diagonal Striping for Weekends */
-.day-col.weekend { width: 100px; } /* <-- NEW: Shrinks the weekend columns */
+.day-col.weekend { width: 100px; } 
 .day-col.weekend .day-header { background: repeating-linear-gradient(45deg, #F8FAFC, #F8FAFC 10px, #FFFFFF 10px, #FFFFFF 20px); color: #64748B; padding: 16px 8px; }
 .day-col.weekend .day-content { background: repeating-linear-gradient(45deg, #F1F5F9, #F1F5F9 10px, #F8FAFC 10px, #F8FAFC 20px); }
 
-/* Out of Office (OOO) Styling */
 .day-col.ooo-day { width: 100px; } 
 .day-col.ooo-day .day-header { background: repeating-linear-gradient(45deg, #FFFBEB, #FFFBEB 10px, #FFFFFF 10px, #FFFFFF 20px); color: #D97706; padding: 16px 8px; }
 .day-col.ooo-day .day-content { background: repeating-linear-gradient(45deg, #FEF3C7, #FEF3C7 10px, #F8FAFC 10px, #F8FAFC 20px); }
@@ -1720,58 +1625,17 @@ input:checked + .slider:after {
 .ooo-btn { background: transparent; border: none; cursor: pointer; opacity: 0.3; transition: opacity 0.2s ease; padding: 0; font-size: 14px; line-height: 1; }
 .ooo-btn:hover { opacity: 0.8; }
 .ooo-btn.active { opacity: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15)); }
-/* Compact Triage Task Cards */
+
 .triage-task { 
     background: #FFFFFF; border: 1px solid var(--border-color); padding: 12px; 
     border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); font-size: 13px; 
     font-weight: 500; cursor: grab; color: #334155; line-height: 1.4; 
     transition: transform 0.15s, box-shadow 0.15s; position: relative; overflow: hidden; 
-    flex-shrink: 0; /* <-- FIX: Prevents tasks from squishing together */
+    flex-shrink: 0; 
 }
 .triage-task:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.06); border-color: #CBD5E1; }
 .triage-task:active { cursor: grabbing; }
 
-/* --- Unify Triage Tasks (Backlog/Due) with Calendar Color Scheme --- */
-.triage-task.q1 { background-color: var(--q1-bg) !important; border: 1px solid var(--q1-border) !important; border-left: 4px solid var(--q1-border) !important; color: var(--q1-text) !important; }
-.triage-task.q2 { background-color: var(--q2-bg) !important; border: 1px solid var(--q2-border) !important; border-left: 4px solid var(--q2-border) !important; color: var(--q2-text) !important; }
-.triage-task.q3 { background-color: var(--q3-bg) !important; border: 1px solid var(--q3-border) !important; border-left: 4px solid var(--q3-border) !important; color: var(--q3-text) !important; }
-.triage-task.q4 { background-color: var(--q4-bg) !important; border: 1px solid var(--q4-border) !important; border-left: 4px solid var(--q4-border) !important; color: var(--q4-text) !important; }
-
-/* In case tasks from Inbox end up in the Triage view */
-.triage-task.inbox { background-color: #EEF2FF !important; border: 1px solid #C7D2FE !important; border-left: 4px solid #818CF8 !important; color: #3730A3 !important; }
-.triage-task-meta { 
-    font-size: 11px; 
-    opacity: 0.75; /* Inherits the quadrant text color but keeps it subtle */
-    margin-top: 8px; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-}
-
-/* 3. Task Cards (Matched identically to Calendar .logged-block style) */
-.note.q1 { background-color: var(--q1-bg) !important; border: 1px solid var(--q1-border) !important; border-left: 4px solid var(--q1-border) !important; }
-.note.q1 .note-text { color: var(--q1-text) !important; }
-
-.note.q2 { background-color: var(--q2-bg) !important; border: 1px solid var(--q2-border) !important; border-left: 4px solid var(--q2-border) !important; }
-.note.q2 .note-text { color: var(--q2-text) !important; }
-
-.note.q3 { background-color: var(--q3-bg) !important; border: 1px solid var(--q3-border) !important; border-left: 4px solid var(--q3-border) !important; }
-.note.q3 .note-text { color: var(--q3-text) !important; }
-
-.note.q4 { background-color: var(--q4-bg) !important; border: 1px solid var(--q4-border) !important; border-left: 4px solid var(--q4-border) !important; }
-.note.q4 .note-text { color: var(--q4-text) !important; }
-
-/* Trays / System Cards */
-.note.inbox { background-color: #EEF2FF !important; border: 1px solid #C7D2FE !important; border-left: 4px solid #818CF8 !important; }
-.note.inbox .note-text { color: #3730A3 !important; }
-
-.note.calendar { background-color: var(--cal-bg) !important; border: 1px solid var(--cal-border) !important; border-left: 4px solid var(--cal-border) !important; }
-.note.calendar .note-text { color: var(--cal-text) !important; }
-
-.note.closed { background-color: var(--closed-bg) !important; border: 1px solid var(--closed-border) !important; border-left: 4px solid var(--closed-border) !important; }
-.note.closed .note-text { color: var(--closed-text) !important; }
-
-/* --- Hide Auxiliary Trays in Grid View --- */
 .matrix-container.layout-grid #tray-inbox,
 .matrix-container.layout-grid #tray-calendar,
 .matrix-container.layout-grid #tray-closed,
@@ -1779,7 +1643,6 @@ input:checked + .slider:after {
     display: none !important;
 }
 
-/* Ensure the core 4 quadrants take up the full balanced grid space */
 .matrix-container.layout-grid #q1,
 .matrix-container.layout-grid #q2,
 .matrix-container.layout-grid #q3,
@@ -1787,28 +1650,16 @@ input:checked + .slider:after {
     width: calc(50% - 12px) !important;
 }
 
-/* --- Unified White Task Cards (Kanban, Grid, & Triage) --- */
 .note.q1, .triage-task.q1 { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--q1-text) !important; color: #334155 !important; }
 .note.q2, .triage-task.q2 { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--q2-text) !important; color: #334155 !important; }
 .note.q3, .triage-task.q3 { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--q3-text) !important; color: #334155 !important; }
 .note.q4, .triage-task.q4 { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--q4-text) !important; color: #334155 !important; }
 
-/* Trays & System Cards */
 .note.inbox, .triage-task.inbox { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid #6366F1 !important; color: #334155 !important; }
 .note.calendar { background-color: #FFFFFF !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--cal-text) !important; color: #334155 !important; }
 .note.closed { background-color: #F8FAFC !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--closed-text) !important; color: var(--closed-text) !important; opacity: 0.7; }
 
-/* Triage Meta Text (Due Dates) */
-.triage-task-meta { 
-    font-size: 11px; 
-    color: #64748B; 
-    margin-top: 8px; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-}
-
-/* --- Timesheet Modal Styles --- */
+/* Timesheet Modal Styles */
 .timesheet-summary-container { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
 .timesheet-table { width: 100%; border-collapse: collapse; }
 .timesheet-table th, .timesheet-table td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 14px; color: #334155; }
@@ -1821,30 +1672,43 @@ input:checked + .slider:after {
 .progress-bar-fill.warning { background: #F59E0B; }
 .progress-bar-fill.danger { background: #EF4444; }
 
-/* --- Workspace Container (Maintains full width) --- */
+/* --- Workspace Container --- */
 .workspace-container {
     position: relative;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    margin-right: 48px; /* Reserves space strictly for the permanent 48px sidebar */
+    margin-right: 48px; /* Reserves space for the permanent sidebar */
+    transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* --- Sticky Right Sidebar (Permanent 48px strip) --- */
+.workspace-container.notebook-open {
+    margin-right: 448px; /* 400px drawer + 48px sidebar */
+}
+
+/* --- Sticky Right Sidebar (Anchored to main-wrapper, offset down below the quick-tags bar) --- */
 .right-sticky-sidebar {
     position: absolute;
     right: 0;
-    top: 0;
+    top: 53px; /* Matches the exact height of the quick-tags bar so it sits cleanly below it */
     width: 48px;
-    height: 100%;
+    height: calc(100% - 53px);
     background: #FFFFFF;
     border-left: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     align-items: center;
     padding-top: 16px;
-    z-index: 99;
+    z-index: 110; 
+    pointer-events: auto !important;
+    user-select: none;
+}
+
+.right-sticky-sidebar.drag-over {
+    background-color: rgba(79, 70, 229, 0.15) !important;
+    box-shadow: inset 0 0 0 2px var(--brand-primary);
 }
 
 .sidebar-icon-btn {
@@ -1879,24 +1743,24 @@ input:checked + .slider:after {
     line-height: 1;
 }
 
-/* --- Google-Style Floating Notebook Drawer Panel --- */
+/* --- Floating Notebook Drawer Panel --- */
 .notebook-drawer-panel {
     position: absolute;
-    top: 0;
-    right: -420px; /* Hidden off-screen by default */
+    top: 53px; /* Aligns with the sidebar below the quick-tags bar */
+    right: -420px; 
     width: 400px;
-    height: 100%;
+    height: calc(100% - 53px);
     background: #FFFFFF;
     border-left: 1px solid var(--border-color);
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08); /* Professional depth shadow */
-    z-index: 105; /* Floats cleanly above matrix and cards */
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08); 
+    z-index: 105; 
     display: flex;
     flex-direction: column;
     transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .notebook-drawer-panel.open {
-    right: 48px; /* Slides open and rests directly on top of the right edge */
+    right: 48px; 
 }
 
 .drawer-header {

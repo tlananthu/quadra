@@ -1,4 +1,4 @@
-let version = '4.12';
+let version = '4.13';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3682,6 +3682,7 @@ function renderSidebarNotebook() {
 // --- Drag & Drop to Quick Notebook Sidebar ---
 function allowSidebarDrop(e) {
     e.preventDefault();
+    e.dataTransfer.dropEffect = 'move'; // Explicitly tells the browser this is a valid drop target
     e.currentTarget.classList.add('drag-over');
 }
 
@@ -3711,12 +3712,12 @@ function dropToSidebar(e) {
         handleSearch();
         renderSidebarNotebook();
         
-        // Automatically open the drawer so the user gets visual feedback
+        // Automatically slide open the notebook drawer for visual feedback
         const drawer = document.getElementById('notebookDrawer');
         const workspace = document.querySelector('.workspace-container');
-        if (!drawer.classList.contains('open')) {
+        if (drawer && !drawer.classList.contains('open')) {
             drawer.classList.add('open');
-            workspace.classList.add('notebook-open');
+            if (workspace) workspace.classList.add('notebook-open');
         }
         
         showToast("✓ Moved note to Quick Notebook!");
