@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.09"]{
+[version="4.10"]{
     display:none;
 }
 
@@ -401,7 +401,7 @@ header h1 {
 /* Unified Flexbox Matrix Layout */
 .matrix-container { 
     display: flex;
-    gap: 24px; 
+    gap: 15px; 
     padding: 10px; 
     flex-grow: 1; 
     transition: all 0.3s ease; 
@@ -570,7 +570,7 @@ header h1 {
 
 /* Layout Grid specific defaults */
 .matrix-container.layout-grid .quadrant { 
-    width: calc(50% - 12px); 
+    width: calc(50% - 7.5px); 
     flex-grow: 1; 
 }
 
@@ -1795,7 +1795,7 @@ input:checked + .slider:after {
 .matrix-container.layout-grid #q2,
 .matrix-container.layout-grid #q3,
 .matrix-container.layout-grid #q4 {
-    width: calc(50% - 12px) !important;
+    width: calc(50% - 7.5px) !important;
 }
 
 /* --- Unified White Task Cards (Kanban, Grid, & Triage) --- */

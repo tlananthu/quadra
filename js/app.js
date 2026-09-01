@@ -13,7 +13,7 @@ if (!appConfig.defaultView) appConfig.defaultView = 'grid';
 if (!appConfig.primaryTz) appConfig.primaryTz = 'local';
 if (!appConfig.secondaryTz) appConfig.secondaryTz = 'none';
 if (!appConfig.quadrantOrder) {
-    appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'q4', 'tray-inbox', 'tray-calendar', 'tray-closed', 'notes'];
+    appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'q4', 'tray-inbox', 'tray-calendar', 'tray-closed'];
 } else if (!appConfig.quadrantOrder.includes('notes')) {
     // Force inject 'notes' after 'tray-inbox' for existing saved layouts
     const inboxIdx = appConfig.quadrantOrder.indexOf('tray-inbox');
@@ -2679,6 +2679,7 @@ window.addEventListener('load', () => {
     
     if (appConfig.quadrantOrder && appConfig.quadrantOrder.length > 0) {
         appConfig.quadrantOrder.forEach(id => {
+            if (id === 'notes') return;
             const el = document.getElementById(id);
             if (el) matrixContainer.appendChild(el);
         });
