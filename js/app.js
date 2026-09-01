@@ -1,4 +1,4 @@
-let version = '4.07';
+let version = '4.08';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -527,6 +527,7 @@ function openSettingsPage() {
     
     loadCalendars();
     renderScheduleSettings();
+    renderArchivedProjects();
 }
 
 function toggleCalSourceFields(source) {
@@ -1606,12 +1607,11 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         const taskModal = document.getElementById('taskModal');
         const shortcutsModal = document.getElementById('shortcutsModal');
-        if (taskModal && taskModal.style.display === 'flex') {
-            closeTaskModal();
-        }
-        if (shortcutsModal && shortcutsModal.style.display === 'flex') {
-            closeShortcutsModal();
-        }
+        const projectModal = document.getElementById('projectModal');
+
+        if (taskModal && taskModal.style.display === 'flex') closeTaskModal();
+        if (shortcutsModal && shortcutsModal.style.display === 'flex') closeShortcutsModal();
+        if (projectModal && projectModal.style.display === 'flex') closeProjectModal();
     } else if (!isEditingText) {
         if (e.shiftKey && (e.key === '?' || e.key === '/')) {
             e.preventDefault();
@@ -1781,24 +1781,32 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
         pendingTimelineContext = timelineContext || null;
     }
     
-    // --- UPDATED: Populate Project Dropdown with "All" Option ---
+    // --- UPDATED: Populate Project Dropdown with "All" Option & Archive Logic ---
     const projectInput = document.getElementById('taskProject');
     if (projectInput) {
         projectInput.innerHTML = '<option value="all">🌐 All Projects (Global)</option>';
+        
+        let assigned = 'p_default';
+        if (noteId) {
+            const activeNote = notes.find(n => n.id === noteId);
+            assigned = activeNote?.projectIds?.[0] || activeNote?.projectId || 'p_default';
+        }
+
         appConfig.projects.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id; 
-            opt.innerText = p.name;
-            projectInput.appendChild(opt);
+            // Only add if it's NOT archived, or if it IS archived but currently assigned to this task
+            if (!p.archived || p.id === assigned) {
+                const opt = document.createElement('option');
+                opt.value = p.id; 
+                opt.innerText = p.name + (p.archived ? ' (Archived)' : '');
+                projectInput.appendChild(opt);
+            }
         });
         
         if (noteId) {
-            const activeNote = notes.find(n => n.id === noteId);
-            const assigned = activeNote?.projectIds?.[0] || activeNote?.projectId || 'p_default';
             projectInput.value = assigned;
         } else {
-            // If adding a task, default to the currently visible project
-            const visibleProjects = appConfig.projects.filter(p => p.visible);
+            // If adding a task, default to the currently visible unarchived project
+            const visibleProjects = appConfig.projects.filter(p => p.visible && !p.archived);
             projectInput.value = visibleProjects.length === 1 ? visibleProjects[0].id : 'p_default';
         }
     }
@@ -2416,7 +2424,8 @@ function renderProjectTabs() {
     if (!container) return;
     container.innerHTML = '';
     
-    appConfig.projects.forEach(proj => {
+    // Only render tabs for projects that are not archived
+    appConfig.projects.filter(p => !p.archived).forEach(proj => {
         const tab = document.createElement('div');
         tab.className = `project-tab ${proj.visible ? 'active-view' : ''}`;
         
@@ -2424,17 +2433,17 @@ function renderProjectTabs() {
         cb.type = 'checkbox';
         cb.checked = proj.visible !== false;
         
-        // Checkbox toggles visibility (allows multi-select)
         cb.onclick = (e) => {
             e.stopPropagation();
             proj.visible = cb.checked;
-            if (!appConfig.projects.some(p => p.visible)) {
-                proj.visible = true; // Revert: At least one project must be visible
+            const unarchived = appConfig.projects.filter(p => !p.archived);
+            if (!unarchived.some(p => p.visible)) {
+                proj.visible = true; 
                 showToast("At least one project must be visible.");
             } else {
                 localStorage.setItem('quadra_config', JSON.stringify(appConfig));
                 renderProjectTabs();
-                handleSearch(); // Refresh the board
+                handleSearch(); 
             }
         };
         
@@ -2444,7 +2453,6 @@ function renderProjectTabs() {
         tab.appendChild(cb);
         tab.appendChild(label);
         
-        // Clicking the tab background isolates it (single-select view)
         tab.onclick = () => {
             appConfig.projects.forEach(p => p.visible = (p.id === proj.id));
             localStorage.setItem('quadra_config', JSON.stringify(appConfig));
@@ -2452,42 +2460,9 @@ function renderProjectTabs() {
             handleSearch();
         };
         
-        // --- NEW: Double-click to Rename or Delete (Allows Renaming Default) ---
         tab.ondblclick = (e) => {
             e.stopPropagation();
-            
-            const action = prompt(`Edit project '${proj.name}':\nType a new name to rename, or type 'DELETE' to remove it.`);
-            if (!action) return;
-            
-            if (action.trim().toUpperCase() === 'DELETE') {
-                // --- FIX: Prevent deletion of the fallback project, but allow renaming ---
-                if (proj.id === 'p_default') {
-                    return showToast("Cannot delete the Default project, but you can rename it.");
-                }
-
-                if (confirm(`Are you sure you want to delete '${proj.name}'? All associated tasks will be moved to your primary project.`)) {
-                    // Migrate orphaned tasks
-                    notes.forEach(n => { 
-                        if (n.projectId === proj.id) {
-                            n.projectId = 'p_default';
-                            n.dirty = true;
-                        }
-                    });
-                    saveNotes();
-                    
-                    // Remove the project and ensure UI safety
-                    appConfig.projects = appConfig.projects.filter(p => p.id !== proj.id);
-                    if (!appConfig.projects.some(p => p.visible)) appConfig.projects[0].visible = true;
-                    
-                    localStorage.setItem('quadra_config', JSON.stringify(appConfig));
-                    renderProjectTabs();
-                    handleSearch();
-                }
-            } else {
-                proj.name = action.trim();
-                localStorage.setItem('quadra_config', JSON.stringify(appConfig));
-                renderProjectTabs();
-            }
+            openProjectModal(proj.id);
         };
         
         container.appendChild(tab);
@@ -2511,19 +2486,16 @@ function addNewProject() {
 function isProjectVisible(note) {
     if (!note) return false;
     
-    // Normalize into an array of project IDs
     let pIds = note.projectIds;
     if (!pIds) {
         pIds = note.projectId ? [note.projectId] : ['p_default'];
     }
 
-    // Wildcard: visible across all project tabs
     if (pIds.includes('all')) return true;
 
-    // Check if at least one assigned project is currently visible
     return pIds.some(pid => {
         const p = appConfig.projects.find(proj => proj.id === pid);
-        return p ? p.visible !== false : false;
+        return p ? (!p.archived && p.visible !== false) : false;
     });
 }
 
@@ -3620,5 +3592,140 @@ async function pushWeekToTargetCalendar() {
         showToast("❌ Failed to sync to Target Calendar.");
     } finally {
         if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+    }
+}
+
+function renderArchivedProjects() {
+    const container = document.getElementById('archivedProjectsList');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const archived = appConfig.projects.filter(p => p.archived);
+    if (archived.length === 0) {
+        container.innerHTML = '<p style="font-size: 13px; color: var(--text-muted);">No archived projects.</p>';
+        return;
+    }
+    
+    archived.forEach(proj => {
+        const div = document.createElement('div');
+        div.className = 'form-row-inline';
+        div.style.marginBottom = '8px';
+        div.innerHTML = `
+            <span style="flex:1; font-weight:600; font-size: 13px; color: var(--text-main);">${proj.name}</span>
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="unarchiveProject('${proj.id}')">Restore</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function unarchiveProject(id) {
+    const proj = appConfig.projects.find(p => p.id === id);
+    if (proj) {
+        proj.archived = false;
+        localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+        renderProjectTabs();
+        renderArchivedProjects();
+        handleSearch();
+        showToast(`Project '${proj.name}' restored.`);
+    }
+}
+
+let currentEditingProjectId = null;
+
+function openProjectModal(projectId) {
+    const proj = appConfig.projects.find(p => p.id === projectId);
+    if (!proj) return;
+    
+    currentEditingProjectId = projectId;
+    const modal = document.getElementById('projectModal');
+    const input = document.getElementById('editProjectNameInput');
+    const btnDelete = document.getElementById('btnDeleteProject');
+    const btnArchive = document.getElementById('btnArchiveProject');
+    
+    input.value = proj.name;
+    
+    // Hide dangerous actions for the Default project
+    if (proj.id === 'p_default') {
+        btnDelete.style.display = 'none';
+        btnArchive.style.display = 'none';
+    } else {
+        btnDelete.style.display = 'inline-block';
+        btnArchive.style.display = 'inline-block';
+    }
+    
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 100);
+}
+
+function closeProjectModal() {
+    currentEditingProjectId = null;
+    document.getElementById('projectModal').style.display = 'none';
+}
+
+function saveProjectModal() {
+    if (!currentEditingProjectId) return;
+    
+    const input = document.getElementById('editProjectNameInput');
+    const newName = input.value.trim();
+    if (!newName) return showToast("Project name cannot be empty.");
+    
+    const proj = appConfig.projects.find(p => p.id === currentEditingProjectId);
+    if (proj) {
+        proj.name = newName;
+        localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+        renderProjectTabs();
+    }
+    
+    closeProjectModal();
+}
+
+function archiveProjectFromModal() {
+    if (!currentEditingProjectId || currentEditingProjectId === 'p_default') return;
+    
+    const proj = appConfig.projects.find(p => p.id === currentEditingProjectId);
+    if (proj) {
+        proj.archived = true;
+        proj.visible = false;
+        
+        const unarchived = appConfig.projects.filter(p => !p.archived);
+        if (!unarchived.some(p => p.visible) && unarchived.length > 0) {
+            unarchived[0].visible = true;
+        }
+        
+        localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+        renderProjectTabs();
+        handleSearch();
+        showToast(`Project '${proj.name}' archived.`);
+    }
+    closeProjectModal();
+}
+
+function deleteProjectFromModal() {
+    if (!currentEditingProjectId || currentEditingProjectId === 'p_default') return;
+    
+    const proj = appConfig.projects.find(p => p.id === currentEditingProjectId);
+    if (!proj) return;
+    
+    if (confirm(`Are you sure you want to delete '${proj.name}'? All associated tasks will be moved to your primary project.`)) {
+        notes.forEach(n => { 
+            if (n.projectId === proj.id || (n.projectIds && n.projectIds.includes(proj.id))) {
+                n.projectId = 'p_default';
+                n.projectIds = ['p_default'];
+                n.dirty = true;
+            }
+        });
+        saveNotes();
+        
+        appConfig.projects = appConfig.projects.filter(p => p.id !== proj.id);
+        const unarchived = appConfig.projects.filter(p => !p.archived);
+        if (!unarchived.some(p => p.visible) && unarchived.length > 0) unarchived[0].visible = true;
+        
+        localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+        renderProjectTabs();
+        handleSearch();
+        closeProjectModal();
     }
 }
