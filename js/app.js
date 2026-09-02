@@ -1,4 +1,4 @@
-let version = '4.14';
+let version = '4.15';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2529,48 +2529,74 @@ function renderNotes(searchQuery = '') {
         if (el) el.innerHTML = ''; 
     });
     
+    // 1. Filter out deleted, hidden projects, etc.
     let filteredNotes = notes.filter(note => {
         if (note.deleted) return false;
-        
         if (!isProjectVisible(note)) return false;
         
         const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-        
-        // Apply Global Due Only Filter (Exempting Notes and Calendar Events)
         const dueToggle = document.getElementById('dueFilterToggle');
         if (dueToggle && dueToggle.checked && !note.dueDate && note.quadrant !== 'notes' && !isCalendarEvent) {
             return false; 
         }
-
-        // Apply the search query to EVERYTHING (including calendar events)
         return matchesSearchQuery(note.text, searchQuery);
     });
 
-    filteredNotes.sort((a, b) => { if (!a.dueDate && !b.dueDate) return 0; if (!a.dueDate) return -1; if (!b.dueDate) return 1; return a.dueDate.localeCompare(b.dueDate); });
-
+    // 2. Group into Bins & Count
     let filteredCounts = { q1: 0, q2: 0, q3: 0, q4: 0, inbox: 0, calendar: 0, notes: 0, closed: 0 };
+    let bins = { q1: [], q2: [], q3: [], q4: [], inbox: [], calendar: [], notes: [], closed: [] };
 
     filteredNotes.forEach(note => {
-        let targetListId = `list-${note.quadrant}`;
-        if (note.eventId) {
-            targetListId = 'list-calendar';
+        let targetQuad = note.eventId ? 'calendar' : note.quadrant;
+        if (bins[targetQuad]) bins[targetQuad].push(note);
+        
+        const matchesSearch = matchesSearchQuery(note.text, searchQuery);
+        if (note.status === 'active' && !note.eventId && filteredCounts[note.quadrant] !== undefined && matchesSearch) {
+            filteredCounts[note.quadrant]++;
         }
-        const list = document.getElementById(targetListId);
-        if (list) {
-            const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-            const matchesSearch = matchesSearchQuery(note.text, searchQuery);
-            
-            if (note.status === 'active' && !note.eventId && filteredCounts[note.quadrant] !== undefined && matchesSearch) {
-                filteredCounts[note.quadrant]++;
-            }
-            if (note.eventId && filteredCounts['calendar'] !== undefined) {
-                filteredCounts['calendar']++;
-            }
-            if (note.quadrant === 'inbox' && filteredCounts['inbox'] !== undefined && matchesSearch) {
-                filteredCounts['inbox']++;
-            }
+        if (note.eventId && filteredCounts['calendar'] !== undefined) {
+            filteredCounts['calendar']++;
+        }
+        if (note.quadrant === 'inbox' && filteredCounts['inbox'] !== undefined && matchesSearch) {
+            filteredCounts['inbox']++;
+        }
+    });
 
-            const noteEl = document.createElement('div'); noteEl.className = 'note' + (note.status === 'closed' ? ' closed-note' : '');
+    if (!appConfig.sortPrefs) appConfig.sortPrefs = {};
+
+    // 3. Sort each bin individually and render
+    ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'notes', 'closed'].forEach(q => {
+        let list = document.getElementById(`list-${q}`);
+        if (!list) return;
+
+        // Default: Notes sort newest first, everything else sorts by impending due date
+        let pref = appConfig.sortPrefs[q] || (q === 'notes' ? 'created_desc' : 'due_asc');
+        let [sortBy, sortDir] = pref.split('_');
+
+        bins[q].sort((a, b) => {
+            if (sortBy === 'title') {
+                let valA = cleanHTMLToPlainText(a.text).split('\n')[0].toLowerCase();
+                let valB = cleanHTMLToPlainText(b.text).split('\n')[0].toLowerCase();
+                return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else if (sortBy === 'created') {
+                // Task IDs are generated via Date.now(), so they natively represent created time
+                let valA = parseFloat(a.id) || 0;
+                let valB = parseFloat(b.id) || 0;
+                return sortDir === 'asc' ? valA - valB : valB - valA;
+            } else { 
+                // Due Date logic: Tasks without due dates safely sink to the bottom
+                if (!a.dueDate && !b.dueDate) return 0;
+                if (!a.dueDate) return 1; 
+                if (!b.dueDate) return -1;
+                return sortDir === 'asc' ? a.dueDate.localeCompare(b.dueDate) : b.dueDate.localeCompare(a.dueDate);
+            }
+        });
+
+        bins[q].forEach(note => {
+            const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
+            const noteEl = document.createElement('div'); 
+            noteEl.className = 'note' + (note.status === 'closed' ? ' closed-note' : '');
+            
             if (note.status === 'active' && !note.eventId) { 
                 noteEl.draggable = true; 
                 noteEl.ondragstart = (e) => {
@@ -2579,7 +2605,8 @@ function renderNotes(searchQuery = '') {
                 }; 
             }
 
-            const contentWrapper = document.createElement('div'); contentWrapper.className = 'note-content-wrapper';
+            const contentWrapper = document.createElement('div'); 
+            contentWrapper.className = 'note-content-wrapper';
             
             let overdueIndicator = '';
             if (!isCalendarEvent && note.status === 'active' && note.dueDate) {
@@ -2595,30 +2622,23 @@ function renderNotes(searchQuery = '') {
             if (note.dueDate) contentWrapper.innerHTML += `<div style="font-size:12px; color:var(--brand-primary); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>`;
             
             contentWrapper.onclick = (e) => openTaskModal(null, note.id, e);
-            
             noteEl.append(contentWrapper);
 
-            // --- REVISED: Actions Div Logic ---
             if (!note.eventId) {
-                // If it's closed, we still show Restore and Delete buttons
                 if (note.status !== 'active') {
                     const actionsDiv = document.createElement('div'); 
                     actionsDiv.className = 'note-actions';
                     actionsDiv.innerHTML = `<button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×</button>`;
                     noteEl.append(actionsDiv);
                 }
-                // (Active tasks no longer receive an actionsDiv, stripping the complete & sync elements)
             } else {
-                // Calendar events still show the Delete button
                 const actionsDiv = document.createElement('div'); 
                 actionsDiv.className = 'note-actions';
                 actionsDiv.innerHTML = `<button class="action-btn delete-btn" onclick="deleteTask('${note.id}')" title="Remove event">×</button>`;
                 noteEl.append(actionsDiv);
             }
-            // ----------------------------------
-            
             list.appendChild(noteEl);
-        }
+        });
     });
 
     document.getElementById('badge-q1').innerText = filteredCounts.q1;
@@ -2671,6 +2691,15 @@ function triggerImport() { document.getElementById('importFile').click(); }
 function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const importedNotes = JSON.parse(e.target.result); if (Array.isArray(importedNotes)) { const noteMap = new Map(notes.map(n => [n.id, n])); importedNotes.forEach(inNote => { inNote.dirty = true; noteMap.set(inNote.id, inNote); }); notes = Array.from(noteMap.values()); saveNotes(); handleSearch(); showToast("Tasks merged!"); closeSettingsPage(); } else showToast("Invalid format."); } catch (err) { showToast("Error reading file."); } event.target.value = ''; }; reader.readAsText(file); }
 
 window.addEventListener('load', () => {
+
+    if (!appConfig.sortPrefs) appConfig.sortPrefs = {};
+    ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'notes', 'closed'].forEach(q => {
+        const sel = document.getElementById(`sort-${q}`);
+        if (sel) {
+            sel.value = appConfig.sortPrefs[q] || (q === 'notes' ? 'created_desc' : 'due_asc');
+        }
+    });
+    
     renderProjectTabs();
     
     const matrixContainer = document.getElementById('matrix');
@@ -3752,4 +3781,49 @@ function deleteProjectFromModal() {
         handleSearch();
         closeProjectModal();
     }
+}
+
+// --- SORTING ENGINE ---
+function toggleSortMenu(quadrant, event) {
+    event.stopPropagation();
+    
+    // Close other open menus
+    document.querySelectorAll('.dropdown-content').forEach(menu => {
+        if (menu.id !== `sort-menu-${quadrant}`) {
+            menu.classList.remove('show');
+        }
+    });
+
+    const menu = document.getElementById(`sort-menu-${quadrant}`);
+    if (menu) {
+        menu.classList.toggle('show');
+        
+        // Highlight active sort option
+        let pref = appConfig.sortPrefs[quadrant] || (quadrant === 'notes' ? 'created_desc' : 'due_asc');
+        Array.from(menu.children).forEach(child => {
+            if (child.getAttribute('onclick').includes(pref)) {
+                child.classList.add('active-sort');
+            } else {
+                child.classList.remove('active-sort');
+            }
+        });
+    }
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.custom-dropdown')) {
+        document.querySelectorAll('.dropdown-content.show').forEach(m => m.classList.remove('show'));
+    }
+});
+
+function changeSort(quadrant, val) {
+    if (!appConfig.sortPrefs) appConfig.sortPrefs = {};
+    appConfig.sortPrefs[quadrant] = val;
+    localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+    
+    const menu = document.getElementById(`sort-menu-${quadrant}`);
+    if (menu) menu.classList.remove('show');
+    
+    handleSearch(); // Trigger re-render with new sort
 }

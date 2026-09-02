@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v4.14</span>
+                    <span class="version-badge">v4.15</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -64,9 +64,10 @@
             <div class="overlay-actions" id="overlay-actions"></div>
         </div>
 
+        <!-- Quick Tags Bar spanning full width ABOVE the split -->
         <div id="quick-tags-bar" class="tags-bar"></div>
 
-        <!-- NEW: Horizontal Splitter for Sidebar -->
+        <!-- Horizontal Splitter for Sidebar -->
         <div style="display: flex; flex-grow: 1; overflow: hidden; width: 100%;">
             
             <!-- LEFT AREA: Main Content & Views -->
@@ -75,43 +76,104 @@
                 <div id="matrix" class="matrix-container layout-grid">
                     
                     <div class="quadrant" id="q1" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header"><h2>Do First <span class="q-badge" id="badge-q1">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q1')">+</button></div></div>
+                        <div class="q-header">
+                            <h2>Do First <span class="q-badge" id="badge-q1">0</span></h2>
+                            <div class="header-buttons">
+                                <div class="custom-dropdown">
+                                    <button class="icon-btn" onclick="toggleSortMenu('q1', event)" title="Sort Tasks">⇅</button>
+                                    <div id="sort-menu-q1" class="dropdown-content"><div onclick="changeSort('q1', 'due_asc')">Due ↑</div><div onclick="changeSort('q1', 'due_desc')">Due ↓</div><div onclick="changeSort('q1', 'created_asc')">Created ↑</div><div onclick="changeSort('q1', 'created_desc')">Created ↓</div><div onclick="changeSort('q1', 'title_asc')">Title A-Z</div><div onclick="changeSort('q1', 'title_desc')">Title Z-A</div></div>
+                                </div>
+                                <button class="icon-btn add-btn" onclick="openTaskModal('q1')">+</button>
+                            </div>
+                        </div>
                         <div class="task-list" id="list-q1"></div>
                         <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q1')" title="Drag edge to resize width"></div>
                     </div>
                     
                     <div class="quadrant" id="q2" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header"><h2>Schedule <span class="q-badge" id="badge-q2">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q2')">+</button></div></div>
+                        <div class="q-header">
+                            <h2>Schedule <span class="q-badge" id="badge-q2">0</span></h2>
+                            <div class="header-buttons">
+                                <div class="custom-dropdown">
+                                    <button class="icon-btn" onclick="toggleSortMenu('q2', event)" title="Sort Tasks">⇅</button>
+                                    <div id="sort-menu-q2" class="dropdown-content"><div onclick="changeSort('q2', 'due_asc')">Due ↑</div><div onclick="changeSort('q2', 'due_desc')">Due ↓</div><div onclick="changeSort('q2', 'created_asc')">Created ↑</div><div onclick="changeSort('q2', 'created_desc')">Created ↓</div><div onclick="changeSort('q2', 'title_asc')">Title A-Z</div><div onclick="changeSort('q2', 'title_desc')">Title Z-A</div></div>
+                                </div>
+                                <button class="icon-btn add-btn" onclick="openTaskModal('q2')">+</button>
+                            </div>
+                        </div>
                         <div class="task-list" id="list-q2"></div>
                         <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q2')" title="Drag edge to resize width"></div>
                     </div>
                     
                     <div class="quadrant" id="q3" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header"><h2>Delegate <span class="q-badge" id="badge-q3">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q3')">+</button></div></div>
+                        <div class="q-header">
+                            <h2>Delegate <span class="q-badge" id="badge-q3">0</span></h2>
+                            <div class="header-buttons">
+                                <div class="custom-dropdown">
+                                    <button class="icon-btn" onclick="toggleSortMenu('q3', event)" title="Sort Tasks">⇅</button>
+                                    <div id="sort-menu-q3" class="dropdown-content"><div onclick="changeSort('q3', 'due_asc')">Due ↑</div><div onclick="changeSort('q3', 'due_desc')">Due ↓</div><div onclick="changeSort('q3', 'created_asc')">Created ↑</div><div onclick="changeSort('q3', 'created_desc')">Created ↓</div><div onclick="changeSort('q3', 'title_asc')">Title A-Z</div><div onclick="changeSort('q3', 'title_desc')">Title Z-A</div></div>
+                                </div>
+                                <button class="icon-btn add-btn" onclick="openTaskModal('q3')">+</button>
+                            </div>
+                        </div>
                         <div class="task-list" id="list-q3"></div>
                         <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q3')" title="Drag edge to resize width"></div>
                     </div>
                     
                     <div class="quadrant" id="q4" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header"><h2>Later <span class="q-badge" id="badge-q4">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('q4')">+</button></div></div>
+                        <div class="q-header">
+                            <h2>Later <span class="q-badge" id="badge-q4">0</span></h2>
+                            <div class="header-buttons">
+                                <div class="custom-dropdown">
+                                    <button class="icon-btn" onclick="toggleSortMenu('q4', event)" title="Sort Tasks">⇅</button>
+                                    <div id="sort-menu-q4" class="dropdown-content"><div onclick="changeSort('q4', 'due_asc')">Due ↑</div><div onclick="changeSort('q4', 'due_desc')">Due ↓</div><div onclick="changeSort('q4', 'created_asc')">Created ↑</div><div onclick="changeSort('q4', 'created_desc')">Created ↓</div><div onclick="changeSort('q4', 'title_asc')">Title A-Z</div><div onclick="changeSort('q4', 'title_desc')">Title Z-A</div></div>
+                                </div>
+                                <button class="icon-btn add-btn" onclick="openTaskModal('q4')">+</button>
+                            </div>
+                        </div>
                         <div class="task-list" id="list-q4"></div>
                         <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q4')" title="Drag edge to resize width"></div>
                     </div>
 
                     <div class="quadrant" id="tray-inbox" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header"><h2>Inbox <span class="q-badge" id="badge-inbox">0</span></h2><div class="header-buttons"><button class="icon-btn add-btn" onclick="openTaskModal('inbox')">+</button></div></div>
+                        <div class="q-header">
+                            <h2>Inbox <span class="q-badge" id="badge-inbox">0</span></h2>
+                            <div class="header-buttons">
+                                <div class="custom-dropdown">
+                                    <button class="icon-btn" onclick="toggleSortMenu('inbox', event)" title="Sort Tasks">⇅</button>
+                                    <div id="sort-menu-inbox" class="dropdown-content"><div onclick="changeSort('inbox', 'due_asc')">Due ↑</div><div onclick="changeSort('inbox', 'due_desc')">Due ↓</div><div onclick="changeSort('inbox', 'created_asc')">Created ↑</div><div onclick="changeSort('inbox', 'created_desc')">Created ↓</div><div onclick="changeSort('inbox', 'title_asc')">Title A-Z</div><div onclick="changeSort('inbox', 'title_desc')">Title Z-A</div></div>
+                                </div>
+                                <button class="icon-btn add-btn" onclick="openTaskModal('inbox')">+</button>
+                            </div>
+                        </div>
                         <div class="task-list" id="list-inbox"></div>
                         <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-inbox')" title="Drag edge to resize width"></div>
                     </div>
                     
                     <div class="quadrant" id="tray-calendar" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header"><h2>Calendar Events <span class="q-badge" id="badge-calendar">0</span></h2></div>
+                        <div class="q-header">
+                            <h2>Calendar Events <span class="q-badge" id="badge-calendar">0</span></h2>
+                            <div class="header-buttons">
+                                <div class="custom-dropdown">
+                                    <button class="icon-btn" onclick="toggleSortMenu('calendar', event)" title="Sort Tasks">⇅</button>
+                                    <div id="sort-menu-calendar" class="dropdown-content"><div onclick="changeSort('calendar', 'due_asc')">Due ↑</div><div onclick="changeSort('calendar', 'due_desc')">Due ↓</div><div onclick="changeSort('calendar', 'created_asc')">Created ↑</div><div onclick="changeSort('calendar', 'created_desc')">Created ↓</div><div onclick="changeSort('calendar', 'title_asc')">Title A-Z</div><div onclick="changeSort('calendar', 'title_desc')">Title Z-A</div></div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="task-list" id="list-calendar"></div>
                         <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-calendar')" title="Drag edge to resize width"></div>
                     </div>
 
                     <div class="quadrant" id="tray-closed" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header"><h2>Completed <span class="q-badge" id="badge-closed">0</span></h2></div>
+                        <div class="q-header">
+                            <h2>Completed <span class="q-badge" id="badge-closed">0</span></h2>
+                            <div class="header-buttons">
+                                <div class="custom-dropdown">
+                                    <button class="icon-btn" onclick="toggleSortMenu('closed', event)" title="Sort Tasks">⇅</button>
+                                    <div id="sort-menu-closed" class="dropdown-content"><div onclick="changeSort('closed', 'due_asc')">Due ↑</div><div onclick="changeSort('closed', 'due_desc')">Due ↓</div><div onclick="changeSort('closed', 'created_asc')">Created ↑</div><div onclick="changeSort('closed', 'created_desc')">Created ↓</div><div onclick="changeSort('closed', 'title_asc')">Title A-Z</div><div onclick="changeSort('closed', 'title_desc')">Title Z-A</div></div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="task-list" id="list-closed"></div>
                         <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-closed')" title="Drag edge to resize width"></div>
                     </div>
@@ -423,6 +485,10 @@
                 <div class="q-header" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" style="border-top: none; background: #FFFFFF; border-radius: 0;">
                     <h2>📓 Notebook <span class="q-badge" id="badge-notes">0</span></h2>
                     <div class="header-buttons">
+                        <div class="custom-dropdown">
+                            <button class="icon-btn" onclick="toggleSortMenu('notes', event)" title="Sort Tasks">⇅</button>
+                            <div id="sort-menu-notes" class="dropdown-content"><div onclick="changeSort('notes', 'due_asc')">Due ↑</div><div onclick="changeSort('notes', 'due_desc')">Due ↓</div><div onclick="changeSort('notes', 'created_asc')">Created ↑</div><div onclick="changeSort('notes', 'created_desc')">Created ↓</div><div onclick="changeSort('notes', 'title_asc')">Title A-Z</div><div onclick="changeSort('notes', 'title_desc')">Title Z-A</div></div>
+                        </div>
                         <button class="icon-btn add-btn" onclick="openTaskModal('notes', null, event)" title="Add Note">+</button>
                     </div>
                 </div>
@@ -438,7 +504,6 @@
 
     <div id="taskModal" class="modal">
         <div class="modal-content">
-            <!-- NEW: Modal Header wrapper with Doc Mode Toggle -->
             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px;">
                 <h3 id="taskModalTitle" style="margin: 0; font-size: 18px; font-weight: 700;">Task Details</h3>
                 <div style="display: flex; gap: 12px; align-items: center;">

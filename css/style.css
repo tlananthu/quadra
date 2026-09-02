@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.14"]{
+[version="4.15"]{
     display:none;
 }
 
@@ -16,7 +16,7 @@
     --q1-bg: #FFE4E6; --q1-border: #FDA4AF; --q1-text: #9F1239;
     --q2-bg: #E0F2FE; --q2-border: #7DD3FC; --q2-text: #0369A1;
     --q3-bg: #FEF3C7; --q3-border: #FCD34D; --q3-text: #B45309;
-    --q4-bg: #F8FAFC; --q4-border: #94A3B8; --q4-text: #334155; /* Fixed from #2e363d */
+    --q4-bg: #F8FAFC; --q4-border: #94A3B8; --q4-text: #334155; 
     
     /* Missing Timeline Colors */
     --cal-bg: #F3E8FF; --cal-border: #D8B4FE; --cal-text: #6B21A8;
@@ -37,14 +37,12 @@
 }
 
 body { 
-    /*background-color: var(--bg-main); 
-    color: var(--text-main); */
     height: 100vh; 
     display: flex; 
     flex-direction: column; 
     overflow: hidden; 
-    background-color: #F8FAFC; /* Soft slate/gray */
-    color: #0F172A; /* Crisp, dark slate text */
+    background-color: #F8FAFC; 
+    color: #0F172A; 
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
 }
@@ -96,11 +94,10 @@ header {
 }
 
 /* --- Unified Header Buttons --- */
-/* Target the buttons inside that middle group */
 .header-action-group button {
     background-color: #FFFFFF;
     border: 1px solid #E2E8F0;
-    border-radius: 8px; /* Soft squares instead of circles */
+    border-radius: 8px; 
     width: 36px;
     height: 36px;
     display: flex;
@@ -110,10 +107,9 @@ header {
     box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     transition: all 0.15s ease;
     cursor: pointer;
-    margin-left: 6px; /* Space them out slightly */
+    margin-left: 6px; 
 }
 
-/* Remove the pill-shaped background from their parent container if it exists */
 .header-action-group {
     background: transparent !important;
     border: none !important;
@@ -189,7 +185,6 @@ header h1 {
     transition: all 0.2s ease;
 }
 
-/* Adds a sleek blue glow and crisp border when actively typing */
 #searchHeaderContainer input:focus {
     background-color: #FFFFFF;
     border-color: #3B82F6;
@@ -237,7 +232,7 @@ header h1 {
 .header-action-btn {
     width: 36px;
     height: 36px;
-    border-radius: 8px; /* Consistent soft square */
+    border-radius: 8px; 
     border: 1px solid #E2E8F0;
     background: #FFFFFF;
     color: #475569;
@@ -293,7 +288,7 @@ header h1 {
     color: white; 
     border: none; 
     padding: 8px 16px; 
-    border-radius: 8px; /* Changed from 6px to 8px to match icon buttons */
+    border-radius: 8px; 
     cursor: pointer; 
     font-weight: 500; 
     font-size: 14px; 
@@ -332,8 +327,8 @@ header h1 {
 
 .tags-bar { 
     display: flex; 
-    align-items: center; /* Vertically centers the text and tags */
-    min-height: 52px;    /* Locks the exact height of the bar when tags are present */
+    align-items: center; 
+    min-height: 52px;    
     gap: 8px; 
     padding: 12px 32px; 
     background: #ffffff; 
@@ -348,7 +343,6 @@ header h1 {
     display: none; 
 }
 
-/* Replaces the old display: none rule to show the placeholder instead */
 .tags-bar:empty::before {
     content: "Your tags will appear here";
     color: var(--text-muted);
@@ -419,12 +413,11 @@ header h1 {
 
 .matrix-container.layout-kanban { 
     flex-wrap: nowrap; 
-    align-items: stretch; /* Forces columns to stretch to the bottom */
+    align-items: stretch; 
     padding-bottom: 10px;
-    overflow-y: hidden; /* Prevents the whole canvas from scrolling vertically */
+    overflow-y: hidden; 
 }
 
-/* Locks the kanban columns to the exact height of the container to force internal scrolling */
 .matrix-container.layout-kanban .quadrant {
     height: 100%;
     max-height: 100%;
@@ -482,22 +475,20 @@ header h1 {
 #tray-closed { border-top: 4px solid var(--closed-border); }
 #notes { border-top: 4px solid #94A3B8; }
 
-/* The counter pill next to the title */
 .quadrant-badge {
     margin-left: 8px;
     padding: 2px 8px;
-    background-color: rgba(0, 0, 0, 0.06); /* Soft, universal background */
+    background-color: rgba(0, 0, 0, 0.06); 
     color: #475569;
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
 }
 
-/* Pushes the plus button to the far right */
 .quadrant-add-btn {
     margin-left: auto; 
     background: #FFFFFF;
-    color: #3B82F6; /* Nice modern blue */
+    color: #3B82F6; 
     border: 1px solid #E2E8F0;
     border-radius: 6px;
     width: 24px;
@@ -522,7 +513,7 @@ header h1 {
 }
 
 .quadrant-list:empty::after {
-    content: "📥\A Drop tasks here"; /* Adds the inbox icon and a line break */
+    content: "📥\A Drop tasks here"; 
     white-space: pre;
     text-align: center;
     line-height: 1.6;
@@ -661,7 +652,7 @@ header h1 {
 
 /* Chrome, Edge, Safari */
 .task-list::-webkit-scrollbar {
-    width: 5px; /* Extremely slim */
+    width: 5px; 
 }
 .task-list::-webkit-scrollbar-track {
     background: transparent;
@@ -669,7 +660,7 @@ header h1 {
     margin-bottom: 10px;
 }
 .task-list::-webkit-scrollbar-thumb {
-    background-color: rgba(148, 163, 184, 0.4); /* Soft, semi-transparent slate */
+    background-color: rgba(148, 163, 184, 0.4); 
     border-radius: 10px;
 }
 .task-list::-webkit-scrollbar-thumb:hover {
@@ -686,7 +677,7 @@ header h1 {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     display: flex;
-    justify-content: space-between; /* Keeps actions on the right */
+    justify-content: space-between; 
     align-items: flex-start;
 }
 
@@ -697,7 +688,6 @@ header h1 {
     border-color: #cbd5e1;
 }
 
-/* Modernize the text color (soft dark slate instead of harsh pure black) */
 .note-text {
     color: #334155;
     font-size: 14px;
@@ -715,7 +705,6 @@ header h1 {
     padding: 2px 0; 
 }
 
-/* Full text wrap for note-titles */
 /* Hashtag Pill */
 .hashtag {
     background-color: #F3E8FF;
@@ -725,7 +714,7 @@ header h1 {
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
-    text-decoration: none !important; /* Removes the dotted line */
+    text-decoration: none !important; 
     display: inline-block;
     margin: 0 2px;
     letter-spacing: 0.2px;
@@ -752,13 +741,11 @@ header h1 {
     background-color: var(--person-tag-hover);
 }
 
-/* Darkens the purple background slightly on hover for tactile feedback */
 .hashtag:hover { 
     background-color: #E9D5FF; 
     cursor: pointer;
 }
 
-/* Optional: Do the same for the green Person Tags! */
 .person-tag:hover {
     background-color: #BBF7D0;
     cursor: pointer;
@@ -1015,7 +1002,7 @@ header h1 {
 .time-row { 
     position: absolute; 
     width: 100%; 
-    border-top: 1px solid #E2E8F0; /* Solid instead of dashed */
+    border-top: 1px solid #E2E8F0; 
     box-sizing: border-box; 
     display: flex; 
     align-items: flex-start; 
@@ -1132,11 +1119,11 @@ header h1 {
     position: absolute; 
     background: var(--brand-primary); 
     color: white; 
-    border-radius: 8px; /* Slightly rounder */
-    padding: 6px 10px; /* More breathing room */
+    border-radius: 8px; 
+    padding: 6px 10px; 
     font-size: 12px; 
     z-index: 10; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08); /* Soft shadow */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08); 
     border: 1px solid rgba(255, 255, 255, 0.4); 
     overflow: hidden; 
     cursor: pointer; 
@@ -1501,10 +1488,10 @@ input:checked + .slider:before {
 }
 
 .slider:after {
-    content: 'ALL'; /* Changed from 'OFF' */
+    content: 'ALL'; 
     color: var(--text-muted);
     position: absolute;
-    right: 8px; /* Slightly adjusted for balance */
+    right: 8px; 
     top: 50%;
     transform: translateY(-50%);
     font-size: 9px;
@@ -1514,7 +1501,7 @@ input:checked + .slider:before {
 }
 
 input:checked + .slider:after {
-    content: 'DUE'; /* Changed from 'ON' */
+    content: 'DUE'; 
     color: white;
     left: 8px;
     right: auto;
@@ -1539,7 +1526,7 @@ input:checked + .slider:after {
     flex-grow: 1;
     min-height: 50vh;
     max-height: none;
-    font-size: 15px; /* Slightly larger text for reading comfort */
+    font-size: 15px; 
     line-height: 1.7;
     overflow-y: auto;
     padding-right: 10px;
@@ -1547,7 +1534,7 @@ input:checked + .slider:after {
 
 /* --- Slack-Style Code Block --- */
 .editor-code-block {
-    background-color: #F1F5F9; /* Soft slate background */
+    background-color: #F1F5F9; 
     border: 1px solid #E2E8F0;
     border-radius: 8px;
     padding: 12px 16px;
@@ -1556,10 +1543,10 @@ input:checked + .slider:after {
     line-height: 1.5;
     color: #334155;
     overflow-x: auto;
-    white-space: pre-wrap; /* Allows text wrapping */
+    white-space: pre-wrap; 
     word-wrap: break-word;
     margin: 12px 0;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03); /* Subtle inner depth */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03); 
 }
 
 /* Ensure paragraph breaks immediately after the block look clean */
@@ -1657,7 +1644,7 @@ input:checked + .slider:after {
     background-color: #FFFFFF;
     color: var(--brand-primary);
     border-top: 3px solid var(--brand-primary);
-    border-bottom: 1px solid #FFFFFF; /* blends into the body */
+    border-bottom: 1px solid #FFFFFF; 
 }
 .project-tab:hover {
     background-color: #FFFFFF;
@@ -1719,7 +1706,7 @@ input:checked + .slider:after {
 .day-content { padding: 12px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 100px; }
 
 /* Diagonal Striping for Weekends */
-.day-col.weekend { width: 100px; } /* <-- NEW: Shrinks the weekend columns */
+.day-col.weekend { width: 100px; } 
 .day-col.weekend .day-header { background: repeating-linear-gradient(45deg, #F8FAFC, #F8FAFC 10px, #FFFFFF 10px, #FFFFFF 20px); color: #64748B; padding: 16px 8px; }
 .day-col.weekend .day-content { background: repeating-linear-gradient(45deg, #F1F5F9, #F1F5F9 10px, #F8FAFC 10px, #F8FAFC 20px); }
 
@@ -1731,13 +1718,14 @@ input:checked + .slider:after {
 .ooo-btn { background: transparent; border: none; cursor: pointer; opacity: 0.3; transition: opacity 0.2s ease; padding: 0; font-size: 14px; line-height: 1; }
 .ooo-btn:hover { opacity: 0.8; }
 .ooo-btn.active { opacity: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15)); }
+
 /* Compact Triage Task Cards */
 .triage-task { 
     background: #FFFFFF; border: 1px solid var(--border-color); padding: 12px; 
     border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); font-size: 13px; 
     font-weight: 500; cursor: grab; color: #334155; line-height: 1.4; 
     transition: transform 0.15s, box-shadow 0.15s; position: relative; overflow: hidden; 
-    flex-shrink: 0; /* <-- FIX: Prevents tasks from squishing together */
+    flex-shrink: 0; 
 }
 .triage-task:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.06); border-color: #CBD5E1; }
 .triage-task:active { cursor: grabbing; }
@@ -1752,7 +1740,7 @@ input:checked + .slider:after {
 .triage-task.inbox { background-color: #EEF2FF !important; border: 1px solid #C7D2FE !important; border-left: 4px solid #818CF8 !important; color: #3730A3 !important; }
 .triage-task-meta { 
     font-size: 11px; 
-    opacity: 0.75; /* Inherits the quadrant text color but keeps it subtle */
+    opacity: 0.75; 
     margin-top: 8px; 
     display: flex; 
     justify-content: space-between; 
@@ -1831,3 +1819,55 @@ input:checked + .slider:after {
 .progress-bar-fill { height: 100%; background: #10B981; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 .progress-bar-fill.warning { background: #F59E0B; }
 .progress-bar-fill.danger { background: #EF4444; }
+
+/* --- Custom Sort Dropdown --- */
+.custom-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.custom-dropdown .icon-btn {
+    font-size: 16px;
+    font-weight: 400; 
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    background-color: #FFFFFF;
+    min-width: 140px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    z-index: 100;
+    overflow: hidden;
+}
+
+.dropdown-content.show {
+    display: block;
+}
+
+.dropdown-content div {
+    color: var(--text-main);
+    padding: 10px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.dropdown-content div:hover {
+    background-color: #F8FAFC;
+    color: var(--brand-primary);
+}
+
+.dropdown-content div.active-sort {
+    background-color: #EFF6FF;
+    color: #1D4ED8;
+    font-weight: 700;
+}
