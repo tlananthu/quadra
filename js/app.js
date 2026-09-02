@@ -1,4 +1,4 @@
-let version = '4.15';
+let version = '4.16';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1107,7 +1107,7 @@ function renderTrackerTimeline() {
     let actualWeekly = 0;
     let countedIds = new Set();
     notes.forEach(note => {
-        if (note.deleted || note.eventId) return;
+        if (note.deleted || note.eventId || note.status === 'closed') return;
         (note.timeBlocks || []).forEach(tb => {
             if (weekDateKeys.has(tb.date) && !countedIds.has(`${note.id}-${tb.blockId}`)) {
                 actualWeekly += roundToQuarterHour(tb.duration || 1.0);
@@ -1118,7 +1118,7 @@ function renderTrackerTimeline() {
 
     let actualDaily = 0;
     notes.forEach(note => {
-        if (note.deleted || note.eventId) return;
+        if (note.deleted || note.eventId || note.status === 'closed') return;
         (note.timeBlocks || []).forEach(tb => {
             if (tb.date === baseDateStr) {
                 actualDaily += roundToQuarterHour(tb.duration || 1.0);
@@ -2301,31 +2301,34 @@ function updateQuickTags() {
     const isDueFilterOn = dueToggle && dueToggle.checked;
     
     notes.forEach(note => {
-        if (note.deleted || note.eventId) return;
+        // FIX 1: Ignore deleted, calendar events, AND CLOSED tasks
+        if (note.deleted || note.eventId || note.status === 'closed') return;
         
         if (!isProjectVisible(note)) return; 
         
         if (isDueFilterOn && !note.dueDate && note.quadrant !== 'notes') return;
         
+        // Add spaces to line breaks and block elements so tags don't get squashed together
         let tempDiv = document.createElement('div');
-        tempDiv.innerHTML = note.text || '';
+        let htmlString = (note.text || '').replace(/<br\s*\/?>/gi, ' ').replace(/<\/div>|<\/li>|<\/p>/gi, ' ');
+        tempDiv.innerHTML = htmlString;
         let safePlainText = tempDiv.textContent || tempDiv.innerText || '';
         
-        // Use a safe boundary regex and extract just the tag using an exec loop
         const regex = /(^|[\s\(\)\[\]\{\}>;"',\.|])(#[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)/g;
         let matches = [];
         let m;
+        
+        // Grab every tag found in this specific task
         while ((m = regex.exec(safePlainText)) !== null) {
-            matches.push(m[2]);
+            matches.push(m[2].toLowerCase());
         }
         
         if (matches.length > 0) {
-            // Convert all tags to lowercase BEFORE deduplicating
-            const lowerCaseMatches = matches.map(tag => tag.toLowerCase());
-            let uniqueMatches = [...new Set(lowerCaseMatches)];
+            // FIX 2: Deduplicate tags within the SAME task so they only count once globally
+            let uniqueTagsInTask = [...new Set(matches)];
             
-            uniqueMatches.forEach(tag => {
-                if (hexColorRegex.test(tag)) return;
+            uniqueTagsInTask.forEach(tag => {
+                if (hexColorRegex.test(tag)) return; // Ignore hex color codes
                 tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
             });
         }
@@ -2341,10 +2344,9 @@ function updateQuickTags() {
     
     let tagFilter = null;
     if (lastWord.startsWith('#') || lastWord.startsWith('@')) {
-        tagFilter = lastWord.toLowerCase(); // Ensure active typing filter is also lowercase
+        tagFilter = lastWord.toLowerCase(); 
     }
     
-    // --- Inject AND / OR logic buttons if search is active ---
     if (currentSearch.length > 0) {
         const endsWithOperator = /\b(AND|OR)$/i.test(currentSearch);
         
@@ -2373,7 +2375,7 @@ function updateQuickTags() {
         }
     }
     
-    // Convert to Array and Sort: Descending by count, then alphabetically
+    // Sort Tags: Highest count first, then alphabetically
     let sortedTags = Array.from(tagCounts.entries()).sort((a, b) => {
         if (b[1] !== a[1]) {
             return b[1] - a[1]; 
@@ -2381,19 +2383,16 @@ function updateQuickTags() {
         return a[0].localeCompare(b[0]); 
     });
     
-    // Apply the real-time typing filter
     if (tagFilter) {
         sortedTags = sortedTags.filter(([tag, count]) => tag.startsWith(tagFilter));
     }
     
-    // Populate the bar with clickable tags
     sortedTags.forEach(([tag, count]) => {
         let btn = document.createElement('button');
         btn.className = 'filter-tag' + (tag.startsWith('@') ? ' person-filter' : '');
         btn.innerText = `${tag} (${count})`;
         
         btn.onclick = () => {
-            // Clean up trailing spaces to standardize the array
             let currentVal = searchInput.value.replace(/\s+$/, '');
             let words = currentVal ? currentVal.split(/\s+/) : [];
             
@@ -2404,7 +2403,6 @@ function updateQuickTags() {
             words.push(tag);
             
             searchInput.value = words.join(' ') + ' ';
-            
             searchInput.focus();
             searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
             
