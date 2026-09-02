@@ -1,4 +1,4 @@
-let version = '4.09';
+let version = '4.11';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1696,10 +1696,7 @@ function toggleTaskCompleteFromModal() {
             note.status = 'closed';
             note.quadrant = 'closed';
         }
-        note.dirty = true;
-        saveNotes();
-        handleSearch();
-        closeTaskModal();
+        saveTaskModal();
     }
 }
 
