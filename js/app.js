@@ -1697,6 +1697,10 @@ function toggleTaskCompleteFromModal() {
             note.quadrant = 'closed';
         }
         saveTaskModal();
+        note.dirty = true;
+        saveNotes();
+        handleSearch();
+        closeTaskModal();
     }
 }
 
