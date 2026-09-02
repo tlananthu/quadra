@@ -1,4 +1,4 @@
-let version = '4.11';
+let version = '4.12';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1687,20 +1687,17 @@ document.addEventListener('keydown', (e) => {
 
 function toggleTaskCompleteFromModal() {
     if (!currentEditingId) return;
-    const note = notes.find(n => n.id === currentEditingId);
-    if (note) {
-        if (note.status === 'closed') {
-            note.status = 'active';
-            note.quadrant = note.quadrant === 'closed' ? 'inbox' : note.quadrant;
+    
+    const quadrantSelect = document.getElementById('taskQuadrant');
+    
+    if (quadrantSelect) {
+        // 1. Force the dropdown menu to "Closed" (or back to "Inbox" if restoring)
+        if (quadrantSelect.value === 'closed') {
+            quadrantSelect.value = 'inbox';
         } else {
-            note.status = 'closed';
-            note.quadrant = 'closed';
+            quadrantSelect.value = 'closed';
         }
         saveTaskModal();
-        note.dirty = true;
-        saveNotes();
-        handleSearch();
-        closeTaskModal();
     }
 }
 
