@@ -1,4 +1,4 @@
-let version = '4.12';
+let version = '4.14';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2625,7 +2625,7 @@ function renderNotes(searchQuery = '') {
     document.getElementById('badge-q2').innerText = filteredCounts.q2;
     document.getElementById('badge-q3').innerText = filteredCounts.q3;
     document.getElementById('badge-q4').innerText = filteredCounts.q4;
-    document.getElementById('badge-closed').innerText = notes.filter(n => !n.deleted && n.status === 'closed' && !n.eventId).length;
+    document.getElementById('badge-closed').innerText = filteredNotes.filter(n => n.status === 'closed' && !n.eventId).length;
     document.getElementById('badge-inbox').innerText = filteredCounts.inbox;
     document.getElementById('badge-calendar').innerText = filteredCounts.calendar;
     

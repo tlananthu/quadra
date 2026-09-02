@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v4.12</span>
+                    <span class="version-badge">v4.14</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -64,14 +64,14 @@
             <div class="overlay-actions" id="overlay-actions"></div>
         </div>
 
+        <div id="quick-tags-bar" class="tags-bar"></div>
+
         <!-- NEW: Horizontal Splitter for Sidebar -->
         <div style="display: flex; flex-grow: 1; overflow: hidden; width: 100%;">
             
             <!-- LEFT AREA: Main Content & Views -->
             <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
                 
-                <div id="quick-tags-bar" class="tags-bar"></div>
-
                 <div id="matrix" class="matrix-container layout-grid">
                     
                     <div class="quadrant" id="q1" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
