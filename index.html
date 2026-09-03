@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v4.16</span>
+                    <span class="version-badge">v4.17</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -503,68 +503,98 @@
     </div>
 
     <div id="taskModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px;">
-                <h3 id="taskModalTitle" style="margin: 0; font-size: 18px; font-weight: 700;">Task Details</h3>
-                <div style="display: flex; gap: 12px; align-items: center;">
-                    <button id="docModeToggleBtn" onclick="toggleDocMode()" title="Enter Doc Mode" style="background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-muted); padding: 4px; display: flex; align-items: center; justify-content: center;">
-                        ⛶
-                    </button>
-                    <button onclick="closeTaskModal()" title="Close" style="background: none; border: none; cursor: pointer; font-size: 22px; color: var(--text-muted); padding: 0; line-height: 1;">×</button>
-                </div>
-            </div>
+        <div class="modal-content" id="taskModalContent" style="display: flex; flex-direction: row; gap: 0; padding: 0; overflow: hidden; transition: max-width 0.3s ease;">
             
-            <div class="form-group">
-                <div id="taskTitleInput" class="rich-task-input" contenteditable="true" placeholder="Task summary" style="min-height: 44px; height: 44px; font-weight: 600; font-size: 15px; padding: 12px; border-radius: 8px; overflow-x: auto; white-space: nowrap;" oninput="triggerAutoSaveInterval()"></div>
+            <!-- LEFT PANE: Main Task Details -->
+            <div id="taskModalLeftPane" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+                
+                <!-- Scrollable Content Area -->
+                <div style="flex: 1; overflow-y: auto; padding: 32px; padding-bottom: 24px;">
+                    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                        <h3 id="taskModalTitle" style="margin: 0; font-size: 18px; font-weight: 700;">Task Details</h3>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <button id="docModeToggleBtn" onclick="toggleDocMode()" title="Enter Doc Mode" style="background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-muted); padding: 4px; display: flex; align-items: center; justify-content: center;">⛶</button>
+                            <button onclick="closeTaskModal()" title="Close" style="background: none; border: none; cursor: pointer; font-size: 22px; color: var(--text-muted); padding: 0; line-height: 1;">×</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div id="taskTitleInput" class="rich-task-input" contenteditable="true" placeholder="Task summary" style="min-height: 44px; height: 44px; font-weight: 600; font-size: 15px; padding: 12px; border-radius: 8px; overflow-x: auto; white-space: nowrap;" oninput="triggerAutoSaveInterval()"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <!--<label>Description Details</label>-->
+                        <div class="editor-toolbar" id="editorToolbar">
+                            <button type="button" data-command="formatBlock" data-value="H1" style="font-weight:700;">H1</button>
+                            <button type="button" data-command="formatBlock" data-value="H2" style="font-weight:600;">H2</button>
+                            <div class="separator"></div>
+                            <button type="button" data-command="bold" style="font-weight:700;">B</button>
+                            <button type="button" data-command="italic" style="font-style:italic;">I</button>
+                            <button type="button" data-command="strikeThrough" style="text-decoration:line-through;">S</button>
+                            <div class="separator"></div>
+                            <button type="button" data-command="insertUnorderedList">⫶☰</button>
+                            <button type="button" data-command="insertOrderedList">☰</button>
+                            <button type="button" onclick="toggleChecklistFormatting()">☑</button>
+                            <div class="separator"></div>
+                            <button type="button" data-command="outdent">←</button>
+                            <button type="button" data-command="indent">→</button>
+                            <div class="separator"></div>
+                            <button type="button" onclick="insertCodeBlock()" title="Formatted Text" style="font-family: monospace; font-weight: 700;">&lt;/&gt;</button>
+                        </div>
+                        <div class="rich-task-input" id="taskInfoInput" contenteditable="true" placeholder="Enter multi-line task specs, lists, details..." oninput="triggerAutoSaveInterval()"></div>
+                    </div>
+
+                    <div class="form-group form-row-inline">
+                        <div style="display: flex; gap: 10px; align-items: stretch; margin-bottom: 12px;">
+                            <input type="date" id="taskDueDate" class="task-input" style="flex: 1; margin-bottom: 0;">
+                            <select id="taskQuadrant" class="task-input" style="flex: 1; margin-bottom: 0; cursor: pointer; padding-right: 10px;">
+                                <option value="inbox">Inbox</option>
+                                <option value="q1">Do First (Q1)</option>
+                                <option value="q2">Schedule (Q2)</option>
+                                <option value="q3">Delegate (Q3)</option>
+                                <option value="q4">Later (Q4)</option>
+                                <option value="calendar">Calendar Tray</option>
+                                <option value="notes">Notebook</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                            <select id="taskProject" class="task-input" style="flex: 1; margin-bottom: 0; cursor: pointer; padding-right: 10px;"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sticky Footer Area -->
+                <div class="modal-actions" style="padding: 16px 32px 32px 32px; margin: 0; border-top: 1px solid var(--border-color); background: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-outline" style="color: #10B981; border-color: #10B981; display: none;" id="taskModalCompleteBtn" onclick="toggleTaskCompleteFromModal()">✓ Mark Complete</button>
+                        <button class="btn btn-outline" style="color: #EF4444; border-color: #EF4444; display: none;" id="taskModalDeleteBtn" onclick="deleteTaskFromModal()">🗑️ Delete</button>
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-left: auto; align-items: center;">
+                        <button class="icon-btn" onclick="toggleTimeTrackPanel()" title="Track Time" style="font-size: 20px; font-weight: 900; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main);">➕</button>
+                        <button class="btn btn-outline" onclick="closeTaskModal()">Cancel</button>
+                        <button class="btn" onclick="saveTaskModal()">Save Task</button>
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Description Details</label>
-                <div class="editor-toolbar" id="editorToolbar">
-                    <button type="button" data-command="formatBlock" data-value="H1" style="font-weight:700;">H1</button>
-                    <button type="button" data-command="formatBlock" data-value="H2" style="font-weight:600;">H2</button>
-                    <div class="separator"></div>
-                    <button type="button" data-command="bold" style="font-weight:700;">B</button>
-                    <button type="button" data-command="italic" style="font-style:italic;">I</button>
-                    <button type="button" data-command="strikeThrough" style="text-decoration:line-through;">S</button>
-                    <div class="separator"></div>
-                    <button type="button" data-command="insertUnorderedList">⫶☰</button>
-                    <button type="button" data-command="insertOrderedList">☰</button>
-                    <button type="button" onclick="toggleChecklistFormatting()">☑</button>
-                    <div class="separator"></div>
-                    <button type="button" data-command="outdent">←</button>
-                    <button type="button" data-command="indent">→</button>
-                    <div class="separator"></div>
-                    <button type="button" onclick="insertCodeBlock()" title="Formatted Text" style="font-family: monospace; font-weight: 700;">&lt;/&gt;</button>
+            <!-- RIGHT PANE: Time Logging (Hidden by default) -->
+            <div id="taskModalRightPane" style="width: 0; border-left: 1px solid var(--border-color); background: #F8FAFC; display: none; flex-direction: column; padding: 32px 20px; transition: width 0.3s ease; overflow-y: auto;">
+                <h4 style="margin-bottom: 16px; font-size: 15px; font-weight: 700; color: #1E293B;">Time Log</h4>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px;">
+                    <input type="date" id="quickLogDate" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px;">
+                    <input type="number" id="quickLogHours" placeholder="Hours (e.g. 1.5)" step="0.25" min="0.25" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px;">
+                    <button class="btn btn-outline" onclick="addManualTimeBlock()" style="background: white; padding: 6px;">Add Time</button>
                 </div>
-                <div class="rich-task-input" id="taskInfoInput" contenteditable="true" placeholder="Enter multi-line task specs, lists, details..." oninput="triggerAutoSaveInterval()"></div>
+                
+                <table class="timesheet-table" style="font-size: 12px; border-top: 1px solid var(--border-color);">
+                    <thead>
+                        <tr><th style="padding: 8px;">Date</th><th style="padding: 8px; text-align: center;">Hours</th><th style="padding: 8px; text-align: center;">Action</th></tr>
+                    </thead>
+                    <tbody id="quickLogTableBody">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
             </div>
 
-            <div class="form-group form-row-inline">
-                <div style="display: flex; gap: 10px; align-items: stretch; margin-bottom: 12px;">
-                    <input type="date" id="taskDueDate" class="task-input" style="flex: 1; margin-bottom: 0;">
-                    <select id="taskQuadrant" class="task-input" style="flex: 1; margin-bottom: 0; cursor: pointer; padding-right: 10px;">
-                        <option value="inbox">Inbox</option>
-                        <option value="q1">Do First (Q1)</option>
-                        <option value="q2">Schedule (Q2)</option>
-                        <option value="q3">Delegate (Q3)</option>
-                        <option value="q4">Later (Q4)</option>
-                        <option value="calendar">Calendar Tray</option>
-                        <option value="notes">Notebook</option>
-                        <option value="closed">Closed</option>
-                    </select>
-                    <select id="taskProject" class="task-input" style="flex: 1; margin-bottom: 0; cursor: pointer; padding-right: 10px;">
-                    </select>
-                </div>
-            </div>
-
-            <div class="modal-actions" style="justify-content: space-between; align-items: center;">
-                <button class="btn btn-outline" style="color: #10B981; border-color: #10B981; display: none;" id="taskModalCompleteBtn" onclick="toggleTaskCompleteFromModal()">✓ Mark Complete</button>
-                <div style="display: flex; gap: 12px; margin-left: auto;">
-                    <button class="btn btn-outline" onclick="closeTaskModal()">Cancel</button>
-                    <button class="btn" onclick="saveTaskModal()">Save Task</button>
-                </div>
-            </div>
         </div>
     </div>
 

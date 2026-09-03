@@ -1,4 +1,4 @@
-let version = '4.16';
+let version = '4.17';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -992,7 +992,11 @@ function renderTrackerTimeline() {
                     blockEl.style.top = `${renderStart * hourPx}px`;
                     blockEl.style.height = `${Math.max(15, renderDuration * hourPx)}px`;
                     
-                    let displayTitle = cleanHTMLToPlainText(note.text).split('\n')[0].substring(0, 40);
+                    let pid = note.projectId || note.projectIds?.[0] || 'p_default';
+                    let pObj = appConfig.projects.find(p => p.id === pid);
+                    let pName = pObj && pObj.id !== 'p_default' ? `${pObj.name} - ` : '';
+                    let cleanTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+                    let displayTitle = (pName + cleanTitle).substring(0, 45);
                     const actualEndHour = (blockStart + actualDuration) % 24;
                     const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
@@ -1030,7 +1034,11 @@ function renderTrackerTimeline() {
                         blockEl.style.top = `0px`;
                         blockEl.style.height = `${Math.max(15, overflowDuration * hourPx)}px`;
                         
-                        let displayTitle = cleanHTMLToPlainText(note.text).split('\n')[0].substring(0, 40);
+                        let pid = note.projectId || note.projectIds?.[0] || 'p_default';
+                        let pObj = appConfig.projects.find(p => p.id === pid);
+                        let pName = pObj && pObj.id !== 'p_default' ? `${pObj.name} - ` : '';
+                        let cleanTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+                        let displayTitle = (pName + cleanTitle).substring(0, 45);
                         const actualEndHour = (blockStart + actualDuration) % 24;
                         const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
@@ -1833,7 +1841,15 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
             projectInput.value = visibleProjects.length === 1 ? visibleProjects[0].id : 'p_default';
         }
     }
+    document.getElementById('taskModalContent').classList.remove('time-panel-open');
+    document.getElementById('taskModalRightPane').style.display = 'none';
     
+    document.getElementById('quickLogDate').value = new Date().toLocaleDateString('en-CA').split('T')[0];
+    document.getElementById('quickLogHours').value = '';
+    const deleteBtn = document.getElementById('taskModalDeleteBtn');
+    if (deleteBtn) deleteBtn.style.display = noteId ? 'inline-block' : 'none';
+
+    renderQuickTimeLogs();
     modal.style.display = 'flex'; 
     setTimeout(() => titleInput.focus(), 100);
 }
@@ -3824,4 +3840,95 @@ function changeSort(quadrant, val) {
     if (menu) menu.classList.remove('show');
     
     handleSearch(); // Trigger re-render with new sort
+}
+
+// --- Modal Extensions: Time Tracking & Deletion ---
+function toggleTimeTrackPanel() {
+    const content = document.getElementById('taskModalContent');
+    const rightPane = document.getElementById('taskModalRightPane');
+    
+    if (content.classList.contains('time-panel-open')) {
+        content.classList.remove('time-panel-open');
+        setTimeout(() => rightPane.style.display = 'none', 300);
+    } else {
+        rightPane.style.display = 'flex';
+        setTimeout(() => content.classList.add('time-panel-open'), 10);
+    }
+}
+
+function renderQuickTimeLogs() {
+    const tbody = document.getElementById('quickLogTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    if (!currentEditingId) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 12px;">Save task first</td></tr>';
+        return;
+    }
+    
+    const note = notes.find(n => n.id === currentEditingId);
+    if (!note || !note.timeBlocks || note.timeBlocks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 12px;">No time logged</td></tr>';
+        return;
+    }
+    
+    // Sort blocks by date descending
+    let sortedBlocks = [...note.timeBlocks].sort((a,b) => b.date.localeCompare(a.date));
+    
+    sortedBlocks.forEach(tb => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="padding: 8px;">${tb.date}</td>
+            <td style="padding: 8px; text-align: center; font-weight: 600;">${tb.duration}</td>
+            <td style="padding: 8px; text-align: center;">
+                <button class="action-btn delete-btn" style="font-size:16px;" onclick="removeTimeBlock('${tb.blockId}')" title="Delete record">×</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function addManualTimeBlock() {
+    if (!currentEditingId) return showToast("Please save the task first to log time.");
+    
+    const dateVal = document.getElementById('quickLogDate').value;
+    const hoursVal = parseFloat(document.getElementById('quickLogHours').value);
+    
+    if (!dateVal || isNaN(hoursVal) || hoursVal <= 0) {
+        return showToast("Please enter a valid date and hours.");
+    }
+    
+    const note = notes.find(n => n.id === currentEditingId);
+    if (note) {
+        if (!note.timeBlocks) note.timeBlocks = [];
+        note.timeBlocks.push({
+            blockId: 'b_' + Date.now().toString() + Math.floor(Math.random() * 1000),
+            date: dateVal,
+            startHour: 9, // Native manual entries default to 9am to avoid overlap issues
+            duration: hoursVal
+        });
+        note.dirty = true;
+        saveNotes();
+        renderQuickTimeLogs();
+        document.getElementById('quickLogHours').value = '';
+    }
+}
+
+function removeTimeBlock(blockId) {
+    if (!currentEditingId) return;
+    const note = notes.find(n => n.id === currentEditingId);
+    if (note && note.timeBlocks) {
+        note.timeBlocks = note.timeBlocks.filter(b => b.blockId !== blockId);
+        note.dirty = true;
+        saveNotes();
+        renderQuickTimeLogs();
+    }
+}
+
+function deleteTaskFromModal() {
+    if (currentEditingId && confirm("Are you sure you want to delete this task/event?")) {
+        deleteTask(currentEditingId);
+        closeTaskModal();
+        if (currentLayout === 'tracker') renderTrackerTimeline();
+    }
 }

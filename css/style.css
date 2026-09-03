@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.15"]{
+[version="4.17"]{
     display:none;
 }
 
@@ -1508,10 +1508,24 @@ input:checked + .slider:after {
 }
 
 /* --- Doc Mode Styles --- */
-#taskModal .modal-content {
+/*#taskModal .modal-content {
     transition: width 0.2s ease, height 0.2s ease, max-width 0.2s ease;
     display: flex;
     flex-direction: column;
+}*/
+
+#taskModal .modal-content {
+    max-width: 800px;
+    transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#taskModal .modal-content.time-panel-open {
+    max-width: 1050px;
+}
+
+#taskModal .modal-content.time-panel-open #taskModalRightPane {
+    width: 280px !important;
+    display: flex !important;
 }
 
 #taskModal .modal-content.doc-mode {
