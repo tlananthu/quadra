@@ -1,4 +1,4 @@
-let version = '4.18';
+let version = '4.20';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -953,9 +953,9 @@ function renderTrackerTimeline() {
         notes.forEach(note => {
             if (note.deleted) return; 
             
-            if (!isProjectVisible(note)) return; 
+            //if (!isProjectVisible(note)) return; 
                         
-            if (!matchesSearchQuery(note.text, globalQuery)) return;
+            //if (!matchesSearchQuery(note.text, globalQuery)) return;
             
             const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
 
