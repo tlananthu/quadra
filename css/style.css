@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.18"]{
+[version="4.19"]{
     display:none;
 }
 
@@ -1538,7 +1538,7 @@ input:checked + .slider:after {
 /* Make the body editor stretch to fill the expanded height */
 #taskModal .modal-content.doc-mode #taskInfoInput {
     flex-grow: 1;
-    min-height: 50vh;
+    min-height: 48vh;
     max-height: none;
     font-size: 15px; 
     line-height: 1.7;
