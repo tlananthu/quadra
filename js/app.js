@@ -1,4 +1,4 @@
-let version = '4.28';
+let version = '4.29';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3577,7 +3577,7 @@ async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar dependi
         let requiresLocalSave = false;
 
         for (const note of notes) {
-            if (note.deleted || note.eventId) continue; 
+            if (note.deleted) continue; 
             if (!note.timeBlocks || note.timeBlocks.length === 0) continue;
 
             let pIds = note.projectIds || (note.projectId ? [note.projectId] : ['p_default']);
@@ -4015,7 +4015,7 @@ async function mirrorToTargetCalendar() {
 
         for (const note of notes) {
             // Skip deleted tasks or tasks that were imported FROM the calendar
-            if (note.deleted || note.eventId) continue; 
+            if (note.deleted) continue; 
             if (!note.timeBlocks || note.timeBlocks.length === 0) continue;
 
             // 1. Get Project Prefix
