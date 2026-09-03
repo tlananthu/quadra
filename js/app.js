@@ -1,4 +1,4 @@
-let version = '4.29';
+let version = '4.30';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -311,6 +311,23 @@ document.getElementById('trackerDate').value = savedDate || todayStr;
 document.getElementById('taskTitleInput')?.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+        // Replace 'timesheetModal' if your modal's HTML ID is different
+        const timesheetModal = document.getElementById('timesheetModal'); 
+        
+        if (timesheetModal && timesheetModal.style.display !== 'none' && timesheetModal.style.display !== '') {
+            timesheetModal.style.display = 'none';
+            
+            // Optional: If your timesheet uses a dark background overlay, hide it here too
+            const overlay = document.getElementById('modalOverlay'); 
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
     }
 });
 
