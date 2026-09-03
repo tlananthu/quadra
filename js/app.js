@@ -1,4 +1,4 @@
-let version = '4.26';
+let version = '4.27';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3560,6 +3560,11 @@ async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar dependi
     const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
     if (!savedToken || !savedToken.token) return showToast("Please sign in to Google first.");
 
+    // Explicitly set the OAuth token before making API calls
+    if (typeof gapi !== 'undefined' && gapi.client) {
+        gapi.client.setToken({ access_token: savedToken.token });
+    }
+
     const trackerDate = document.getElementById('trackerDate').value;
     const [y, m, d] = trackerDate.split('-');
     
@@ -3992,6 +3997,11 @@ async function mirrorToTargetCalendar() {
     
     const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
     if (!savedToken || !savedToken.token) return showToast("Please sign in to Google first.");
+
+    // Explicitly set the OAuth token before making API calls
+    if (typeof gapi !== 'undefined' && gapi.client) {
+        gapi.client.setToken({ access_token: savedToken.token });
+    }
 
     const trackerDate = document.getElementById('trackerDate').value;
     const [y, m, d] = trackerDate.split('-');
