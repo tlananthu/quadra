@@ -1,4 +1,4 @@
-let version = '4.22';
+let version = '4.23';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3957,43 +3957,7 @@ function exportNoteToPDF() {
     let pObj = appConfig.projects.find(p => p.id === pid);
     let projectName = pObj ? pObj.name : 'Default';
 
-    // 2. Format Time Logs (if any exist)
-    let timeLogsHTML = '';
-    if (note.timeBlocks && note.timeBlocks.length > 0) {
-        let totalHrs = 0;
-        let rows = [...note.timeBlocks].sort((a,b) => a.date.localeCompare(b.date)).map(tb => {
-            totalHrs += tb.duration;
-            return `<tr>
-                        <td style="padding: 6px 8px; border-bottom: 1px solid #E2E8F0; color: #475569;">${tb.date}</td>
-                        <td style="padding: 6px 8px; border-bottom: 1px solid #E2E8F0; text-align: right; color: #475569;">${tb.duration} hrs</td>
-                    </tr>`;
-        }).join('');
-        
-        timeLogsHTML = `
-            <div style="margin-top: 30px; page-break-inside: avoid;">
-                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #1E293B; border-bottom: 2px solid #E2E8F0; padding-bottom: 4px;">Time Log Summary</h4>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px;">
-                    <thead>
-                        <tr>
-                            <th style="text-align: left; padding: 6px 8px; border-bottom: 2px solid #CBD5E1; color: #1E293B;">Date</th>
-                            <th style="text-align: right; padding: 6px 8px; border-bottom: 2px solid #CBD5E1; color: #1E293B;">Hours</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td style="padding: 8px; font-weight: 700; color: #0F172A;">Total Logged</td>
-                            <td style="padding: 8px; text-align: right; font-weight: 700; color: #10B981;">${totalHrs} hrs</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        `;
-    }
-
-    // 3. Build the Print Template (Invisible to the user)
+    // 2. Build the Print Template (Invisible to the user)
     const printElement = document.createElement('div');
     printElement.style.padding = '30px';
     printElement.style.fontFamily = 'Inter, Helvetica, Arial, sans-serif';
@@ -4012,10 +3976,9 @@ function exportNoteToPDF() {
         <div style="font-size: 13px; line-height: 1.6; color: #334155;">
             ${bodyHTML !== '<br>' && bodyHTML !== '' ? bodyHTML : '<i>No description provided.</i>'}
         </div>
-        ${timeLogsHTML}
     `;
 
-    // 4. Configure html2pdf settings
+    // 3. Configure html2pdf settings
     const opt = {
         margin:       0.5,
         filename:     `${titleText.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 30)}_export.pdf`,
@@ -4024,7 +3987,7 @@ function exportNoteToPDF() {
         jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
 
-    // 5. Generate and Download
+    // 4. Generate and Download
     showToast("Generating PDF...");
     html2pdf().set(opt).from(printElement).save().then(() => {
         showToast("✓ PDF Downloaded");
