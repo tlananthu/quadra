@@ -1,4 +1,4 @@
-let version = '4.24';
+let version = '4.25';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2756,7 +2756,8 @@ window.addEventListener('load', () => {
                 apiKey: appConfig.apiKey, 
                 discoveryDocs: [
                     'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest',
-                    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+                    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+                    'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
                 ] 
             }).catch(() => {});
         });
