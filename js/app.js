@@ -1,4 +1,4 @@
-let version = '4.17';
+let version = '4.18';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -994,7 +994,7 @@ function renderTrackerTimeline() {
                     
                     let pid = note.projectId || note.projectIds?.[0] || 'p_default';
                     let pObj = appConfig.projects.find(p => p.id === pid);
-                    let pName = pObj && pObj.id !== 'p_default' ? `${pObj.name} - ` : '';
+                    let pName = pObj ? `${pObj.name} - ` : '';
                     let cleanTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
                     let displayTitle = (pName + cleanTitle).substring(0, 45);
                     const actualEndHour = (blockStart + actualDuration) % 24;
@@ -1036,7 +1036,7 @@ function renderTrackerTimeline() {
                         
                         let pid = note.projectId || note.projectIds?.[0] || 'p_default';
                         let pObj = appConfig.projects.find(p => p.id === pid);
-                        let pName = pObj && pObj.id !== 'p_default' ? `${pObj.name} - ` : '';
+                        let pName = pObj ? `${pObj.name} - ` : '';
                         let cleanTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
                         let displayTitle = (pName + cleanTitle).substring(0, 45);
                         const actualEndHour = (blockStart + actualDuration) % 24;
