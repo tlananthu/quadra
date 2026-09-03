@@ -1,4 +1,4 @@
-let version = '4.20';
+let version = '4.21';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -694,27 +694,35 @@ function renderTrackerPalette() {
     
     paletteList.innerHTML = '';
     
-    let paletteNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId && isProjectVisible(n.projectId));
+    const trackerDate = document.getElementById('trackerDate') ? document.getElementById('trackerDate').value : new Date().toLocaleDateString('en-CA').split('T')[0];
+    const dueToggle = document.getElementById('dueFilterToggle');
+    const isDueFilterOn = dueToggle && dueToggle.checked;
+
+    let paletteNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId && isProjectVisible(n));
     
-    /*const dueToggle = document.getElementById('dueFilterToggle');
-    if (dueToggle && dueToggle.checked) {
-        paletteNotes = paletteNotes.filter(n => n.dueDate);
-    }*/
-    
-    // --- UPDATED: Advanced Sorting (Date -> Quadrant) ---
+    // 1. If Global Due is ON: Show ONLY tasks due on the selected calendar day
+    if (isDueFilterOn) {
+        paletteNotes = paletteNotes.filter(n => n.dueDate === trackerDate);
+    }
+
     const quadPriority = { 'q1': 1, 'q2': 2, 'q3': 3, 'q4': 4, 'inbox': 5, 'calendar': 6 };
     
     paletteNotes.sort((a, b) => {
-        // 1. Sort by Date first (if both have dates)
+        const aIsDueSelectedDay = a.dueDate === trackerDate;
+        const bIsDueSelectedDay = b.dueDate === trackerDate;
+
+        // 2. If Global Due is OFF: Force tasks due on the selected day to the very top
+        if (aIsDueSelectedDay && !bIsDueSelectedDay) return -1;
+        if (!aIsDueSelectedDay && bIsDueSelectedDay) return 1;
+
+        // Standard sorting for the rest
         if (a.dueDate && b.dueDate) {
             const dateCompare = a.dueDate.localeCompare(b.dueDate);
             if (dateCompare !== 0) return dateCompare;
         } 
-        // 2. Prioritize tasks with dates over tasks without dates
         else if (a.dueDate && !b.dueDate) return -1;
         else if (!a.dueDate && b.dueDate) return 1;
         
-        // 3. If dates are identical (or both are missing), sub-sort by Quadrant Priority
         const pA = quadPriority[a.quadrant] || 99;
         const pB = quadPriority[b.quadrant] || 99;
         return pA - pB;
