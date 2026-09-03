@@ -1,4 +1,4 @@
-let version = '4.25';
+let version = '4.26';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3554,124 +3554,112 @@ function renderNotebookView() {
 
 
 // --- TARGET CALENDAR MIRROR SYNC ---
-async function pushWeekToTargetCalendar() {
-    if (!appConfig.targetCalendar) {
-        return showToast("❌ Please select a Target Calendar in Settings first.");
-    }
+async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar depending on your button config
+    if (!appConfig.targetCalendar) return showToast("Please select a Target Calendar in Settings.");
     
     const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-    if (!savedToken || !savedToken.token || savedToken.expires_at < Date.now()) {
-        return showToast("❌ Please sign in to Google first.");
-    }
+    if (!savedToken || !savedToken.token) return showToast("Please sign in to Google first.");
 
-    const btn = document.getElementById('btnSyncTargetCal');
-    const originalText = btn ? btn.innerHTML : '';
-    if (btn) { btn.innerText = "Syncing..."; btn.disabled = true; }
+    const trackerDate = document.getElementById('trackerDate').value;
+    const [y, m, d] = trackerDate.split('-');
+    
+    // Find your sync button to update its text (update the ID if yours is different)
+    const btn = document.getElementById('mirrorTargetBtn') || document.querySelector('[onclick="pushWeekToTargetCalendar()"]');
+    if (btn) btn.innerText = "Syncing...";
 
     try {
-        // 1. Determine the current week's dates
-        const baseDateStr = document.getElementById('trackerDate').value;
-        const [y, m, d] = baseDateStr.split('-');
-        const baseDate = new Date(y, m - 1, d);
-        const dayOfWeek = baseDate.getDay();
-        const startOfWeek = new Date(baseDate);
-        startOfWeek.setDate(baseDate.getDate() - dayOfWeek);
+        let syncedCount = 0;
+        let requiresLocalSave = false;
 
-        const workWeekDates = new Set();
-        for (let i = 0; i < 7; i++) {
-            let dateIter = new Date(startOfWeek);
-            dateIter.setDate(startOfWeek.getDate() + i);
-            const localY = dateIter.getFullYear();
-            const localM = String(dateIter.getMonth() + 1).padStart(2, '0');
-            const localD = String(dateIter.getDate()).padStart(2, '0');
-            workWeekDates.add(`${localY}-${localM}-${localD}`);
-        }
+        for (const note of notes) {
+            if (note.deleted || note.eventId) continue; 
+            if (!note.timeBlocks || note.timeBlocks.length === 0) continue;
 
-        let syncCount = 0;
-
-        // 2. Loop through all active notes and their time blocks
-        for (let note of notes) {
-            if (note.deleted || !note.timeBlocks) continue;
-            
-            // Get the project name for the calendar title
-            let pid = note.projectId || note.projectIds?.[0] || 'p_default';
+            let pIds = note.projectIds || (note.projectId ? [note.projectId] : ['p_default']);
+            let pid = pIds[0];
             let pObj = appConfig.projects.find(p => p.id === pid);
-            let pName = pObj ? pObj.name : pid;
-            let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+            let pName = pObj ? `${pObj.name} - ` : '';
             
-            // Format: "[3094] Architecture Review"
-            let eventSummary = `[${pName}] ${cleanTextTitle}`;
+            let plainText = cleanHTMLToPlainText(note.text);
+            let lines = plainText.split('\n');
+            let cleanTitle = lines[0].trim();
+            
+            let fullDisplayTitle = pName + cleanTitle; 
+            let taskNotes = lines.slice(1).join('\n').trim(); 
 
-            for (let tb of note.timeBlocks) {
-                // Only sync blocks that fall in the current week and have a duration
-                if (workWeekDates.has(tb.date) && tb.duration > 0) {
-                    
-                    // Convert Quadra's decimal time into UTC ISO Strings
-                    const [tY, tM, tD] = tb.date.split('-');
-                    let startH = Math.floor(tb.startHour);
-                    let startM = Math.round((tb.startHour - startH) * 60);
-                    let startDateObj = new Date(tY, tM - 1, tD, startH, startM, 0);
-                    
-                    let endDec = tb.startHour + tb.duration;
-                    let endH = Math.floor(endDec);
-                    let endM = Math.round((endDec - endH) * 60);
-                    let endDateObj = new Date(tY, tM - 1, tD, endH, endM, 0);
+            let noteUpdatedLocally = false;
 
-                    let resourceBody = {
-                        summary: eventSummary,
-                        start: { dateTime: startDateObj.toISOString() },
-                        end: { dateTime: endDateObj.toISOString() }
-                    };
+            for (const tb of note.timeBlocks) {
+                // Adjust this if your function loops the whole week instead of just the selected day
+                if (tb.date !== trackerDate) continue; 
 
-                    // 3. Push to Google Calendar
-                    try {
-                        if (tb.targetEventId) {
-                            // Update existing event if it was moved/resized
-                            await gapi.client.calendar.events.patch({
-                                calendarId: appConfig.targetCalendar,
-                                eventId: tb.targetEventId,
-                                resource: resourceBody
-                            });
-                        } else {
-                            // Create new event and save the generated Google ID to Quadra
-                            let res = await gapi.client.calendar.events.insert({
-                                calendarId: appConfig.targetCalendar,
-                                resource: resourceBody
-                            });
-                            tb.targetEventId = res.result.id;
-                            note.dirty = true;
-                        }
-                        syncCount++;
-                    } catch (err) {
-                        // If the event was manually deleted on Google Calendar, it will 404. Recreate it.
-                        if (err.status === 404 || (err.result && err.result.error && err.result.error.code === 404)) {
-                            let res = await gapi.client.calendar.events.insert({
-                                calendarId: appConfig.targetCalendar,
-                                resource: resourceBody
-                            });
-                            tb.targetEventId = res.result.id;
-                            note.dirty = true;
-                            syncCount++;
-                        } else {
-                            console.error("Event Sync Error:", err);
-                        }
+                let startHour = Math.floor(tb.startHour);
+                let startMin = Math.round((tb.startHour % 1) * 60);
+                
+                let endDecimal = tb.startHour + tb.duration;
+                let endHour = Math.floor(endDecimal);
+                let endMin = Math.round((endDecimal % 1) * 60);
+
+                let startDateTime = new Date(y, m - 1, d, startHour, startMin, 0);
+                let endDateTime = new Date(y, m - 1, d, endHour, endMin, 0);
+
+                const eventPayload = {
+                    summary: fullDisplayTitle,
+                    description: taskNotes,
+                    start: { dateTime: startDateTime.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+                    end: { dateTime: endDateTime.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }
+                };
+
+                try {
+                    if (tb.targetEventId) {
+                        // 1. If we already synced this block, UPDATE it
+                        await gapi.client.calendar.events.patch({
+                            calendarId: appConfig.targetCalendar,
+                            eventId: tb.targetEventId,
+                            resource: eventPayload
+                        });
+                    } else {
+                        // 2. If it's new, CREATE it and save the ID
+                        const res = await gapi.client.calendar.events.insert({
+                            calendarId: appConfig.targetCalendar,
+                            resource: eventPayload
+                        });
+                        tb.targetEventId = res.result.id; 
+                        noteUpdatedLocally = true;
+                    }
+                    syncedCount++;
+                } catch (err) {
+                    // 3. Failsafe: If it was manually deleted in GCal, the API returns a 404. Recreate it.
+                    if (err.status === 404 || (err.result && err.result.error && err.result.error.code === 404)) {
+                        const res = await gapi.client.calendar.events.insert({
+                            calendarId: appConfig.targetCalendar,
+                            resource: eventPayload
+                        });
+                        tb.targetEventId = res.result.id;
+                        noteUpdatedLocally = true;
+                        syncedCount++;
+                    } else {
+                        console.error("Calendar Sync Error on Block:", err);
                     }
                 }
             }
+            
+            // Mark the task as dirty so the new targetEventIds get saved
+            if (noteUpdatedLocally) {
+                note.dirty = true;
+                requiresLocalSave = true;
+            }
         }
+        
+        // Save the new IDs to LocalStorage
+        if (requiresLocalSave) saveNotes();
 
-        if (syncCount > 0) {
-            saveNotes();
-            showToast(`✅ Synced ${syncCount} timeline blocks to Target Calendar!`);
-        } else {
-            showToast("No timeline blocks found to sync for this week.");
-        }
-
-    } catch (error) {
-        console.error("Target Calendar Sync Failed:", error);
-        showToast("❌ Failed to sync to Target Calendar.");
+        showToast(`✓ Mirrored ${syncedCount} blocks to Target Calendar`);
+    } catch (e) {
+        console.error("Mirror to Target Failed:", e);
+        showToast("❌ Failed to sync to Target Calendar");
     } finally {
-        if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+        if (btn) btn.innerText = "Mirror to Target"; // Reset your button text
     }
 }
 
