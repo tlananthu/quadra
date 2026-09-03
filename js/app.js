@@ -1,4 +1,4 @@
-let version = '4.23';
+let version = '4.24';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1004,7 +1004,9 @@ function renderTrackerTimeline() {
                     let pObj = appConfig.projects.find(p => p.id === pid);
                     let pName = pObj ? `${pObj.name} - ` : '';
                     let cleanTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
-                    let displayTitle = (pName + cleanTitle).substring(0, 45);
+
+                    // REMOVED .substring(0, 45) so the full text displays
+                    let displayTitle = pName + cleanTitle;
                     const actualEndHour = (blockStart + actualDuration) % 24;
                     const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
@@ -1046,7 +1048,9 @@ function renderTrackerTimeline() {
                         let pObj = appConfig.projects.find(p => p.id === pid);
                         let pName = pObj ? `${pObj.name} - ` : '';
                         let cleanTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
-                        let displayTitle = (pName + cleanTitle).substring(0, 45);
+
+                        // REMOVED .substring(0, 45) so the full text displays
+                        let displayTitle = pName + cleanTitle;
                         const actualEndHour = (blockStart + actualDuration) % 24;
                         const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
@@ -3992,4 +3996,79 @@ function exportNoteToPDF() {
     html2pdf().set(opt).from(printElement).save().then(() => {
         showToast("✓ PDF Downloaded");
     });
+}
+
+async function mirrorToTargetCalendar() {
+    if (!appConfig.targetCalendar) return showToast("Please select a Target Calendar in Settings.");
+    
+    const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+    if (!savedToken || !savedToken.token) return showToast("Please sign in to Google first.");
+
+    const trackerDate = document.getElementById('trackerDate').value;
+    const [y, m, d] = trackerDate.split('-');
+    
+    const btn = document.getElementById('mirrorTargetBtn'); // Replace with your actual button ID if different
+    if (btn) btn.innerText = "Syncing...";
+
+    try {
+        let syncedCount = 0;
+
+        for (const note of notes) {
+            // Skip deleted tasks or tasks that were imported FROM the calendar
+            if (note.deleted || note.eventId) continue; 
+            if (!note.timeBlocks || note.timeBlocks.length === 0) continue;
+
+            // 1. Get Project Prefix
+            let pid = note.projectId || note.projectIds?.[0] || 'p_default';
+            let pObj = appConfig.projects.find(p => p.id === pid);
+            let pName = pObj ? `${pObj.name} - ` : '';
+            
+            // 2. Extract Title and Notes
+            let plainText = cleanHTMLToPlainText(note.text);
+            let lines = plainText.split('\n');
+            let cleanTitle = lines[0].trim();
+            
+            let fullDisplayTitle = pName + cleanTitle; // The padded title
+            let taskNotes = lines.slice(1).join('\n').trim(); // The rest becomes the calendar description
+
+            // 3. Process Time Blocks for the selected day
+            for (const tb of note.timeBlocks) {
+                if (tb.date !== trackerDate) continue; 
+
+                let startHour = Math.floor(tb.startHour);
+                let startMin = Math.round((tb.startHour % 1) * 60);
+                
+                let endDecimal = tb.startHour + tb.duration;
+                let endHour = Math.floor(endDecimal);
+                let endMin = Math.round((endDecimal % 1) * 60);
+
+                let startDateTime = new Date(y, m - 1, d, startHour, startMin, 0);
+                let endDateTime = new Date(y, m - 1, d, endHour, endMin, 0);
+
+                // 4. Push to Target Calendar
+                await gapi.client.calendar.events.insert({
+                    calendarId: appConfig.targetCalendar,
+                    resource: {
+                        summary: fullDisplayTitle, // Pushes padded title
+                        description: taskNotes,    // Pushes all task notes
+                        start: { 
+                            dateTime: startDateTime.toISOString(), 
+                            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone 
+                        },
+                        end: { 
+                            dateTime: endDateTime.toISOString(), 
+                            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone 
+                        }
+                    }
+                });
+                syncedCount++;
+            }
+        }
+        showToast(`✓ Mirrored ${syncedCount} blocks to Target Calendar`);
+    } catch (e) {
+        console.error("Mirror to Target Failed:", e);
+        showToast("❌ Failed to sync to Target Calendar");
+    } finally {
+        if (btn) btn.innerText = "Mirror to Target";
+    }
 }
