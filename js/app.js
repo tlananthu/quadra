@@ -1,4 +1,4 @@
-let version = '4.27';
+let version = '4.28';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3611,6 +3611,7 @@ async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar dependi
                 const eventPayload = {
                     summary: fullDisplayTitle,
                     description: taskNotes,
+                    status: 'confirmed', // <-- This forces the event out of the GCal Trash
                     start: { dateTime: startDateTime.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
                     end: { dateTime: endDateTime.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }
                 };
