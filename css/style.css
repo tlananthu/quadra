@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.30"]{
+[version="4.31"]{
     display:none;
 }
 
@@ -878,7 +878,7 @@ header h1 {
 }
 
 .tracker-toolbar {
-    padding: 12px 20px;
+    padding: 15px 20px;
     background: #ffffff;
     border-bottom: 1px solid var(--border-color);
     display: flex;
@@ -1884,4 +1884,79 @@ input:checked + .slider:after {
     background-color: #EFF6FF;
     color: #1D4ED8;
     font-weight: 700;
+}
+
+/* --- Right Icon Toolbar --- */
+#right-icon-toolbar {
+    position: fixed;
+    right: 0;
+    top: 125px; 
+    bottom: 39px; 
+    width: 44px; 
+    border-left: 1px solid var(--border-color);
+    background-color: #FFFFFF; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 12px;
+    gap: 12px; /* Creates even spacing between multiple icons */
+    z-index: 90;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.03); 
+}
+
+/* Individual Icon Buttons */
+#right-icon-toolbar .toggle-icon-wrapper {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer; /* Moved cursor here so the empty bar isn't clickable */
+    transition: all 0.2s ease;
+}
+
+#right-icon-toolbar .toggle-icon-wrapper:hover {
+    background: #E2E8F0;
+    border-color: #CBD5E1;
+}
+
+/* Active state targets the button, not the whole bar */
+#right-icon-toolbar .toggle-icon-wrapper.active {
+    background-color: #E2E8F0;
+    border-color: var(--brand-primary);
+}
+
+/* --- SCROLLBAR RESTORATION FOR KANBAN & DUE VIEWS --- */
+
+/* Restore Kanban Horizontal Scroll */
+#matrix.layout-kanban {
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    flex-wrap: nowrap !important;
+}
+.layout-kanban .quadrant {
+    min-width: 300px !important; /* Restores a healthy width */
+    flex-shrink: 0 !important;   /* Stops them from squishing, forcing the scrollbar */
+}
+
+/* Restore Due Tasks Horizon Scroll */
+.due-layout {
+    min-width: 0 !important; /* Allows the parent to not overflow the screen */
+}
+.horizon-pane {
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    min-width: 0 !important;
+}
+.horizon-container {
+    display: flex;
+    flex-wrap: nowrap;
+    width: max-content; /* Allows columns to expand beyond the visible area */
+}
+.horizon-container .day-col {
+    min-width: 220px !important; /* Restores a healthy width */
+    flex-shrink: 0 !important;   /* Stops them from squishing, forcing the scrollbar */
 }

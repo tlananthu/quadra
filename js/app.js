@@ -1,4 +1,4 @@
-let version = '4.30';
+let version = '4.31';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -485,6 +485,15 @@ function setLayout(layout) {
     document.getElementById('viewToggleGroup').style.display = 'flex';
     document.getElementById('settingsNavBtn').style.display = 'inline-block';
     document.getElementById('backNavBtn').style.display = 'none';
+    // --- Context-Specific Toolbar Logic ---
+    const trackerContextIcons = document.getElementById('tracker-context-icons');
+    if (trackerContextIcons) {
+        trackerContextIcons.style.display = (layout === 'tracker') ? 'flex' : 'none';
+    }
+
+    if (typeof applyNotebookVisibility === 'function') {
+        applyNotebookVisibility();
+    }
 }
 
 function switchLayout(layout) {
@@ -1028,12 +1037,13 @@ function renderTrackerTimeline() {
                     const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
                     // NEW: Pass both note.id and tBlock.blockId to startBlockDrag
+                    // Removed the ternary check to inject the resize-handle on ALL blocks
                     blockEl.innerHTML = `
                         <div class="block-info">
                             <div class="block-title">${displayTitle}</div>
                             <div class="block-meta">${timeStr}</div>
                         </div>
-                        ${isCalendarEvent ? '' : `<div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', '${tBlock.blockId}', true)"></div>`}
+                        <div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', '${tBlock.blockId}', true)"></div>
                     `;
                     
                     blockEl.onclick = (e) => {
@@ -1042,12 +1052,11 @@ function renderTrackerTimeline() {
                         openTaskModal(null, note.id, e);
                     };
 
-                    if(!isCalendarEvent) {
-                        blockEl.onmousedown = (e) => {
-                            if(e.target.closest('.resize-handle')) return;
-                            startBlockDrag(e, note.id, tBlock.blockId, false);
-                        };
-                    }
+                    // Removed the if(!isCalendarEvent) wrapper to enable dragging on ALL blocks
+                    blockEl.onmousedown = (e) => {
+                        if(e.target.closest('.resize-handle')) return;
+                        startBlockDrag(e, note.id, tBlock.blockId, false);
+                    };
                     
                     dayBlocks.push({ el: blockEl, start: renderStart, end: renderStart + renderDuration, duration: renderDuration });
                 } 
@@ -2733,6 +2742,40 @@ function exportData() { const dataStr = JSON.stringify(notes, null, 2); const bl
 function triggerImport() { document.getElementById('importFile').click(); }
 function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const importedNotes = JSON.parse(e.target.result); if (Array.isArray(importedNotes)) { const noteMap = new Map(notes.map(n => [n.id, n])); importedNotes.forEach(inNote => { inNote.dirty = true; noteMap.set(inNote.id, inNote); }); notes = Array.from(noteMap.values()); saveNotes(); handleSearch(); showToast("Tasks merged!"); closeSettingsPage(); } else showToast("Invalid format."); } catch (err) { showToast("Error reading file."); } event.target.value = ''; }; reader.readAsText(file); }
 
+// --- STICKY NOTEBOOK TOGGLE LOGIC ---
+if (appConfig.showStickyNotebook === undefined) {
+    appConfig.showStickyNotebook = true; // Default to visible
+}
+
+function toggleStickyNotebook() {
+    appConfig.showStickyNotebook = !appConfig.showStickyNotebook;
+    localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+    applyNotebookVisibility();
+}
+
+function applyNotebookVisibility() {
+    const notesQuad = document.getElementById('notes'); 
+    const notebookBtn = document.getElementById('notebook-toggle-btn'); // Target specific button
+
+    if (!notesQuad) return;
+
+    if (currentLayout === 'notebook') {
+        // Force the sticky section to hide on the main Notebook view
+        notesQuad.style.display = 'none'; 
+        if (notebookBtn) notebookBtn.classList.remove('active');
+        
+    } else if (appConfig.showStickyNotebook) {
+        // Visible for other views
+        notesQuad.style.display = ''; 
+        if (notebookBtn) notebookBtn.classList.add('active');
+        
+    } else {
+        // Hidden for other views
+        notesQuad.style.display = 'none'; 
+        if (notebookBtn) notebookBtn.classList.remove('active');
+    }
+}
+
 window.addEventListener('load', () => {
 
     if (!appConfig.sortPrefs) appConfig.sortPrefs = {};
@@ -2744,6 +2787,8 @@ window.addEventListener('load', () => {
     });
     
     renderProjectTabs();
+    // Apply saved notebook visibility state on load
+    applyNotebookVisibility();
     
     const matrixContainer = document.getElementById('matrix');
     
@@ -4089,3 +4134,4 @@ async function mirrorToTargetCalendar() {
         if (btn) btn.innerText = "Mirror to Target";
     }
 }
+

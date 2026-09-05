@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v4.30</span>
+                    <span class="version-badge">v4.31</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
                 </h1>
             </div>
@@ -57,6 +57,27 @@
     <div id="sync-banner"><span class="spin">↻</span> Syncing...</div>
     <div id="toast-container"></div>
 
+    <!-- Global Right Icon Toolbar -->
+    <div id="right-icon-toolbar">
+        <!-- Notebook Toggle Button -->
+        <div id="notebook-toggle-btn" class="toggle-icon-wrapper" onclick="toggleStickyNotebook()" title="Toggle Notebook Sticky Section">
+            <span style="font-size: 14px; color: var(--text-muted); line-height: 1;">📓</span>
+        </div>
+        
+        <!-- Global Icons on top -->
+        <div style="width: 24px; height: 1px; background-color: var(--border-color); flex-shrink: 0;"></div>
+        
+        <!-- Context specific Icons below -->
+        <div id="tracker-context-icons" style="display: none; flex-direction: column; gap: 12px; width: 100%; align-items: center;">
+            <div class="toggle-icon-wrapper" onclick="openTimesheetModal()" title="Review Timesheet">
+                <span style="font-size: 14px; line-height: 1;">📄</span>
+            </div>
+            <div class="toggle-icon-wrapper" onclick="importCalendarEvents()" title="Import Meetings">
+                <span style="font-size: 14px; line-height: 1;">📥</span>
+            </div>
+        </div>
+    </div>
+
     <div class="main-wrapper">
         <div id="auth-overlay" class="overlay" style="display: none;">
             <h3 id="overlay-title">Google Tasks & Calendar Sync</h3>
@@ -68,7 +89,7 @@
         <div id="quick-tags-bar" class="tags-bar"></div>
 
         <!-- Horizontal Splitter for Sidebar -->
-        <div style="display: flex; flex-grow: 1; overflow: hidden; width: 100%;">
+        <div style="display: flex; flex-grow: 1; overflow: hidden; width: 100%; padding-right: 44px; box-sizing: border-box;">
             
             <!-- LEFT AREA: Main Content & Views -->
             <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
@@ -257,17 +278,6 @@
                                         <span id="zoomLevelDisplay" class="tracker-zoom-value" style="min-width: 24px; text-align: center;">1x</span>
                                         <button class="btn-outline" onclick="adjustTimelineZoom(0.25)">+</button>
                                     </div>
-                                </div>
-
-                                <!-- RIGHT SIDE (Forced to never wrap) -->
-                                <div class="tracker-toolbar-right" style="display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; flex-shrink: 0;">
-                                    <button class="btn btn-outline" onclick="openTimesheetModal()" title="Review Timesheet" style="display: flex; align-items: center; gap: 4px; white-space: nowrap; padding: 6px 10px;">
-                                        📄
-                                    </button>
-                                    <button class="btn btn-outline" onclick="importCalendarEvents()" title="Import meetings for this day" style="white-space: nowrap; padding: 6px 10px;">📥</button>
-                                    <button id="btnSyncTargetCal" class="btn btn-outline" onclick="pushWeekToTargetCalendar()" title="Push this week's timeline blocks to Target Calendar" style="display: flex; align-items: center; gap: 4px; white-space: nowrap; padding: 6px 10px;">
-                                        📅 
-                                    </button>
                                 </div>
                             </div>
                             
