@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="4.31"]{
+[version="4.32"]{
     display:none;
 }
 
@@ -27,6 +27,16 @@
     --border-color: #E5E7EB;
     
     --hour-height: 60px;
+
+    --notebook-bg: #EEF2FF;      /* Indigo 50 */
+    --notebook-border: #818CF8;  /* Indigo 400 */
+    --notebook-text: #312E81;    /* Indigo 900 */
+}
+
+[data-theme="dark"] {
+    --notebook-bg: #1E1B4B;      /* Indigo 950 */
+    --notebook-border: #4F46E5;  /* Indigo 600 */
+    --notebook-text: #E0E7FF;    /* Indigo 100 */
 }
 
 * { 
@@ -473,7 +483,33 @@ header h1 {
 #tray-inbox { border-top: 4px solid #818CF8; }
 #tray-calendar { border-top: 4px solid var(--cal-border); }
 #tray-closed { border-top: 4px solid var(--closed-border); }
-#notes { border-top: 4px solid #94A3B8; }
+
+#notes { 
+    border-top: 4px solid #94A3B8;
+    background-color: var(--notebook-bg) !important;
+    border-left: 2px solid var(--notebook-border) !important;
+    color: var(--notebook-text) !important; 
+}
+
+#notes .q-header {
+    background-color: var(--notebook-bg) !important;
+    border-bottom: 1px solid rgba(129, 140, 248, 0.3) !important; /* Soft indigo underline */
+}
+
+#notes .q-header h2 {
+    color: var(--notebook-text) !important;
+}
+
+#notes .note {
+    background-color: #FFFFFF !important;
+    border: 1px solid rgba(49, 46, 129, 0.1) !important; /* Very subtle indigo border */
+    box-shadow: 0 1px 2px rgba(49, 46, 129, 0.05) !important;
+}
+
+[data-theme="dark"] #notes .note {
+    background-color: rgba(0, 0, 0, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
 
 .quadrant-badge {
     margin-left: 8px;

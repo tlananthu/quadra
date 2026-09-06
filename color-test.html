@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notebook Theme Preview</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            padding: 40px;
+            margin: 0;
+        }
+        .row {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+        }
+        .theme-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .notebook-preview {
+            width: 250px;
+            height: 300px;
+            padding: 20px;
+            border-radius: 8px;
+            border-left-width: 4px;
+            border-left-style: solid;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .note-card {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        /* THEME 1: FOCUS INDIGO */
+        .indigo-light { background: #EEF2FF; border-left-color: #818CF8; color: #312E81; }
+        .indigo-dark { background: #1E1B4B; border-left-color: #4F46E5; color: #E0E7FF; }
+        .indigo-dark .note-card { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); }
+
+        /* THEME 2: MODERN AMBER */
+        .amber-light { background: #FFFBEB; border-left-color: #F59E0B; color: #78350F; }
+        .amber-dark { background: #451A03; border-left-color: #D97706; color: #FEF3C7; }
+        .amber-dark .note-card { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); }
+
+        /* THEME 3: PRODUCTIVITY MINT */
+        .mint-light { background: #ECFDF5; border-left-color: #34D399; color: #064E3B; }
+        .mint-dark { background: #022C22; border-left-color: #059669; color: #D1FAE5; }
+        .mint-dark .note-card { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+
+    <h2 style="text-align: center; color: #334155; margin: 0;">Light Mode</h2>
+    <div class="row">
+        <div class="theme-container">
+            <h3 style="color:#334155;">1. Focus Indigo</h3>
+            <div class="notebook-preview indigo-light">
+                <div class="header">📓 Notebook <span>+</span></div>
+                <div class="note-card">Discuss Q3 sprint goals #planning</div>
+                <div class="note-card">TSADETL - Feed Doc Num Logic</div>
+            </div>
+        </div>
+        <div class="theme-container">
+            <h3 style="color:#334155;">2. Modern Amber</h3>
+            <div class="notebook-preview amber-light">
+                <div class="header">📓 Notebook <span>+</span></div>
+                <div class="note-card">Discuss Q3 sprint goals #planning</div>
+                <div class="note-card">TSADETL - Feed Doc Num Logic</div>
+            </div>
+        </div>
+        <div class="theme-container">
+            <h3 style="color:#334155;">3. Productivity Mint</h3>
+            <div class="notebook-preview mint-light">
+                <div class="header">📓 Notebook <span>+</span></div>
+                <div class="note-card">Discuss Q3 sprint goals #planning</div>
+                <div class="note-card">TSADETL - Feed Doc Num Logic</div>
+            </div>
+        </div>
+    </div>
+
+    <h2 style="text-align: center; color: #334155; margin-top: 20px;">Dark Mode Preview</h2>
+    <div class="row" style="background: #0F172A; padding: 40px; border-radius: 12px;">
+        <div class="theme-container">
+            <div class="notebook-preview indigo-dark">
+                <div class="header">📓 Notebook <span>+</span></div>
+                <div class="note-card">Discuss Q3 sprint goals #planning</div>
+                <div class="note-card">TSADETL - Feed Doc Num Logic</div>
+            </div>
+        </div>
+        <div class="theme-container">
+            <div class="notebook-preview amber-dark">
+                <div class="header">📓 Notebook <span>+</span></div>
+                <div class="note-card">Discuss Q3 sprint goals #planning</div>
+                <div class="note-card">TSADETL - Feed Doc Num Logic</div>
+            </div>
+        </div>
+        <div class="theme-container">
+            <div class="notebook-preview mint-dark">
+                <div class="header">📓 Notebook <span>+</span></div>
+                <div class="note-card">Discuss Q3 sprint goals #planning</div>
+                <div class="note-card">TSADETL - Feed Doc Num Logic</div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
