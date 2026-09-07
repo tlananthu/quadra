@@ -1,4 +1,4 @@
-let version = '4.31';
+let version = '4.34';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3632,7 +3632,7 @@ async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar dependi
     
     // Find your sync button to update its text (update the ID if yours is different)
     const btn = document.getElementById('mirrorTargetBtn') || document.querySelector('[onclick="pushWeekToTargetCalendar()"]');
-    if (btn) btn.innerText = "Syncing...";
+    if (btn) btn.innerText = "⏳";
 
     try {
         let syncedCount = 0;
@@ -3727,7 +3727,7 @@ async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar dependi
         console.error("Mirror to Target Failed:", e);
         showToast("❌ Failed to sync to Target Calendar");
     } finally {
-        if (btn) btn.innerText = "Mirror to Target"; // Reset your button text
+        if (btn) btn.innerText = "💾"; // Reset your button text
     }
 }
 
