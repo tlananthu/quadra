@@ -3652,7 +3652,7 @@ async function pushWeekToTargetCalendar() {
     const [y, m, d] = trackerDate.split('-');
     
     const btn = document.getElementById('btnSyncTargetCal') || document.getElementById('mirrorTargetBtn');
-    if (btn) btn.innerText = "Syncing...";
+    if (btn) btn.innerText = "⏳";
 
     try {
         let syncedCount = 0;
