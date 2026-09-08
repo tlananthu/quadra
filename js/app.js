@@ -1,4 +1,4 @@
-let version = '4.36';
+let version = '4.37';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3272,9 +3272,13 @@ async function performBackgroundSync() {
         // --- NEW: Also trigger a SQLite backup to Drive when Tasks sync completes ---
         uploadDatabaseToDrive();
         
-        if (syncBanner) syncBanner.style.display = 'none';
-        showToast("✓ Successfully synced with Google Tasks & Drive!");
+        // --- NEW: Also push scheduled blocks to Target Calendar silently ---
+        if (appConfig.targetCalendar) {
+            await pushWeekToTargetCalendar(true);
+        }
         
+        if (syncBanner) syncBanner.style.display = 'none';
+        showToast("✓ Successfully synced!");
     } catch (e) {
         console.error("Background sync error:", e);
         const syncBanner = document.getElementById('sync-banner');
@@ -3644,17 +3648,24 @@ function renderNotebookView() {
 }
 
 
-async function pushWeekToTargetCalendar() {
-    if (!appConfig.targetCalendar) return showToast("Please select a Target Calendar in Settings.");
+async function pushWeekToTargetCalendar(silent = false) {
+    if (!appConfig.targetCalendar) {
+        if (!silent) showToast("Please select a Target Calendar in Settings.");
+        return;
+    }
     
     const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-    if (!savedToken || !savedToken.token) return showToast("Please sign in to Google first.");
+    if (!savedToken || !savedToken.token) {
+        if (!silent) showToast("Please sign in to Google first.");
+        return;
+    }
 
     if (typeof gapi !== 'undefined' && gapi.client) {
         gapi.client.setToken({ access_token: savedToken.token });
     }
 
-    const trackerDate = document.getElementById('trackerDate').value;
+    const trackerDateEl = document.getElementById('trackerDate');
+    const trackerDate = trackerDateEl ? trackerDateEl.value : new Date().toLocaleDateString('en-CA').split('T')[0];
     const [y, m, d] = trackerDate.split('-');
     
     // Target the specific span ID in the right toolbar
@@ -3771,10 +3782,10 @@ async function pushWeekToTargetCalendar() {
 
         let statusMsg = `✓ Mirrored ${syncedCount} blocks to Target Calendar`;
         if (deletedCount > 0) statusMsg += ` (${deletedCount} deleted)`;
-        showToast(statusMsg);
+        if (!silent) showToast(statusMsg);
     } catch (e) {
         console.error("Mirror to Target Failed:", e);
-        showToast("❌ Failed to sync to Target Calendar");
+        if (!silent) showToast("❌ Failed to sync to Target Calendar");
     } finally {
         if (btnIcon) btnIcon.innerText = "💾";
     }
