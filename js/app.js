@@ -1,8 +1,9 @@
-let version = '4.35';
+let version = '4.36';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
 let currentNotebookLayout = 'grid';
+let autoSyncTimerId = null; // NEW: Tracks the 20-minute sync loop
 
 if (!appConfig.ignoreKeywords) appConfig.ignoreKeywords = 'out of office, ooo, away, vacation, holiday';
 if (!appConfig.calSource) appConfig.calSource = 'google';
@@ -724,11 +725,14 @@ function renderTrackerPalette() {
     const dueToggle = document.getElementById('dueFilterToggle');
     const isDueFilterOn = dueToggle && dueToggle.checked;
 
+    // Shifted todayStr up so the filter can use it
+    const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
+
     let paletteNotes = notes.filter(n => !n.deleted && n.status !== 'closed' && matchesSearchQuery(n.text, effectivePaletteQuery) && !n.eventId && isProjectVisible(n));
     
-    // 1. If Global Due is ON: Show ONLY tasks due on the selected calendar day
+    // 1. If Global Due is ON: Show tasks due on the selected date AND overdue tasks
     if (isDueFilterOn) {
-        paletteNotes = paletteNotes.filter(n => n.dueDate === trackerDate);
+        paletteNotes = paletteNotes.filter(n => n.dueDate && n.dueDate <= todayStr);
     }
 
     const quadPriority = { 'q1': 1, 'q2': 2, 'q3': 3, 'q4': 4, 'inbox': 5, 'calendar': 6 };
@@ -753,8 +757,6 @@ function renderTrackerPalette() {
         const pB = quadPriority[b.quadrant] || 99;
         return pA - pB;
     });
-
-    const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
 
     const quadStyles = {
         'q1': { color: 'var(--q1-text)', border: 'var(--q1-border)', bg: 'var(--q1-bg)', label: 'Q1 (Urgent)' },
@@ -2754,6 +2756,7 @@ function checkConfigState() {
         
         loadCalendars(); 
         startTokenHeartbeat();
+        startAutoSync(); // NEW: Start the 20-minute loop
         downloadDatabaseFromDrive(); // <-- NEW: Pre-fetch Drive file ID and DB in background
     } else {
         authorizeButton.style.display = 'inline-block';
@@ -2861,6 +2864,7 @@ window.addEventListener('load', () => {
                 if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
                 loadCalendars(); 
                 performBackgroundSync(); 
+                startAutoSync(); // NEW: Start the 20-minute loop
             }, 
         });
     }
@@ -2916,6 +2920,7 @@ function handleAuthClick() {
                 if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
                 loadCalendars(); 
                 performBackgroundSync(); 
+                startAutoSync(); // NEW: Start the 20-minute loop
             }, 
         }); 
     }
@@ -2931,7 +2936,8 @@ function handleSignoutClick() {
     localStorage.removeItem('quadra_gapi_token_v2'); 
     isGoogleSynced = false; 
     
-    if (tokenHeartbeatId) clearInterval(tokenHeartbeatId); // NEW: Kill the heartbeat
+    if (tokenHeartbeatId) clearInterval(tokenHeartbeatId);
+    if (autoSyncTimerId) clearInterval(autoSyncTimerId); // NEW: Kill auto-sync
     
     document.getElementById('auth-overlay').style.display = 'none';
     document.getElementById('authorize_button').style.display = 'inline-block'; 
@@ -3493,10 +3499,10 @@ function startTokenHeartbeat() {
 function attemptSilentTokenRefresh() {
     if (!tokenClient || typeof google === 'undefined') return;
     
-    // The prompt: '' parameter tells Google to skip the consent screen 
-    // if the user is already logged into Chrome/Google.
-    tokenClient.requestAccessToken({ prompt: '' });
+    // prompt: 'none' forces Google to issue the new token without flashing a window
+    tokenClient.requestAccessToken({ prompt: 'none' });
 }
+
 // --- Instant Push Engine (Hybrid Sync) ---
 async function syncSingleTask(noteId) {
     if (!isGoogleSynced || typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks) return;
@@ -3651,8 +3657,9 @@ async function pushWeekToTargetCalendar() {
     const trackerDate = document.getElementById('trackerDate').value;
     const [y, m, d] = trackerDate.split('-');
     
-    const btn = document.getElementById('btnSyncTargetCal') || document.getElementById('mirrorTargetBtn');
-    if (btn) btn.innerText = "⏳";
+    // Target the specific span ID in the right toolbar
+    const btnIcon = document.getElementById('syncTargetIcon') || document.getElementById('btnSyncTargetCal');
+    if (btnIcon) btnIcon.innerText = "⏳";
 
     try {
         let syncedCount = 0;
@@ -3671,7 +3678,6 @@ async function pushWeekToTargetCalendar() {
                     });
                     deletedCount++;
                 } catch (err) {
-                    // 404 or 410 means it is already removed on Google Calendar
                     if (err.status === 404 || err.status === 410 || 
                        (err.result && err.result.error && (err.result.error.code === 404 || err.result.error.code === 410))) {
                         deletedCount++;
@@ -3770,7 +3776,7 @@ async function pushWeekToTargetCalendar() {
         console.error("Mirror to Target Failed:", e);
         showToast("❌ Failed to sync to Target Calendar");
     } finally {
-        if (btn) btn.innerText = "💾";
+        if (btnIcon) btnIcon.innerText = "💾";
     }
 }
 
@@ -4189,4 +4195,21 @@ function queueTargetEventDeletion(targetEventId) {
         queue.push(targetEventId);
         localStorage.setItem('quadra_deleted_target_events', JSON.stringify(queue));
     }
+}
+
+// --- Auto-Sync Engine ---
+function startAutoSync() {
+    if (autoSyncTimerId) clearInterval(autoSyncTimerId);
+    
+    // Run every 20 minutes (1200000 milliseconds)
+    autoSyncTimerId = setInterval(() => {
+        const savedTokenData = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
+        
+        // Only run if we are logged in and the token hasn't expired
+        if (savedTokenData && isGoogleSynced && savedTokenData.expires_at > Date.now()) {
+            console.log("⏰ Running 20-minute background auto-sync...");
+            performBackgroundSync();
+            uploadDatabaseToDrive();
+        }
+    }, 1200000); 
 }
