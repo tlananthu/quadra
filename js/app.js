@@ -1,4 +1,4 @@
-let version = '4.34';
+let version = '4.35';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1367,9 +1367,12 @@ function dropToBacklog(ev) {
     const note = notes.find(n => n.id === noteId);
     
     if (note) {
-        note.dueDate = null; // Unschedule the task completely
-        if (note.timeBlocks) {
-            note.timeBlocks = []; 
+        note.dueDate = null;
+        if (note.timeBlocks && note.timeBlocks.length > 0) {
+            note.timeBlocks.forEach(tb => {
+                if (tb.targetEventId) queueTargetEventDeletion(tb.targetEventId);
+            });
+            note.timeBlocks = [];
         }
         note.dirty = true;
         saveNotes();
@@ -1492,7 +1495,13 @@ function stopBlockDrag(e) {
                 
                 const note = notes.find(n => n.id === dragState.noteId);
                 if (note && note.timeBlocks) {
-                    // NEW: Filter out this specific block to un-schedule it
+                    // 1. Queue the target calendar event for deletion if it exists
+                    const tbToRemove = note.timeBlocks.find(b => b.blockId === dragState.blockId);
+                    if (tbToRemove && tbToRemove.targetEventId) {
+                        queueTargetEventDeletion(tbToRemove.targetEventId);
+                    }
+                    
+                    // 2. Remove the block locally
                     note.timeBlocks = note.timeBlocks.filter(b => b.blockId !== dragState.blockId);
                     note.dirty = true;
                     unscheduled = true;
@@ -2713,7 +2722,21 @@ function renderNotes(searchQuery = '') {
 
 function completeTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'closed'; note.quadrant = 'closed'; note.dirty = true; saveNotes(); syncSingleTask(id); handleSearch(); } }
 function restoreTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'active'; note.quadrant = 'inbox'; note.dirty = true; saveNotes(); syncSingleTask(id); handleSearch(); } }
-function deleteTask(id) { const note = notes.find(n => n.id === id); if (note) { note.deleted = true; note.dirty = true; saveNotes(); syncSingleTask(id); handleSearch(); } }
+function deleteTask(id) {
+    const note = notes.find(n => n.id === id);
+    if (note) {
+        if (note.timeBlocks && note.timeBlocks.length > 0) {
+            note.timeBlocks.forEach(tb => {
+                if (tb.targetEventId) queueTargetEventDeletion(tb.targetEventId);
+            });
+        }
+        note.deleted = true;
+        note.dirty = true;
+        saveNotes();
+        syncSingleTask(id);
+        handleSearch();
+    }
+}
 
 function checkConfigState() {
     const authorizeButton = document.getElementById('authorize_button');
@@ -3615,14 +3638,12 @@ function renderNotebookView() {
 }
 
 
-// --- TARGET CALENDAR MIRROR SYNC ---
-async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar depending on your button config
+async function pushWeekToTargetCalendar() {
     if (!appConfig.targetCalendar) return showToast("Please select a Target Calendar in Settings.");
     
     const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
     if (!savedToken || !savedToken.token) return showToast("Please sign in to Google first.");
 
-    // Explicitly set the OAuth token before making API calls
     if (typeof gapi !== 'undefined' && gapi.client) {
         gapi.client.setToken({ access_token: savedToken.token });
     }
@@ -3630,14 +3651,40 @@ async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar dependi
     const trackerDate = document.getElementById('trackerDate').value;
     const [y, m, d] = trackerDate.split('-');
     
-    // Find your sync button to update its text (update the ID if yours is different)
-    const btn = document.getElementById('mirrorTargetBtn') || document.querySelector('[onclick="pushWeekToTargetCalendar()"]');
-    if (btn) btn.innerText = "⏳";
+    const btn = document.getElementById('btnSyncTargetCal') || document.getElementById('mirrorTargetBtn');
+    if (btn) btn.innerText = "Syncing...";
 
     try {
         let syncedCount = 0;
+        let deletedCount = 0;
         let requiresLocalSave = false;
 
+        // --- 1. PROCESS REMOTE DELETIONS FROM QUEUE ---
+        let deleteQueue = JSON.parse(localStorage.getItem('quadra_deleted_target_events')) || [];
+        if (deleteQueue.length > 0) {
+            const remainingDeletions = [];
+            for (const targetEventId of deleteQueue) {
+                try {
+                    await gapi.client.calendar.events.delete({
+                        calendarId: appConfig.targetCalendar,
+                        eventId: targetEventId
+                    });
+                    deletedCount++;
+                } catch (err) {
+                    // 404 or 410 means it is already removed on Google Calendar
+                    if (err.status === 404 || err.status === 410 || 
+                       (err.result && err.result.error && (err.result.error.code === 404 || err.result.error.code === 410))) {
+                        deletedCount++;
+                    } else {
+                        console.error("Failed to delete event from Target Calendar:", targetEventId, err);
+                        remainingDeletions.push(targetEventId);
+                    }
+                }
+            }
+            localStorage.setItem('quadra_deleted_target_events', JSON.stringify(remainingDeletions));
+        }
+
+        // --- 2. SYNC ACTIVE BLOCKS ---
         for (const note of notes) {
             if (note.deleted) continue; 
             if (!note.timeBlocks || note.timeBlocks.length === 0) continue;
@@ -3657,7 +3704,6 @@ async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar dependi
             let noteUpdatedLocally = false;
 
             for (const tb of note.timeBlocks) {
-                // Adjust this if your function loops the whole week instead of just the selected day
                 if (tb.date !== trackerDate) continue; 
 
                 let startHour = Math.floor(tb.startHour);
@@ -3673,21 +3719,19 @@ async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar dependi
                 const eventPayload = {
                     summary: fullDisplayTitle,
                     description: taskNotes,
-                    status: 'confirmed', // <-- This forces the event out of the GCal Trash
+                    status: 'confirmed',
                     start: { dateTime: startDateTime.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
                     end: { dateTime: endDateTime.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }
                 };
 
                 try {
                     if (tb.targetEventId) {
-                        // 1. If we already synced this block, UPDATE it
                         await gapi.client.calendar.events.patch({
                             calendarId: appConfig.targetCalendar,
                             eventId: tb.targetEventId,
                             resource: eventPayload
                         });
                     } else {
-                        // 2. If it's new, CREATE it and save the ID
                         const res = await gapi.client.calendar.events.insert({
                             calendarId: appConfig.targetCalendar,
                             resource: eventPayload
@@ -3697,7 +3741,6 @@ async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar dependi
                     }
                     syncedCount++;
                 } catch (err) {
-                    // 3. Failsafe: If it was manually deleted in GCal, the API returns a 404. Recreate it.
                     if (err.status === 404 || (err.result && err.result.error && err.result.error.code === 404)) {
                         const res = await gapi.client.calendar.events.insert({
                             calendarId: appConfig.targetCalendar,
@@ -3712,22 +3755,22 @@ async function pushWeekToTargetCalendar() { // Or mirrorToTargetCalendar dependi
                 }
             }
             
-            // Mark the task as dirty so the new targetEventIds get saved
             if (noteUpdatedLocally) {
                 note.dirty = true;
                 requiresLocalSave = true;
             }
         }
         
-        // Save the new IDs to LocalStorage
         if (requiresLocalSave) saveNotes();
 
-        showToast(`✓ Mirrored ${syncedCount} blocks to Target Calendar`);
+        let statusMsg = `✓ Mirrored ${syncedCount} blocks to Target Calendar`;
+        if (deletedCount > 0) statusMsg += ` (${deletedCount} deleted)`;
+        showToast(statusMsg);
     } catch (e) {
         console.error("Mirror to Target Failed:", e);
         showToast("❌ Failed to sync to Target Calendar");
     } finally {
-        if (btn) btn.innerText = "💾"; // Reset your button text
+        if (btn) btn.innerText = "📅";
     }
 }
 
@@ -3987,6 +4030,10 @@ function removeTimeBlock(blockId) {
     if (!currentEditingId) return;
     const note = notes.find(n => n.id === currentEditingId);
     if (note && note.timeBlocks) {
+        const tbToRemove = note.timeBlocks.find(b => b.blockId === blockId);
+        if (tbToRemove && tbToRemove.targetEventId) {
+            queueTargetEventDeletion(tbToRemove.targetEventId);
+        }
         note.timeBlocks = note.timeBlocks.filter(b => b.blockId !== blockId);
         note.dirty = true;
         saveNotes();
@@ -4135,3 +4182,11 @@ async function mirrorToTargetCalendar() {
     }
 }
 
+function queueTargetEventDeletion(targetEventId) {
+    if (!targetEventId) return;
+    let queue = JSON.parse(localStorage.getItem('quadra_deleted_target_events')) || [];
+    if (!queue.includes(targetEventId)) {
+        queue.push(targetEventId);
+        localStorage.setItem('quadra_deleted_target_events', JSON.stringify(queue));
+    }
+}
