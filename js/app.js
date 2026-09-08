@@ -3770,7 +3770,7 @@ async function pushWeekToTargetCalendar() {
         console.error("Mirror to Target Failed:", e);
         showToast("❌ Failed to sync to Target Calendar");
     } finally {
-        if (btn) btn.innerText = "📅";
+        if (btn) btn.innerText = "💾";
     }
 }
 
