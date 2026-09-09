@@ -1,4 +1,4 @@
-let version = '4.37';
+let version = '4.38';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3012,6 +3012,37 @@ async function importCalendarEvents() {
             if (autoPlot) {
                 newTimeBlocks = [{ blockId: 'cal', date: dateStr, startHour: startHour, duration: duration }];
             }
+
+            // --- 1. STRIP ANNOYING PREFIXES FROM TITLE ---
+            let cleanTitle = (event.summary || 'Meeting');
+            // Safely strips any combination of these prefixes (case-insensitive)
+            cleanTitle = cleanTitle.replace(/^(?:\[EXT\]:?\s*|Updated invitation:?\s*|Invitation:?\s*|Accepted:?\s*|Declined:?\s*|Tentative:?\s*|Canceled:?\s*|Canceled Event:?\s*)+/ig, '').trim();
+            if (!cleanTitle) cleanTitle = 'Meeting';
+
+            // --- 2. EXTRACT METADATA FOR QUADRA DESCRIPTION ---
+            let bodyParts = [];
+            
+            // Grab organizer (Google API provides organizer.displayName and email)
+            if (event.organizer) {
+                let org = event.organizer.displayName ? `${event.organizer.displayName} (${event.organizer.email})` : event.organizer.email;
+                if (org) bodyParts.push(`Organizer: ${org}`);
+            }
+            
+            // Grab location 
+            if (event.location) {
+                bodyParts.push(`Location: ${event.location.trim()}`);
+            }
+            
+            // Grab existing meeting description (stripping HTML to keep Quadra clean)
+            if (event.description) {
+                let tempDiv = document.createElement('div');
+                tempDiv.innerHTML = event.description;
+                let plainDesc = tempDiv.textContent || tempDiv.innerText || "";
+                if (plainDesc.trim()) bodyParts.push(`\n${plainDesc.trim()}`);
+            }
+
+            // Combine into the Quadra payload format (Line 1: Title, Line 2+: Description)
+            const newTextPayload = `${cleanTitle} #meeting` + (bodyParts.length > 0 ? `\n${bodyParts.join('\n')}` : '');
             
             // --- UPDATE EXISTING GOOGLE EVENT ---
             if (existingNote) {
@@ -3030,8 +3061,11 @@ async function importCalendarEvents() {
                     }
                 }
                 
-                const newText = `${event.summary || 'Meeting'} #meeting`;
-                if (existingNote.text !== newText) { existingNote.text = newText; changed = true; }
+                // Compare new payload text
+                if (existingNote.text !== newTextPayload) { 
+                    existingNote.text = newTextPayload; 
+                    changed = true; 
+                }
                 
                 if (changed) { 
                     existingNote.dirty = true; 
@@ -3040,11 +3074,10 @@ async function importCalendarEvents() {
                 return;
             }
             
-            // --- INSERT NEW GOOGLE EVENT ---
             notes.push({
                 id: Date.now().toString() + Math.random(),
                 eventId: event.id, 
-                text: `${event.summary || 'Meeting'} #meeting`,
+                text: newTextPayload,
                 quadrant: 'q2', 
                 status: 'active',
                 dirty: false, 
