@@ -17,8 +17,8 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v4.38</span>
-                    <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help; transition: color 0.3s ease;">☁️</span>
+                    <span class="version-badge">v5.0</span>
+                    <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
             
@@ -34,19 +34,15 @@
         </div>
         
         <div class="header-actions">
-                <label class="switch" title="Filter by Due Date">
-                    <input type="checkbox" id="dueFilterToggle" onchange="toggleDueFilter()">
-                    <span class="slider round"></span>
-                </label>
-
-                <button class="btn btn-outline" onclick="performBackgroundSync()" title="Sync tasks with Google Tasks">🔄</button>
-                <div class="view-toggle" id="viewToggleGroup">
-                <button id="btnGrid" title="Quadrant View" onclick="setLayout('grid')">🚩</button>
-                <button id="btnKanban" title="Kanban View" onclick="setLayout('kanban')">⏸️</button>
-                <button id="btnOverdue" title="Due Tasks (Triage)" onclick="setLayout('overdue')">⚡</button>
-                <button id="btnTracker" title="Calendar View (C)" onclick="setLayout('tracker')">📅</button>
-                <button onclick="switchLayout('notebook')" id="btn-layout-notebook" title="Notebook View">📓</button>
-            </div>
+            <label class="switch" title="Filter by Due Date">
+                <input type="checkbox" id="dueFilterToggle" onchange="toggleDueFilter()">
+                <span class="slider round"></span>
+            </label>
+            
+            <!-- New Load Button -->
+            <button class="btn btn-outline" onclick="loadLocalDatabase()" title="Load local database">📂 Load</button>
+            <button class="btn btn-outline" onclick="executeFullSave()" title="Save all changes">💾 Save</button>
+            
             <button id="authorize_button" class="btn" onclick="handleAuthClick()">Sign In</button>
             <button id="signout_button" class="btn btn-outline icon-button" onclick="handleSignoutClick()" title="Sign out of Google">⏻</button>
             <button id="settingsNavBtn" class="btn btn-outline" onclick="openSettingsPage()">⚙️</button>
@@ -57,464 +53,133 @@
     <div id="sync-banner"><span class="spin">↻</span> Syncing...</div>
     <div id="toast-container"></div>
 
-    <!-- Global Right Icon Toolbar -->
-    <div id="right-icon-toolbar">
-        <!-- Notebook Toggle Button -->
-        <div id="notebook-toggle-btn" class="toggle-icon-wrapper" onclick="toggleStickyNotebook()" title="Toggle Notebook Sticky Section">
-            <span style="font-size: 14px; color: var(--text-muted); line-height: 1;">📓</span>
-        </div>
-        
-        <!-- Global Icons on top -->
-        <div style="width: 24px; height: 1px; background-color: var(--border-color); flex-shrink: 0;"></div>
-        
-        <!-- Context specific Icons below -->
-        <div id="tracker-context-icons" style="display: none; flex-direction: column; gap: 12px; width: 100%; align-items: center;">
-            <div class="toggle-icon-wrapper" onclick="openTimesheetModal()" title="Review Timesheet">
-                <span style="font-size: 14px; line-height: 1;">📄</span>
-            </div>
-            <div class="toggle-icon-wrapper" onclick="importCalendarEvents()" title="Import Meetings">
-                <span style="font-size: 14px; line-height: 1;">📥</span>
-            </div>
-            
-            <!-- NEW: Sync Target Calendar Button -->
-            <div class="toggle-icon-wrapper" onclick="pushWeekToTargetCalendar()" title="Push to Target Calendar">
-                <span id="syncTargetIcon" style="font-size: 14px; line-height: 1;">💾</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="main-wrapper">
+    <div class="main-wrapper" style="padding-right: 0 !important; margin-right: 0 !important; width: 100%; overflow-x: hidden;">
         <div id="auth-overlay" class="overlay" style="display: none;">
             <h3 id="overlay-title">Google Tasks & Calendar Sync</h3>
-            <p id="overlay-text">Sync your Eisenhower Matrix and import meetings directly from Google Calendar or Outlook.</p>
-            <div class="overlay-actions" id="overlay-actions"></div>
+            <p id="overlay-text">Sync your Workspace directly to Google.</p>
         </div>
 
-        <!-- Quick Tags Bar spanning full width ABOVE the split -->
         <div id="quick-tags-bar" class="tags-bar"></div>
 
-        <!-- Horizontal Splitter for Sidebar -->
-        <div style="display: flex; flex-grow: 1; overflow: hidden; width: 100%; padding-right: 44px; box-sizing: border-box;">
+        <!-- THE PIPELINE WORKSPACE -->
+        <div id="pipeline-workspace" class="pipeline-workspace" style="display: flex; flex-direction: row; height: 100%; width: 100%; overflow: hidden;">
             
-            <!-- LEFT AREA: Main Content & Views -->
-            <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
+            <!-- 1. LEFT PANE: INTAKE & BACKLOG -->
+            <div class="pipeline-col backlog-col" style="width: 320px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border-color);">
+                <div class="col-header" style="display: flex; align-items: center; justify-content: space-between; height: 60px; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color);">
+                    <h2 style="margin: 0; font-size: 16px;">📥 Intake & Backlog</h2>
+                    <button class="icon-btn add-btn" onclick="openTaskModal('inbox')">+</button>
+                </div>
+                <div class="task-list" id="list-inbox" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex-grow: 1; overflow-y: auto;"></div>
+            </div>
+
+            <!-- 2. CENTER: ACTION KANBAN BOARD -->
+            <div class="pipeline-col matrix-col" style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+                <div class="col-header" style="display: flex; align-items: center; height: 60px; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color);">
+                    <h2 style="margin: 0; font-size: 16px;">⚡ Action Board</h2>
+                </div>
+                <div class="action-board" style="display: flex; gap: 15px; overflow-x: auto; flex-grow: 1; padding: 15px;">
+                    <!-- Do First -->
+                    <div class="kanban-col do-first" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #ffebee; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #c62828;">Do First</div>
+                        <div class="task-list" id="list-q1" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
+                    </div>
+                    
+                    <!-- Schedule -->
+                    <div class="kanban-col schedule" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #e3f2fd; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #1565c0;">Schedule</div>
+                        <div class="task-list" id="list-q2" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
+                    </div>
+                    
+                    <!-- Delegate -->
+                    <div class="kanban-col delegate" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #fff8e1; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #f57f17;">Delegate</div>
+                        <div class="task-list" id="list-q3" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
+                    </div>
+                    
+                    <!-- Later -->
+                    <div class="kanban-col later" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #f5f5f5; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #424242;">Later</div>
+                        <div class="task-list" id="list-q4" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
+                    </div>
+                    
+                </div>
+            </div>
+
+            <!-- 3. RIGHT TOGGLABLE PANE -->
+            <div class="right-sliding-pane" id="rightPane" style="display: flex; width: 360px; flex-shrink: 0; flex-direction: column; border-left: 1px solid var(--border-color); background: #ffffff;">
                 
-                <div id="matrix" class="matrix-container layout-grid">
-                    
-                    <div class="quadrant" id="q1" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header">
-                            <h2>Do First <span class="q-badge" id="badge-q1">0</span></h2>
-                            <div class="header-buttons">
-                                <div class="custom-dropdown">
-                                    <button class="icon-btn" onclick="toggleSortMenu('q1', event)" title="Sort Tasks">⇅</button>
-                                    <div id="sort-menu-q1" class="dropdown-content"><div onclick="changeSort('q1', 'due_asc')">Due ↑</div><div onclick="changeSort('q1', 'due_desc')">Due ↓</div><div onclick="changeSort('q1', 'created_asc')">Created ↑</div><div onclick="changeSort('q1', 'created_desc')">Created ↓</div><div onclick="changeSort('q1', 'title_asc')">Title A-Z</div><div onclick="changeSort('q1', 'title_desc')">Title Z-A</div></div>
-                                </div>
-                                <button class="icon-btn add-btn" onclick="openTaskModal('q1')">+</button>
-                            </div>
+                <!-- Today's Plan (Timeline) View -->
+                <div id="todaysPlanView" class="pane-content" style="display: flex; flex-direction: column; height: 100%;">
+                    <div class="col-header" style="display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: space-between; align-items: center; height: 60px; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+                            <button class="icon-btn" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="changeTrackerDay(-1)">←</button>
+                            <h2 style="font-size: 15px; margin: 0; color: var(--text-main); white-space: nowrap;">Today's Plan</h2>
+                            <button class="icon-btn" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="changeTrackerDay(1)">→</button>
                         </div>
-                        <div class="task-list" id="list-q1"></div>
-                        <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q1')" title="Drag edge to resize width"></div>
+                        <input type="date" id="trackerDate" onchange="renderTrackerTimeline()" style="padding: 4px 6px; width: 115px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 6px; background: #F8FAFC; color: var(--text-main); cursor: pointer; outline: none; flex-shrink: 0;">
                     </div>
-                    
-                    <div class="quadrant" id="q2" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header">
-                            <h2>Schedule <span class="q-badge" id="badge-q2">0</span></h2>
-                            <div class="header-buttons">
-                                <div class="custom-dropdown">
-                                    <button class="icon-btn" onclick="toggleSortMenu('q2', event)" title="Sort Tasks">⇅</button>
-                                    <div id="sort-menu-q2" class="dropdown-content"><div onclick="changeSort('q2', 'due_asc')">Due ↑</div><div onclick="changeSort('q2', 'due_desc')">Due ↓</div><div onclick="changeSort('q2', 'created_asc')">Created ↑</div><div onclick="changeSort('q2', 'created_desc')">Created ↓</div><div onclick="changeSort('q2', 'title_asc')">Title A-Z</div><div onclick="changeSort('q2', 'title_desc')">Title Z-A</div></div>
-                                </div>
-                                <button class="icon-btn add-btn" onclick="openTaskModal('q2')">+</button>
-                            </div>
-                        </div>
-                        <div class="task-list" id="list-q2"></div>
-                        <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q2')" title="Drag edge to resize width"></div>
-                    </div>
-                    
-                    <div class="quadrant" id="q3" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header">
-                            <h2>Delegate <span class="q-badge" id="badge-q3">0</span></h2>
-                            <div class="header-buttons">
-                                <div class="custom-dropdown">
-                                    <button class="icon-btn" onclick="toggleSortMenu('q3', event)" title="Sort Tasks">⇅</button>
-                                    <div id="sort-menu-q3" class="dropdown-content"><div onclick="changeSort('q3', 'due_asc')">Due ↑</div><div onclick="changeSort('q3', 'due_desc')">Due ↓</div><div onclick="changeSort('q3', 'created_asc')">Created ↑</div><div onclick="changeSort('q3', 'created_desc')">Created ↓</div><div onclick="changeSort('q3', 'title_asc')">Title A-Z</div><div onclick="changeSort('q3', 'title_desc')">Title Z-A</div></div>
-                                </div>
-                                <button class="icon-btn add-btn" onclick="openTaskModal('q3')">+</button>
-                            </div>
-                        </div>
-                        <div class="task-list" id="list-q3"></div>
-                        <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q3')" title="Drag edge to resize width"></div>
-                    </div>
-                    
-                    <div class="quadrant" id="q4" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header">
-                            <h2>Later <span class="q-badge" id="badge-q4">0</span></h2>
-                            <div class="header-buttons">
-                                <div class="custom-dropdown">
-                                    <button class="icon-btn" onclick="toggleSortMenu('q4', event)" title="Sort Tasks">⇅</button>
-                                    <div id="sort-menu-q4" class="dropdown-content"><div onclick="changeSort('q4', 'due_asc')">Due ↑</div><div onclick="changeSort('q4', 'due_desc')">Due ↓</div><div onclick="changeSort('q4', 'created_asc')">Created ↑</div><div onclick="changeSort('q4', 'created_desc')">Created ↓</div><div onclick="changeSort('q4', 'title_asc')">Title A-Z</div><div onclick="changeSort('q4', 'title_desc')">Title Z-A</div></div>
-                                </div>
-                                <button class="icon-btn add-btn" onclick="openTaskModal('q4')">+</button>
-                            </div>
-                        </div>
-                        <div class="task-list" id="list-q4"></div>
-                        <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'q4')" title="Drag edge to resize width"></div>
-                    </div>
-
-                    <div class="quadrant" id="tray-inbox" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header">
-                            <h2>Inbox <span class="q-badge" id="badge-inbox">0</span></h2>
-                            <div class="header-buttons">
-                                <div class="custom-dropdown">
-                                    <button class="icon-btn" onclick="toggleSortMenu('inbox', event)" title="Sort Tasks">⇅</button>
-                                    <div id="sort-menu-inbox" class="dropdown-content"><div onclick="changeSort('inbox', 'due_asc')">Due ↑</div><div onclick="changeSort('inbox', 'due_desc')">Due ↓</div><div onclick="changeSort('inbox', 'created_asc')">Created ↑</div><div onclick="changeSort('inbox', 'created_desc')">Created ↓</div><div onclick="changeSort('inbox', 'title_asc')">Title A-Z</div><div onclick="changeSort('inbox', 'title_desc')">Title Z-A</div></div>
-                                </div>
-                                <button class="icon-btn add-btn" onclick="openTaskModal('inbox')">+</button>
-                            </div>
-                        </div>
-                        <div class="task-list" id="list-inbox"></div>
-                        <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-inbox')" title="Drag edge to resize width"></div>
-                    </div>
-                    
-                    <div class="quadrant" id="tray-calendar" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header">
-                            <h2>Calendar Events <span class="q-badge" id="badge-calendar">0</span></h2>
-                            <div class="header-buttons">
-                                <div class="custom-dropdown">
-                                    <button class="icon-btn" onclick="toggleSortMenu('calendar', event)" title="Sort Tasks">⇅</button>
-                                    <div id="sort-menu-calendar" class="dropdown-content"><div onclick="changeSort('calendar', 'due_asc')">Due ↑</div><div onclick="changeSort('calendar', 'due_desc')">Due ↓</div><div onclick="changeSort('calendar', 'created_asc')">Created ↑</div><div onclick="changeSort('calendar', 'created_desc')">Created ↓</div><div onclick="changeSort('calendar', 'title_asc')">Title A-Z</div><div onclick="changeSort('calendar', 'title_desc')">Title Z-A</div></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="task-list" id="list-calendar"></div>
-                        <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-calendar')" title="Drag edge to resize width"></div>
-                    </div>
-
-                    <div class="quadrant" id="tray-closed" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" ondrop="dropQuad(event)">
-                        <div class="q-header">
-                            <h2>Completed <span class="q-badge" id="badge-closed">0</span></h2>
-                            <div class="header-buttons">
-                                <div class="custom-dropdown">
-                                    <button class="icon-btn" onclick="toggleSortMenu('closed', event)" title="Sort Tasks">⇅</button>
-                                    <div id="sort-menu-closed" class="dropdown-content"><div onclick="changeSort('closed', 'due_asc')">Due ↑</div><div onclick="changeSort('closed', 'due_desc')">Due ↓</div><div onclick="changeSort('closed', 'created_asc')">Created ↑</div><div onclick="changeSort('closed', 'created_desc')">Created ↓</div><div onclick="changeSort('closed', 'title_asc')">Title A-Z</div><div onclick="changeSort('closed', 'title_desc')">Title Z-A</div></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="task-list" id="list-closed"></div>
-                        <div class="quadrant-resize-handle" onmousedown="initQuadResize(event, 'tray-closed')" title="Drag edge to resize width"></div>
-                    </div>
-
-                </div>
-
-                <div id="overdue-view" style="display: none; flex-grow: 1; overflow: hidden; background: #F8FAFC;">
-                    <div class="due-layout">
-                        <div class="backlog-pane">
-                            <div class="pane-header">
-                                <span>⚠️ Backlog</span>
-                                <span style="font-size: 12px; background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 12px; color: #64748B;"><span id="backlog-count">0</span> Tasks</span>
-                            </div>
-                            <div class="pane-content" id="backlog-list" ondragover="allowBacklogDrop(event)" ondragleave="dragLeaveBacklog(event)" ondrop="dropToBacklog(event)">
-                                <!-- Overdue & Unscheduled tasks go here -->
-                            </div>
-                        </div>
-                        <div class="horizon-pane" id="horizon-scroll">
-                            <div class="horizon-container" id="horizon-container">
-                                <!-- Day columns injected here via JS -->
-                            </div>
-                        </div>
+                    <div class="timeline-scroll-area" id="timelineScrollArea" style="flex-grow: 1; overflow-y: auto; padding: 12px 0;">
+                        <div class="timeline" id="timelineCanvas" style="margin: 0 12px;"></div>
                     </div>
                 </div>
 
-                <div id="notebook-view" style="display: none; flex-grow: 1; flex-direction: column; overflow-y: auto; background: #F8FAFC; padding: 40px 20px;">
-                    <div style="max-width: 1200px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
-                            <h2 style="font-size: 22px; font-weight: 700; color: #1E293B;">My Notes</h2>
-                            <div style="display: flex; gap: 12px; align-items: center;">
-                                <div class="tracker-control-group" style="padding: 2px;">
-                                    <button class="btn-outline" onclick="toggleNotebookLayout('grid')" id="notebook-grid-btn" style="background: white; border-color: #3B82F6; color: #3B82F6;">⊞ Grid</button>
-                                    <button class="btn-outline" onclick="toggleNotebookLayout('list')" id="notebook-list-btn" style="border: transparent;">☰ List</button>
-                                </div>
-                                <button class="btn" onclick="openTaskModal('notes', null, event)">+ New Note</button>
-                            </div>
-                        </div>
-                        <div id="notebook-container" class="notebook-grid">
-                            <!-- Notes will be injected here -->
-                        </div>
+                <!-- Notebook View -->
+                <div id="notebookView" class="pane-content" style="display: none; flex-direction: column; height: 100%; background: var(--notebook-bg);">
+                    <div class="col-header" style="display: flex; align-items: center; justify-content: space-between; height: 60px; padding: 0 16px; box-sizing: border-box; background: transparent; border-bottom: 1px solid rgba(129, 140, 248, 0.3);">
+                        <h2 style="color: var(--notebook-text); margin: 0; font-size: 16px;">📓 Notebook</h2>
+                        <button class="icon-btn add-btn" onclick="openTaskModal('notes')" style="color: var(--notebook-text);">+</button>
                     </div>
+                    <div class="task-list" id="list-notes" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                 </div>
-
-                <div id="tracker-view">
-                    <div class="tracker-layout">
-                        <div class="tracker-palette">
-                            <div class="palette-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div>
-                                    <h3>Task Palette</h3>
-                                    <p>Click or drag tasks onto the calendar.</p>
-                                </div>
-                            </div>
-                            <div style="padding: 10px 16px; border-bottom: 1px solid var(--border-color); background: #F8FAFC; position: relative; flex-shrink: 0;">
-                                <input type="text" id="paletteSearchInput" placeholder="Filter palette tasks..." style="width: 100%; padding: 8px 30px 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; outline: none; background: #ffffff; color: var(--text-main);" oninput="renderTrackerPalette()">
-                                <button id="clearPaletteSearchBtn" style="position: absolute; right: 24px; top: 50%; transform: translateY(-50%); display: none; background: none; border: none; font-size: 18px; line-height: 1; cursor: pointer; color: var(--text-muted); padding: 0;" onclick="document.getElementById('paletteSearchInput').value=''; renderTrackerPalette();" title="Clear palette search">×</button>
-                            </div>
-                            <div class="palette-list" id="tracker-palette-list">
-                            </div>
-                        </div>
-                        
-                        <div class="tracker-canvas-wrapper">
-                            <div class="tracker-toolbar" style="display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; width: 100%; overflow: hidden; gap: 8px;">
-                                <!-- LEFT SIDE (Forced to never wrap) -->
-                                <div class="tracker-toolbar-left" style="display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; flex-shrink: 1; overflow: hidden;">
-                                    
-                                    <div class="view-toggle" style="margin:0; display: flex; flex-shrink: 0;">
-                                        <button id="btnTrackerDay" class="active" onclick="setTrackerMode('day')">Day</button>
-                                        <button id="btnTrackerWeek" onclick="setTrackerMode('week')">Week</button>
-                                    </div>
-                                    
-                                    <div class="tracker-control-group tracker-nav-group" style="display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; flex-shrink: 0;">
-                                        <button class="btn-outline" onclick="changeTrackerDay(-1)">←</button>
-                                        <span id="trackerDayOfWeek" style="font-weight: 600; color: var(--brand-primary); width: 75px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></span>
-                                        <input type="date" id="trackerDate" onchange="renderTrackerTimeline()" style="padding: 4px 2px; width: 120px; margin: 0;">
-                                        <button class="btn-outline" onclick="goToToday()" title="Go to Today">📅</button>
-                                        <button class="btn-outline" onclick="changeTrackerDay(1)">→</button>
-                                    </div>
-                                    
-                                    <div class="tracker-control-group zoom-controls" style="display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; flex-shrink: 0;">
-                                        <button class="btn-outline" onclick="adjustTimelineZoom(-0.25)">−</button>
-                                        <span id="zoomLevelDisplay" class="tracker-zoom-value" style="min-width: 24px; text-align: center;">1x</span>
-                                        <button class="btn-outline" onclick="adjustTimelineZoom(0.25)">+</button>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="timeline-scroll-area" id="timelineScrollArea">
-                                <div class="timeline" id="timelineCanvas">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="settings-view">
-                    <div class="settings-container">
-                        <div class="settings-header">
-                            <h2>Configuration Settings</h2>
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <button class="btn" onclick="saveSettings()">Save Changes</button>
-                            </div>
-                        </div>
-
-                        <div class="settings-section" style="padding: 24px 0; border-bottom: 1px solid var(--border-color);">
-                            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1E293B;">Calendar & Timesheet Integration</h3>
-                            
-                            <div class="form-group">
-                                <label for="sourceCalendar">Source Calendar (Outlook Sync)</label>
-                                <select id="sourceCalendar">
-                                    <option value="">Loading calendars...</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group" style="margin-top: 16px;">
-                                <label for="targetCalendar">Target Calendar (Timesheet Destination)</label>
-                                <select id="targetCalendar">
-                                    <option value="">Loading calendars...</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group" style="margin-top: 20px;">
-                                <label>Meeting Import Behavior</label>
-                                <div class="form-row-inline" style="background: #F8FAFC; padding: 12px 16px; border-radius: 8px; border: 1px solid #E2E8F0;">
-                                    <input type="radio" id="importAuto" name="importBehavior" value="auto" checked>
-                                    <label for="importAuto" style="width:auto; margin-right:24px; cursor: pointer;">Auto-Plot on Timeline</label>
-                                    
-                                    <input type="radio" id="importPalette" name="importBehavior" value="palette">
-                                    <label for="importPalette" style="width:auto; cursor: pointer;">Send to Task Palette</label>
-                                </div>
-                            </div>
-
-                            <div class="form-group" style="margin-top: 16px;">
-                                <label>Google Apps Script Timesheet URL</label>
-                                <input type="text" id="configTimesheetUrl" placeholder="https://script.google.com/macros/s/.../exec" style="font-family: monospace;">
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Google OAuth Client ID</label>
-                            <input type="text" id="configClientId" style="font-family: monospace;">
-                        </div>
-                        <div class="form-group">
-                            <label>Google API Key (Optional)</label>
-                            <input type="text" id="configApiKey" style="font-family: monospace;">
-                        </div>
-                        
-                        <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
-                        
-                        <div class="form-group" style="margin-top: 12px;">
-                            <label>Ignore Keywords (Comma-separated)</label>
-                            <input type="text" id="configIgnoreKeywords" placeholder="out of office, ooo, away, vacation, holiday">
-                            <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Calendar events containing these words will be ignored during sync.</p>
-                        </div>
-
-                        <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 8px;">
-                            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; color: #EF4444; border-color: #EF4444;" onclick="clearCalendarCache()">🗑️ Clear Calendar Cache</button>
-                        </div>
-
-                        <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
-
-                        <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">Timezone Display</h4>
-                        <div class="form-group form-row-inline">
-                            <label>Home Timezone</label>
-                            <select id="configPrimaryTz" style="width: auto;">
-                                <option value="local">Local Browser Time</option>
-                                <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
-                                <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
-                                <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
-                                <option value="America/Anchorage">UTC-09:00 (Alaska Time)</option>
-                                <option value="America/Los_Angeles">UTC-08:00 (Pacific Time)</option>
-                                <option value="America/Denver">UTC-07:00 (Mountain Time)</option>
-                                <option value="America/Chicago">UTC-06:00 (Central Time)</option>
-                                <option value="America/New_York">UTC-05:00 (Eastern Time)</option>
-                                <option value="America/Caracas">UTC-04:00 (Atlantic / Venezuela)</option>
-                                <option value="America/St_Johns">UTC-03:30 (Newfoundland Time)</option>
-                                <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
-                                <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
-                                <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
-                                <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
-                                <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
-                                <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
-                                <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
-                                <option value="Asia/Tehran">UTC+03:30 (Iran Standard Time)</option>
-                                <option value="Asia/Dubai">UTC+04:00 (Gulf Standard Time)</option>
-                                <option value="Asia/Kabul">UTC+04:30 (Afghanistan Time)</option>
-                                <option value="Asia/Karachi">UTC+05:00 (Pakistan Standard Time)</option>
-                                <option value="Asia/Kolkata">UTC+05:30 (India Standard Time)</option>
-                                <option value="Asia/Kathmandu">UTC+05:45 (Nepal Time)</option>
-                                <option value="Asia/Dhaka">UTC+06:00 (Bangladesh Time)</option>
-                                <option value="Asia/Yangon">UTC+06:30 (Myanmar Time)</option>
-                                <option value="Asia/Bangkok">UTC+07:00 (Indochina Time)</option>
-                                <option value="Asia/Singapore">UTC+08:00 (Singapore / China Time)</option>
-                                <option value="Australia/Perth">UTC+08:00 (Australian Western Time)</option>
-                                <option value="Australia/Eucla">UTC+08:45 (Australian Central Western)</option>
-                                <option value="Asia/Tokyo">UTC+09:00 (Japan Standard Time)</option>
-                                <option value="Australia/Adelaide">UTC+09:30 (Australian Central Time)</option>
-                                <option value="Australia/Sydney">UTC+10:00 (Australian Eastern Time)</option>
-                                <option value="Australia/Lord_Howe">UTC+10:30 (Lord Howe Time)</option>
-                                <option value="Pacific/Guadalcanal">UTC+11:00 (Solomon Islands Time)</option>
-                                <option value="Pacific/Auckland">UTC+12:00 (New Zealand Time)</option>
-                                <option value="Pacific/Chatham">UTC+12:45 (Chatham Time)</option>
-                                <option value="Pacific/Apia">UTC+13:00 (Samoa / Tonga Time)</option>
-                                <option value="Pacific/Kiritimati">UTC+14:00 (Line Islands Time)</option>
-                            </select>
-                        </div>
-                        <div class="form-group form-row-inline" style="margin-top: 8px;">
-                            <label>Secondary Timezone</label>
-                            <select id="configSecondaryTz" style="width: auto;">
-                                <option value="none">None</option>
-                                <option value="local">Local Browser Time</option>
-                                <option value="Pacific/Midway">UTC-11:00 (Samoa Time)</option>
-                                <option value="Pacific/Honolulu">UTC-10:00 (Hawaii Time)</option>
-                                <option value="Pacific/Marquesas">UTC-09:30 (Marquesas Time)</option>
-                                <option value="America/Anchorage">UTC-09:00 (Alaska Time)</option>
-                                <option value="America/Los_Angeles">UTC-08:00 (Pacific Time)</option>
-                                <option value="America/Denver">UTC-07:00 (Mountain Time)</option>
-                                <option value="America/Chicago">UTC-06:00 (Central Time)</option>
-                                <option value="America/New_York">UTC-05:00 (Eastern Time)</option>
-                                <option value="America/Caracas">UTC-04:00 (Atlantic / Venezuela)</option>
-                                <option value="America/St_Johns">UTC-03:30 (Newfoundland Time)</option>
-                                <option value="America/Sao_Paulo">UTC-03:00 (Brazil / Argentina)</option>
-                                <option value="Atlantic/South_Georgia">UTC-02:00 (South Georgia)</option>
-                                <option value="Atlantic/Azores">UTC-01:00 (Azores Time)</option>
-                                <option value="Europe/London">UTC+00:00 (UK / Western Europe)</option>
-                                <option value="Europe/Paris">UTC+01:00 (Central European Time)</option>
-                                <option value="Europe/Athens">UTC+02:00 (Eastern European Time / Cairo)</option>
-                                <option value="Europe/Moscow">UTC+03:00 (Moscow / East Africa)</option>
-                                <option value="Asia/Tehran">UTC+03:30 (Iran Standard Time)</option>
-                                <option value="Asia/Dubai">UTC+04:00 (Gulf Standard Time)</option>
-                                <option value="Asia/Kabul">UTC+04:30 (Afghanistan Time)</option>
-                                <option value="Asia/Karachi">UTC+05:00 (Pakistan Standard Time)</option>
-                                <option value="Asia/Kolkata">UTC+05:30 (India Standard Time)</option>
-                                <option value="Asia/Kathmandu">UTC+05:45 (Nepal Time)</option>
-                                <option value="Asia/Dhaka">UTC+06:00 (Bangladesh Time)</option>
-                                <option value="Asia/Yangon">UTC+06:30 (Myanmar Time)</option>
-                                <option value="Asia/Bangkok">UTC+07:00 (Indochina Time)</option>
-                                <option value="Asia/Singapore">UTC+08:00 (Singapore / China Time)</option>
-                                <option value="Australia/Perth">UTC+08:00 (Australian Western Time)</option>
-                                <option value="Australia/Eucla">UTC+08:45 (Australian Central Western)</option>
-                                <option value="Asia/Tokyo">UTC+09:00 (Japan Standard Time)</option>
-                                <option value="Australia/Adelaide">UTC+09:30 (Australian Central Time)</option>
-                                <option value="Australia/Sydney">UTC+10:00 (Australian Eastern Time)</option>
-                                <option value="Australia/Lord_Howe">UTC+10:30 (Lord Howe Time)</option>
-                                <option value="Pacific/Guadalcanal">UTC+11:00 (Solomon Islands Time)</option>
-                                <option value="Pacific/Auckland">UTC+12:00 (New Zealand Time)</option>
-                                <option value="Pacific/Chatham">UTC+12:45 (Chatham Time)</option>
-                                <option value="Pacific/Apia">UTC+13:00 (Samoa / Tonga Time)</option>
-                                <option value="Pacific/Kiritimati">UTC+14:00 (Line Islands Time)</option>
-                            </select>
-                        </div>
-
-                        <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
-
-                        <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">View Preferences</h4>
-                        <div class="form-group form-row-inline">
-                            <label>Default View</label>
-                            <select id="configDefaultView" class="task-input">
-                                <option value="grid">Grid View</option>
-                                <option value="kanban">Kanban View</option>
-                                <option value="tracker">Tracker View</option>
-                                <option value="overdue">Due Tasks</option>
-                                <option value="notebook">Notebook View</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Enabled Views</label>
-                            <div style="display: flex; gap: 16px; font-size: 13px; margin-top: 4px; flex-wrap: wrap;">
-                                <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewGrid"> Quadrant</label>
-                                <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewKanban"> Kanban</label>
-                                <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewTracker"> Calendar</label>
-                                <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewOverdue"> Due Tasks</label>
-                                <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 4px; width: auto;"><input type="checkbox" id="configViewNotebook"> Notebook</label>
-                            </div>
-                        </div>
-
-                        <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
-                        
-                        <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">Recurring Overlays</h4>
-                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 0; margin-bottom: 12px;">Highlight unavailable time on your calendar.</p>
-                        <div id="scheduleConfigList"></div>
-                        <button class="btn btn-outline" style="margin-top: 8px; width: 100%;" onclick="addScheduleRow()">+ Add Block</button>
-
-                        <hr style="margin: 24px 0 16px 0; border: none; border-top: 1px solid var(--border-color);">
-
-                        <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">Archived Projects</h4>
-                        <div id="archivedProjectsList" style="margin-bottom: 16px;"></div>
-
-                        <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">Data Management</h4>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn btn-outline" onclick="exportData()">📤 Export Backup</button>
-                            <button class="btn btn-outline" onclick="triggerImport()">📥 Import Backup</button>
-                            <input type="file" id="importFile" style="display: none;" accept=".json" onchange="importData(event)">
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
-            <!-- RIGHT AREA: Sticky Notebook Panel -->
-            <div class="quadrant" id="notes" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" ondragleave="dragLeaveQuad(event)" style="width: 320px; border-radius: 0; border: none; border-left: 1px solid var(--border-color); height: 100%; max-height: none; flex-shrink: 0;">
-                <div class="q-header" draggable="true" ondragstart="dragStartQuad(event)" ondragend="dragEndQuad(event)" style="border-top: none; border-radius: 0;">
-                    <h2>📓 Notebook <span class="q-badge" id="badge-notes">0</span></h2>
-                    <div class="header-buttons">
-                        <div class="custom-dropdown">
-                            <button class="icon-btn" onclick="toggleSortMenu('notes', event)" title="Sort Tasks">⇅</button>
-                            <div id="sort-menu-notes" class="dropdown-content"><div onclick="changeSort('notes', 'due_asc')">Due ↑</div><div onclick="changeSort('notes', 'due_desc')">Due ↓</div><div onclick="changeSort('notes', 'created_asc')">Created ↑</div><div onclick="changeSort('notes', 'created_desc')">Created ↓</div><div onclick="changeSort('notes', 'title_asc')">Title A-Z</div><div onclick="changeSort('notes', 'title_desc')">Title Z-A</div></div>
-                        </div>
-                        <button class="icon-btn add-btn" onclick="openTaskModal('notes', null, event)" title="Add Note">+</button>
-                    </div>
-                </div>
-                <div class="task-list" id="list-notes"></div>
+            <!-- 4. EXTREME RIGHT NAV BAR -->
+            <div class="right-nav-bar" style="width: 50px; flex-shrink: 0; background: #f8fafc; border-left: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding-top: 15px; gap: 15px;">
+                <button class="nav-icon active" onclick="toggleRightPane('todaysPlan')" id="nav-btn-todaysPlan" title="Today's Plan" style="width: 36px; height: 36px; border: none; background: #e3f2fd; color: #1976d2; border-radius: 8px; cursor: pointer; font-size: 18px;">⏱️</button>
+                <button class="nav-icon" onclick="toggleRightPane('notebook')" id="nav-btn-notebook" title="Notebook" style="width: 36px; height: 36px; border: none; background: transparent; color: #64748b; border-radius: 8px; cursor: pointer; font-size: 18px;">📓</button>
             </div>
 
+            <div id="settings-view" style="display: none; background: #F8FAFC; width: 100%; height: 100%; padding: 40px; overflow-y: auto; box-sizing: border-box;">
+                <div class="settings-container" style="max-width: 800px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #E2E8F0; padding: 32px 40px; display: flex; flex-direction: column; gap: 24px;">
+                    <div class="settings-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+                        <h2 style="font-size: 22px; font-weight: 700;">Configuration Settings</h2>
+                        <button class="btn" onclick="saveSettings()">Save Changes</button>
+                    </div>
+
+                    <div class="settings-section" style="padding: 24px 0; border-bottom: 1px solid var(--border-color);">
+                        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1E293B;">Calendar & Timesheet Integration</h3>
+                        <div class="form-group"><label>Source Calendar</label><select id="sourceCalendar"></select></div>
+                        <div class="form-group" style="margin-top: 16px;"><label>Target Calendar</label><select id="targetCalendar"></select></div>
+                        <div class="form-group" style="margin-top: 16px;"><label>Timesheet Web App URL</label><input type="text" id="configTimesheetUrl"></div>
+                    </div>
+                    
+                    <div class="form-group"><label>Google OAuth Client ID</label><input type="text" id="configClientId"></div>
+                    <div class="form-group"><label>Google API Key</label><input type="text" id="configApiKey"></div>
+                    <div class="form-group"><label>Ignore Keywords</label><input type="text" id="configIgnoreKeywords"></div>
+                    
+                    <div class="form-group form-row-inline"><label>Home Timezone</label><select id="configPrimaryTz"><option value="local">Local</option></select></div>
+                    <div class="form-group form-row-inline"><label>Secondary Timezone</label><select id="configSecondaryTz"><option value="none">None</option></select></div>
+
+                    <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
+                    <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">Recurring Overlays</h4>
+                    <div id="scheduleConfigList"></div>
+                    <button class="btn btn-outline" style="margin-top: 8px; width: 100%;" onclick="addScheduleRow()">+ Add Block</button>
+                    
+                    <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
+                    <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">Archived Projects</h4>
+                    <div id="archivedProjectsList" style="margin-bottom: 16px;"></div>
+                    
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-outline" onclick="exportData()">📤 Export Backup</button>
+                        <button class="btn btn-outline" onclick="triggerImport()">📥 Import Backup</button>
+                        <input type="file" id="importFile" style="display: none;" accept=".json" onchange="importData(event)">
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
     <div id="project-tabs-bar">
         <div id="project-tabs-container"></div>
         <button id="add-project-btn" onclick="addNewProject()" title="Add Project">+</button>
@@ -542,7 +207,6 @@
                     </div>
 
                     <div class="form-group">
-                        <!--<label>Description Details</label>-->
                         <div class="editor-toolbar" id="editorToolbar">
                             <button type="button" data-command="formatBlock" data-value="H1" style="font-weight:700;">H1</button>
                             <button type="button" data-command="formatBlock" data-value="H2" style="font-weight:600;">H2</button>
@@ -609,7 +273,6 @@
                         <tr><th style="padding: 8px;">Date</th><th style="padding: 8px; text-align: center;">Hours</th><th style="padding: 8px; text-align: center;">Action</th></tr>
                     </thead>
                     <tbody id="quickLogTableBody">
-                        <!-- Populated via JS -->
                     </tbody>
                 </table>
             </div>
@@ -634,7 +297,6 @@
                         </tr>
                     </thead>
                     <tbody id="timesheetTableBody">
-                        <!-- Populated via JS -->
                         <tr><td>3094</td><td style="text-align: right;">18.5</td></tr>
                         <tr><td>1434</td><td style="text-align: right;">12.0</td></tr>
                     </tbody>

@@ -1,9 +1,13 @@
-let version = '4.38';
+let version = '5.0';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
-let currentNotebookLayout = 'grid';
 let autoSyncTimerId = null; // NEW: Tracks the 20-minute sync loop
+let isSyncingSingle = false;
+let localDbFileHandle = null;
+let currentTrackerMode = 'day';
+let dbFileHandle = null; 
+let activeRightPane = 'todaysPlan';
 
 if (!appConfig.ignoreKeywords) appConfig.ignoreKeywords = 'out of office, ooo, away, vacation, holiday';
 if (!appConfig.calSource) appConfig.calSource = 'google';
@@ -75,6 +79,13 @@ async function initSQLite(binaryData = null) {
                 timeBlocks TEXT,
                 deleted INTEGER DEFAULT 0,
                 projectId TEXT DEFAULT 'p_default'
+            );
+        `);
+        db.run(`
+            CREATE TABLE IF NOT EXISTS projects (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                status TEXT
             );
         `);
         try { db.run(`ALTER TABLE tasks ADD COLUMN projectId TEXT DEFAULT 'p_default'`); } catch (e) {}
@@ -151,6 +162,7 @@ async function downloadDatabaseFromDrive() {
             
             // 3. Boot SQLite with the downloaded data
             await initSQLite(arrayBuffer);
+            loadNotesFromSQLite();
             setCloudSyncIcon('saved');
         } else {
             // No file exists yet in Drive, boot a fresh database
@@ -253,7 +265,7 @@ function toggleDocMode() {
     }
 }
 
-const SCOPES = 'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file';
+const SCOPES = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file';
 
 const defaultSchedule = [
     { title: 'Out of office hours', startHour: 14, endHour: 29 }, 
@@ -312,23 +324,6 @@ document.getElementById('trackerDate').value = savedDate || todayStr;
 document.getElementById('taskTitleInput')?.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
-    }
-});
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' || e.key === 'Esc') {
-        // Replace 'timesheetModal' if your modal's HTML ID is different
-        const timesheetModal = document.getElementById('timesheetModal'); 
-        
-        if (timesheetModal && timesheetModal.style.display !== 'none' && timesheetModal.style.display !== '') {
-            timesheetModal.style.display = 'none';
-            
-            // Optional: If your timesheet uses a dark background overlay, hide it here too
-            const overlay = document.getElementById('modalOverlay'); 
-            if (overlay) {
-                overlay.style.display = 'none';
-            }
-        }
     }
 });
 
@@ -397,110 +392,6 @@ function formatCurrentTimeBadge(date) {
     return text;
 }
 
-// --- Layout Management ---
-let currentLayout = localStorage.getItem('quadra_layout') || appConfig.defaultView;
-let currentTrackerMode = 'day'; 
-
-if (!appConfig.viewsEnabled[currentLayout]) {
-    const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
-    currentLayout = firstEnabled || 'grid';
-}
-
-function applyViewVisibility() {
-    const btnGrid = document.getElementById('btnGrid') || document.getElementById('btn-layout-grid');
-    const btnKanban = document.getElementById('btnKanban') || document.getElementById('btn-layout-kanban');
-    const btnTracker = document.getElementById('btnTracker') || document.getElementById('btn-layout-tracker');
-    const btnOverdue = document.getElementById('btnOverdue') || document.getElementById('btn-layout-overdue');
-    const btnNotebook = document.getElementById('btnNotebook') || document.getElementById('btn-layout-notebook');
-    
-    if (btnGrid) btnGrid.style.display = appConfig.viewsEnabled.grid ? '' : 'none';
-    if (btnKanban) btnKanban.style.display = appConfig.viewsEnabled.kanban ? '' : 'none';
-    if (btnTracker) btnTracker.style.display = appConfig.viewsEnabled.tracker ? '' : 'none';
-    if (btnOverdue) btnOverdue.style.display = appConfig.viewsEnabled.overdue ? '' : 'none';
-    if (btnNotebook) btnNotebook.style.display = appConfig.viewsEnabled.notebook ? '' : 'none';
-    
-    if (!appConfig.viewsEnabled[currentLayout]) {
-        const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
-        setLayout(firstEnabled || 'grid');
-    }
-}
-
-function setLayout(layout) {
-    if (!appConfig.viewsEnabled[layout]) return; 
-    
-    currentLayout = layout;
-    localStorage.setItem('quadra_layout', layout);
-    
-    const matrix = document.getElementById('matrix');
-    const tracker = document.getElementById('tracker-view');
-    const overdue = document.getElementById('overdue-view');
-    const settingsView = document.getElementById('settings-view');
-    const notebookView = document.getElementById('notebook-view'); 
-    
-    const btnGrid = document.getElementById('btnGrid') || document.getElementById('btn-layout-grid');
-    const btnKanban = document.getElementById('btnKanban') || document.getElementById('btn-layout-kanban');
-    const btnOverdue = document.getElementById('btnOverdue') || document.getElementById('btn-layout-overdue');
-    const btnTracker = document.getElementById('btnTracker') || document.getElementById('btn-layout-tracker');
-    const btnNotebook = document.getElementById('btnNotebook') || document.getElementById('btn-layout-notebook');
-
-    if (btnGrid) btnGrid.classList.toggle('active', layout === 'grid');
-    if (btnKanban) btnKanban.classList.toggle('active', layout === 'kanban');
-    if (btnOverdue) btnOverdue.classList.toggle('active', layout === 'overdue');
-    if (btnTracker) btnTracker.classList.toggle('active', layout === 'tracker');
-    if (btnNotebook) btnNotebook.classList.toggle('active', layout === 'notebook');
-    
-    // ENSURE ALL VIEWS ARE HIDDEN FIRST
-    if(settingsView) settingsView.style.display = 'none';
-    if(matrix) matrix.style.display = 'none';
-    if(tracker) tracker.style.display = 'none';
-    if(overdue) overdue.style.display = 'none';
-    if(notebookView) notebookView.style.display = 'none'; 
-
-    if (layout === 'tracker') {
-        if(tracker) tracker.style.display = 'block'; 
-        document.body.classList.remove('sidebar-open');
-        updateZoomDisplay();
-        renderTrackerTimeline();
-        startLiveClock();
-    } else if (layout === 'overdue') {
-        if(overdue) overdue.style.display = 'block';
-        document.body.classList.remove('sidebar-open');
-        renderOverdueTasksPage();
-        stopLiveClock();
-    } else if (layout === 'notebook') {
-        if(notebookView) notebookView.style.display = 'flex';
-        document.body.classList.remove('sidebar-open');
-        renderNotebookView();
-        stopLiveClock();
-    } else {
-        if(matrix) {
-            matrix.style.display = ''; 
-            matrix.classList.remove('layout-grid', 'layout-kanban');
-            matrix.classList.add(`layout-${layout}`);
-        }
-        stopLiveClock();
-    }
-    
-    document.getElementById('quick-tags-bar').style.display = 'flex';
-    document.getElementById('searchHeaderContainer').style.display = 'block';
-    document.getElementById('viewToggleGroup').style.display = 'flex';
-    document.getElementById('settingsNavBtn').style.display = 'inline-block';
-    document.getElementById('backNavBtn').style.display = 'none';
-    // --- Context-Specific Toolbar Logic ---
-    const trackerContextIcons = document.getElementById('tracker-context-icons');
-    if (trackerContextIcons) {
-        trackerContextIcons.style.display = (layout === 'tracker') ? 'flex' : 'none';
-    }
-
-    if (typeof applyNotebookVisibility === 'function') {
-        applyNotebookVisibility();
-    }
-}
-
-function switchLayout(layout) {
-    setLayout(layout);
-}
-
 function adjustTimelineZoom(amount) {
     timelineZoom = Math.max(0.5, Math.min(3, roundToQuarterHour(timelineZoom + amount)));
     localStorage.setItem('quadra_zoom', timelineZoom);
@@ -513,50 +404,6 @@ function updateZoomDisplay() {
     if (display) display.innerText = `${timelineZoom}x`;
 }
 
-function openSettingsPage() {
-    document.getElementById('matrix').style.display = 'none';
-    document.getElementById('tracker-view').style.display = 'none';
-    document.getElementById('overdue-view').style.display = 'none';
-    document.getElementById('settings-view').style.display = 'block';
-    document.body.classList.remove('sidebar-open');
-    document.getElementById('quick-tags-bar').style.display = 'none';
-    document.getElementById('searchHeaderContainer').style.display = 'none';
-    document.getElementById('viewToggleGroup').style.display = 'none';
-    document.getElementById('settingsNavBtn').style.display = 'none';
-    document.getElementById('backNavBtn').style.display = 'inline-block';
-
-    document.getElementById('configClientId').value = appConfig.clientId || '';
-    document.getElementById('configApiKey').value = appConfig.apiKey || '';
-    document.getElementById('configTimesheetUrl').value = appConfig.timesheetUrl || '';
-    
-    // Load toggles
-    if (appConfig.importBehavior === 'palette') {
-        document.getElementById('importPalette').checked = true;
-    } else {
-        document.getElementById('importAuto').checked = true;
-    }
-
-    const ignoreEl = document.getElementById('configIgnoreKeywords');
-    if (ignoreEl) ignoreEl.value = appConfig.ignoreKeywords || '';
-    
-    const calSourceEl = document.getElementById('configCalSource');
-    if (calSourceEl) calSourceEl.value = appConfig.calSource || 'google';
-
-    document.getElementById('configPrimaryTz').value = appConfig.primaryTz || 'local';
-    document.getElementById('configSecondaryTz').value = appConfig.secondaryTz || 'none';
-    
-    document.getElementById('configDefaultView').value = appConfig.defaultView || 'grid';
-    document.getElementById('configViewGrid').checked = appConfig.viewsEnabled.grid !== false;
-    document.getElementById('configViewKanban').checked = appConfig.viewsEnabled.kanban !== false;
-    document.getElementById('configViewTracker').checked = appConfig.viewsEnabled.tracker !== false;
-    document.getElementById('configViewOverdue').checked = appConfig.viewsEnabled.overdue !== false;
-    document.getElementById('configViewNotebook').checked = appConfig.viewsEnabled.notebook !== false;
-    
-    loadCalendars();
-    renderScheduleSettings();
-    renderArchivedProjects();
-}
-
 function toggleCalSourceFields(source) {
     if (source === 'outlook') {
         document.getElementById('googleCalGroup').style.display = 'none';
@@ -565,10 +412,6 @@ function toggleCalSourceFields(source) {
         document.getElementById('googleCalGroup').style.display = 'block';
         document.getElementById('outlookIcsGroup').style.display = 'none';
     }
-}
-
-function closeSettingsPage() {
-    setLayout(currentLayout);
 }
 
 function setTrackerMode(mode) {
@@ -586,7 +429,7 @@ function saveNotes() {
 function startLiveClock() {
     if(clockIntervalId) clearInterval(clockIntervalId);
     clockIntervalId = setInterval(() => {
-        if (currentLayout === 'tracker' && currentTrackerMode === 'day' && document.getElementById('tracker-view').style.display === 'block') {
+        if (currentTrackerMode === 'day') { // <-- Removed currentLayout check
             const line = document.querySelector('.current-time-line');
             const badge = document.querySelector('.current-time-badge');
             if (line && badge) {
@@ -673,7 +516,6 @@ function dropQuad(e) {
             note.quadrant = targetKey; 
             note.dirty = true; 
             saveNotes();
-            syncSingleTask(note.id);
             handleSearch(); 
         }
     }
@@ -828,12 +670,22 @@ function renderTrackerPalette() {
 }
 
 function renderTrackerTimeline() {
+    const canvas = document.getElementById('timelineCanvas');
+    const dateInput = document.getElementById('trackerDate');
+    
+    // SAFETY CHECK: Abort if the HTML elements don't exist yet
+    if (!canvas || !dateInput) return; 
+
+    // SAFETY CHECK: Prevent blank/invalid date crashes
+    let baseDateStr = dateInput.value;
+    if (!baseDateStr) {
+        baseDateStr = new Date().toLocaleDateString('en-CA').split('T')[0];
+        dateInput.value = baseDateStr;
+    }
+
     const searchInput = document.getElementById('searchInput');
     const globalQuery = searchInput ? searchInput.value.toLowerCase() : '';
     
-    renderTrackerPalette();
-
-    const canvas = document.getElementById('timelineCanvas');
     const hourPx = 60 * timelineZoom;
     
     canvas.innerHTML = '';
@@ -871,7 +723,6 @@ function renderTrackerTimeline() {
     }
     canvas.appendChild(bgLines);
 
-    const baseDateStr = document.getElementById('trackerDate').value;
     localStorage.setItem('quadra_tracker_date', baseDateStr);
     
     const [y, m, d] = baseDateStr.split('-');
@@ -931,6 +782,8 @@ function renderTrackerTimeline() {
         col.ondrop = (e) => dropToTracker(e, dateStr);
         col.onclick = (e) => handleTimelineClick(e, dateStr);
 
+        const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
+
         if (currentTrackerMode === 'week') {
             const header = document.createElement('div');
             header.className = 'col-header';
@@ -987,14 +840,9 @@ function renderTrackerTimeline() {
         let dayBlocks = [];
 
         notes.forEach(note => {
-            if (note.deleted) return; 
-            
-            //if (!isProjectVisible(note)) return; 
-                        
-            //if (!matchesSearchQuery(note.text, globalQuery)) return;
+            if (!note || note.deleted) return; 
             
             const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-
             let blocksToProcess = note.timeBlocks || [];
             
             // Dynamic fallback for Imported Google Events
@@ -1003,8 +851,11 @@ function renderTrackerTimeline() {
             }
 
             blocksToProcess.forEach(tBlock => {
-                let blockStart = roundToQuarterHour(tBlock.startHour);
-                let duration = roundToQuarterHour(tBlock.duration);
+                // SAFETY CHECK: Ensure the block has a valid date string before comparing
+                if (!tBlock || !tBlock.date) return;
+
+                let blockStart = roundToQuarterHour(tBlock.startHour || 0);
+                let duration = roundToQuarterHour(tBlock.duration || 1.0);
                 let blockEnd = blockStart + duration;
                 if (blockEnd < blockStart) { blockEnd += 24; }
                 let actualDuration = roundToQuarterHour(blockEnd - blockStart);
@@ -1023,29 +874,25 @@ function renderTrackerTimeline() {
                     const quadClass = note.quadrant || 'q2';
                     blockEl.className = 'logged-block' + (isCalendarEvent ? ' is-meeting' : ` ${quadClass}`) + (note.status === 'closed' ? ' is-closed' : '');
                     
-                    // NEW: ID includes the specific blockId
-                    blockEl.id = `block-${note.id}-${tBlock.blockId}`;
+                    blockEl.id = `block-${note.id}-${tBlock.blockId || 'base'}`;
                     blockEl.style.top = `${renderStart * hourPx}px`;
                     blockEl.style.height = `${Math.max(15, renderDuration * hourPx)}px`;
                     
                     let pid = note.projectId || note.projectIds?.[0] || 'p_default';
-                    let pObj = appConfig.projects.find(p => p.id === pid);
+                    let pObj = appConfig.projects ? appConfig.projects.find(p => p.id === pid) : null;
                     let pName = pObj ? `${pObj.name} - ` : '';
-                    let cleanTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+                    let cleanTitle = cleanHTMLToPlainText(note.text || '').split('\n')[0];
 
-                    // REMOVED .substring(0, 45) so the full text displays
                     let displayTitle = pName + cleanTitle;
                     const actualEndHour = (blockStart + actualDuration) % 24;
                     const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
 
-                    // NEW: Pass both note.id and tBlock.blockId to startBlockDrag
-                    // Removed the ternary check to inject the resize-handle on ALL blocks
                     blockEl.innerHTML = `
                         <div class="block-info">
                             <div class="block-title">${displayTitle}</div>
                             <div class="block-meta">${timeStr}</div>
                         </div>
-                        <div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', '${tBlock.blockId}', true)"></div>
+                        <div class="resize-handle" onmousedown="startBlockDrag(event, '${note.id}', '${tBlock.blockId || ''}', true)"></div>
                     `;
                     
                     blockEl.onclick = (e) => {
@@ -1054,10 +901,9 @@ function renderTrackerTimeline() {
                         openTaskModal(null, note.id, e);
                     };
 
-                    // Removed the if(!isCalendarEvent) wrapper to enable dragging on ALL blocks
                     blockEl.onmousedown = (e) => {
                         if(e.target.closest('.resize-handle')) return;
-                        startBlockDrag(e, note.id, tBlock.blockId, false);
+                        startBlockDrag(e, note.id, tBlock.blockId || '', false);
                     };
                     
                     dayBlocks.push({ el: blockEl, start: renderStart, end: renderStart + renderDuration, duration: renderDuration });
@@ -1068,16 +914,15 @@ function renderTrackerTimeline() {
                         const blockEl = document.createElement('div');
                         const quadClass = note.quadrant || 'q2';
                         blockEl.className = 'logged-block' + (isCalendarEvent ? ' is-meeting' : ` ${quadClass}`) + (note.status === 'closed' ? ' is-closed' : '');
-                        blockEl.id = `block-overflow-${note.id}-${tBlock.blockId}`;
+                        blockEl.id = `block-overflow-${note.id}-${tBlock.blockId || 'base'}`;
                         blockEl.style.top = `0px`;
                         blockEl.style.height = `${Math.max(15, overflowDuration * hourPx)}px`;
                         
                         let pid = note.projectId || note.projectIds?.[0] || 'p_default';
-                        let pObj = appConfig.projects.find(p => p.id === pid);
+                        let pObj = appConfig.projects ? appConfig.projects.find(p => p.id === pid) : null;
                         let pName = pObj ? `${pObj.name} - ` : '';
-                        let cleanTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+                        let cleanTitle = cleanHTMLToPlainText(note.text || '').split('\n')[0];
 
-                        // REMOVED .substring(0, 45) so the full text displays
                         let displayTitle = pName + cleanTitle;
                         const actualEndHour = (blockStart + actualDuration) % 24;
                         const timeStr = `${decToTime(blockStart)} - ${decToTime(actualEndHour)}`;
@@ -1151,13 +996,13 @@ function renderTrackerTimeline() {
         colsContainer.appendChild(col);
     });
 
-    // --- NEW: Daily/Weekly Hour Calculations loop through timeBlocks ---
+    // --- Daily/Weekly Hour Calculations loop through timeBlocks ---
     let actualWeekly = 0;
     let countedIds = new Set();
     notes.forEach(note => {
-        if (note.deleted || note.eventId || note.status === 'closed') return;
+        if (!note || note.deleted || note.eventId || note.status === 'closed') return;
         (note.timeBlocks || []).forEach(tb => {
-            if (weekDateKeys.has(tb.date) && !countedIds.has(`${note.id}-${tb.blockId}`)) {
+            if (tb && tb.date && weekDateKeys.has(tb.date) && !countedIds.has(`${note.id}-${tb.blockId}`)) {
                 actualWeekly += roundToQuarterHour(tb.duration || 1.0);
                 countedIds.add(`${note.id}-${tb.blockId}`);
             }
@@ -1166,9 +1011,9 @@ function renderTrackerTimeline() {
 
     let actualDaily = 0;
     notes.forEach(note => {
-        if (note.deleted || note.eventId || note.status === 'closed') return;
+        if (!note || note.deleted || note.eventId || note.status === 'closed') return;
         (note.timeBlocks || []).forEach(tb => {
-            if (tb.date === baseDateStr) {
+            if (tb && tb.date === baseDateStr) {
                 actualDaily += roundToQuarterHour(tb.duration || 1.0);
             }
         });
@@ -1189,169 +1034,15 @@ function toggleDueFilter() {
     }
 }
 
-// --- DUE TASKS (TRIAGE) ENGINE ---
-function renderOverdueTasksPage() {
-    const backlogList = document.getElementById('backlog-list');
-    const horizonContainer = document.getElementById('horizon-container');
-    
-    if (!backlogList || !horizonContainer) return;
-    
-    backlogList.innerHTML = '';
-    horizonContainer.innerHTML = '';
-    
-    const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
-    const todayObj = new Date();
-    
-    // --- FIX: Grab the global search query ---
-    const searchInput = document.getElementById('searchInput');
-    const globalQuery = searchInput ? searchInput.value : '';
-    
-    // 1. Filter eligible notes (Not closed, deleted, meetings, Notebook notes, and MATCHES SEARCH)
-    const activeNotes = notes.filter(n => 
-        !n.deleted && 
-        n.status !== 'closed' && 
-        !n.eventId && 
-        n.quadrant !== 'notes' && 
-        isProjectVisible(n) &&
-        matchesSearchQuery(n.text, globalQuery) // <-- Applied here
-    );
-    
-    // 2. Identify Backlog (Overdue OR Unscheduled)
-    const backlogNotes = activeNotes.filter(n => {
-        if (!n.dueDate) return true; // Unscheduled
-        return n.dueDate < todayStr; // Overdue
-    });
-    
-    // Sort Backlog: Overdue dates first, then unscheduled
-    backlogNotes.sort((a, b) => {
-        if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
-        if (a.dueDate) return -1;
-        if (b.dueDate) return 1;
-        return 0;
-    });
-    
-    document.getElementById('backlog-count').innerText = backlogNotes.length;
-    
-    backlogNotes.forEach(note => {
-        backlogList.appendChild(createTriageCard(note, todayStr));
-    });
-    
-    // 3. Generate Horizon Columns (Today + Next 6 Days)
-    for (let i = 0; i < 7; i++) {
-        const d = new Date();
-        d.setDate(todayObj.getDate() + i);
-        
-        const localY = d.getFullYear();
-        const localM = String(d.getMonth() + 1).padStart(2, '0');
-        const localD = String(d.getDate()).padStart(2, '0');
-        const dateStr = `${localY}-${localM}-${localD}`;
-        
-        const dayOfWeek = d.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        const isToday = i === 0;
-        
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        
-        const subLabel = dayNames[dayOfWeek];
-        const mainLabel = `${monthNames[d.getMonth()]} ${d.getDate()}` + (isToday ? ' (Today)' : '');
-        
-        const isOOO = appConfig.oooDates && appConfig.oooDates.includes(dateStr);
-        
-        const col = document.createElement('div');
-        col.className = `day-col ${isWeekend ? 'weekend' : ''} ${isOOO ? 'ooo-day' : ''}`;
-        col.innerHTML = `
-            <div class="day-header ${isToday ? 'today' : ''}">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                    <div class="sub">${subLabel}</div>
-                    <button class="ooo-btn ${isOOO ? 'active' : ''}" onclick="toggleOOODay('${dateStr}')" title="Mark Out of Office">🌴</button>
-                </div>
-                <div>${mainLabel}</div>
-            </div>
-            <div class="day-content" ondragover="allowHorizonDrop(event)" ondragleave="dragLeaveHorizon(event)" ondrop="dropToHorizon(event, '${dateStr}')"></div>
-        `;
-        
-        const contentArea = col.querySelector('.day-content');
-        
-        // Populate tasks scheduled for this specific day
-        const dayNotes = activeNotes.filter(n => n.dueDate === dateStr);
-        dayNotes.forEach(note => {
-            contentArea.appendChild(createTriageCard(note, todayStr));
-        });
-        
-        horizonContainer.appendChild(col);
-    }
-}
-
-function createTriageCard(note, todayStr) {
-    const el = document.createElement('div');
-    el.className = `triage-task ${note.quadrant || 'q2'}`;
-    el.draggable = true;
-    el.ondragstart = (e) => e.dataTransfer.setData('text/plain', note.id);
-    el.onclick = (e) => openTaskModal(null, note.id, e);
-    
-    let title = cleanHTMLToPlainText(note.text).split('\n')[0];
-        
-    // --- NEW: Calculate Due Date Metadata ---
-    let metaText = '';
-    //const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
-    
-    if (note.dueDate && note.dueDate < todayStr) {
-        metaText = `<span style="color: #EF4444; font-weight: 700;">Overdue (${note.dueDate})</span>`;
-    } else if (!note.dueDate) {
-        metaText = `Unscheduled`;
-    } else {
-        metaText = `Due ${note.dueDate}`;
-    }
-    
-    // --- NEW: Render Card without Quadrant Pill ---
-    el.innerHTML = `
-        <div style="font-weight: 600; color: #334155; margin-bottom: 4px;">${parseTags(title)}</div>
-        <div style="font-size: 11px; color: #64748B;">${metaText}</div>
-    `;
-    return el;
-}
-
-// --- Triage Drag & Drop Handlers ---
 function toggleOOODay(dateStr) {
     if (!appConfig.oooDates) appConfig.oooDates = [];
     const idx = appConfig.oooDates.indexOf(dateStr);
     
-    // Toggle the date in the array
-    if (idx > -1) {
-        appConfig.oooDates.splice(idx, 1);
-    } else {
-        appConfig.oooDates.push(dateStr);
-    }
+    if (idx > -1) appConfig.oooDates.splice(idx, 1);
+    else appConfig.oooDates.push(dateStr);
     
-    // Save and re-render
     localStorage.setItem('quadra_config', JSON.stringify(appConfig));
-    renderOverdueTasksPage();
-}
-function allowHorizonDrop(ev) {
-    ev.preventDefault();
-    ev.currentTarget.parentElement.classList.add('drag-over');
-}
-function dragLeaveHorizon(ev) {
-    ev.currentTarget.parentElement.classList.remove('drag-over');
-}
-function dropToHorizon(ev, dateStr) {
-    ev.preventDefault(); 
-    ev.currentTarget.parentElement.classList.remove('drag-over');
-    
-    const noteId = ev.dataTransfer.getData("text/plain");
-    const note = notes.find(n => n.id === noteId);
-    
-    if (note) {
-        note.dueDate = dateStr;
-        // Shift existing calendar blocks to match the new day
-        if (note.timeBlocks && note.timeBlocks.length > 0) {
-            note.timeBlocks.forEach(tb => tb.date = dateStr);
-        }
-        note.dirty = true;
-        saveNotes();
-        handleSearch(); 
-    }
+    renderTrackerTimeline(); // <--- Replaces renderOverdueTasksPage()
 }
 
 function allowBacklogDrop(ev) {
@@ -1600,148 +1291,6 @@ document.addEventListener('click', function(e) {
     }
 });
 
-document.addEventListener('keydown', (e) => {
-    // --- NEW: Intercept Ctrl+S / Cmd+S globally ---
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault(); // Stop default browser "Save Webpage" dialog
-        
-        // 1. Save standard state to localStorage first
-        saveNotes();
-        
-        // 2. Trigger SQLite backup to Google Drive AppData
-        uploadDatabaseToDrive();
-        
-        // 3. Trigger Google Tasks Sync
-        performBackgroundSync();
-        
-        return;
-    }
-
-    const isEditingText = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
-    
-    if (isEditingText) {
-        // --- NEW: Rich Text Formatting Shortcuts ---
-        
-        // Ctrl+Alt+Shift+S : Code Block
-        if ((e.ctrlKey || e.metaKey) && e.altKey && e.shiftKey && e.key.toLowerCase() === 's') {
-            e.preventDefault();
-            insertCodeBlock();
-            return;
-        }
-        
-        // Ctrl+Shift+X : Strikethrough
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'x' && !e.altKey) {
-            e.preventDefault();
-            document.execCommand('strikeThrough', false, null);
-            triggerAutoSaveInterval();
-            return;
-        }
-        
-        // Ctrl+B : Bold
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b' && !e.shiftKey && !e.altKey) {
-            e.preventDefault();
-            document.execCommand('bold', false, null);
-            triggerAutoSaveInterval();
-            return;
-        }
-        
-        // Ctrl+I : Italics
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i' && !e.shiftKey && !e.altKey) {
-            e.preventDefault();
-            document.execCommand('italic', false, null);
-            triggerAutoSaveInterval();
-            return;
-        }
-
-        // Existing custom Ctrl+1 checklist shortcut
-        if (e.ctrlKey && e.key === '1' && !e.shiftKey && !e.altKey) {
-            e.preventDefault();
-            toggleChecklistFormatting();
-            return; 
-        }
-    }
-
-    if (e.key === 'Escape') {
-        const taskModal = document.getElementById('taskModal');
-        const shortcutsModal = document.getElementById('shortcutsModal');
-        const projectModal = document.getElementById('projectModal');
-
-        if (taskModal && taskModal.style.display === 'flex') closeTaskModal();
-        if (shortcutsModal && shortcutsModal.style.display === 'flex') closeShortcutsModal();
-        if (projectModal && projectModal.style.display === 'flex') closeProjectModal();
-    } else if (!isEditingText) {
-        // --- NEW: Alt + Up/Down Arrow for Project Traversal ---
-        if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-            e.preventDefault();
-            const unarchived = appConfig.projects.filter(p => !p.archived);
-            
-            if (unarchived.length > 1) {
-                let currentIndex = unarchived.findIndex(p => p.visible);
-                if (currentIndex === -1) currentIndex = 0;
-                
-                let newIndex;
-                if (e.key === 'ArrowDown') {
-                    newIndex = (currentIndex + 1) % unarchived.length; // Next project
-                } else {
-                    newIndex = (currentIndex - 1 + unarchived.length) % unarchived.length; // Previous project
-                }
-                
-                const targetProjectId = unarchived[newIndex].id;
-                appConfig.projects.forEach(p => p.visible = (p.id === targetProjectId));
-                
-                localStorage.setItem('quadra_config', JSON.stringify(appConfig));
-                renderProjectTabs();
-                handleSearch();
-            }
-            return;
-        }
-        if (e.shiftKey && (e.key === '?' || e.key === '/')) {
-            e.preventDefault();
-            openShortcutsModal();
-        } else if (e.key === '/') {
-            e.preventDefault();
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.focus();
-                searchInput.select();
-            }
-        } else if (e.key.toLowerCase() === 'q' && appConfig.viewsEnabled.grid) {
-            e.preventDefault();
-            setLayout('grid');
-        } else if (e.key.toLowerCase() === 'k' && appConfig.viewsEnabled.kanban) {
-            e.preventDefault();
-            setLayout('kanban');
-        } else if (e.key.toLowerCase() === 'c' && appConfig.viewsEnabled.tracker) {
-            e.preventDefault();
-            setLayout('tracker');
-        } else if (e.key.toLowerCase() === 'o' && appConfig.viewsEnabled.overdue) {
-            e.preventDefault();
-            setLayout('overdue');
-        } else if (e.key.toLowerCase() === 'n' && appConfig.viewsEnabled.notebook) {
-            // --- NEW: Direct shortcut for Notebook ---
-            e.preventDefault();
-            setLayout('notebook');
-        } else if (e.key === '`' || e.key === '~') {
-            e.preventDefault();
-            
-            // --- FIX: Matched to the new visual order (Grid, Kanban, Overdue, Tracker, Notebook) ---
-            const allViews = ['grid', 'kanban', 'overdue', 'tracker', 'notebook'];
-            
-            const views = allViews.filter(v => appConfig.viewsEnabled[v]);
-            if (views.length === 0) return; 
-            
-            let idx = views.indexOf(currentLayout);
-            if (idx === -1) idx = 0;
-            if (e.shiftKey) {
-                idx = (idx - 1 + views.length) % views.length;
-            } else {
-                idx = (idx + 1) % views.length;
-            }
-            setLayout(views[idx]);
-        }
-    }
-});
-
 function toggleTaskCompleteFromModal() {
     if (!currentEditingId) return;
     
@@ -1984,7 +1533,6 @@ function saveTaskModal() {
             }
             note.dirty = true; 
             saveNotes(); 
-            syncSingleTask(note.id);
             handleSearch(); 
         } 
     } else { 
@@ -2007,7 +1555,6 @@ function saveTaskModal() {
             projectIds: targetProjects
         }); 
         saveNotes(); 
-        syncSingleTask(newNoteId);
         handleSearch(); 
     }
     closeTaskModal();
@@ -2198,6 +1745,7 @@ async function loadCalendars() {
 
 function renderScheduleSettings() {
     const container = document.getElementById('scheduleConfigList');
+    if (!container) return; // <-- Prevents the crash
     container.innerHTML = '';
     appSchedule.forEach(block => addScheduleRow(block));
 }
@@ -2210,6 +1758,9 @@ function formatTimeForInput(decimalHour) {
 }
 
 function addScheduleRow(block = {title: '', startHour: 14, endHour: 29}) {
+    const container = document.getElementById('scheduleConfigList');
+    if (!container) return; // <-- Prevents the crash
+    
     const div = document.createElement('div');
     div.className = 'schedule-row';
     div.style.display = 'flex'; div.style.gap = '8px'; div.style.marginBottom = '8px';
@@ -2219,7 +1770,7 @@ function addScheduleRow(block = {title: '', startHour: 14, endHour: 29}) {
         <input type="time" class="sched-end" value="${formatTimeForInput(block.endHour)}" style="padding:8px;">
         <button class="btn btn-outline" style="color:red; padding:8px 12px;" onclick="this.parentElement.remove()">×</button>
     `;
-    document.getElementById('scheduleConfigList').appendChild(div);
+    container.appendChild(div);
 }
 
 function formatEditorNodes(editorId) {
@@ -2282,76 +1833,6 @@ function formatEditorNodes(editorId) {
             marker.parentNode.removeChild(marker);
         }
     }
-}
-
-function saveSettings() {
-    appConfig.clientId = document.getElementById('configClientId').value.trim();
-    appConfig.apiKey = document.getElementById('configApiKey').value.trim();
-    appConfig.timesheetUrl = document.getElementById('configTimesheetUrl').value.trim();
-    
-    const ignoreEl = document.getElementById('configIgnoreKeywords');
-    if (ignoreEl) appConfig.ignoreKeywords = ignoreEl.value.trim();
-    
-    const calSourceEl = document.getElementById('configCalSource');
-    if (calSourceEl) appConfig.calSource = calSourceEl.value;
-    
-    const sourceSelect = document.getElementById('sourceCalendar');
-    if (sourceSelect) appConfig.sourceCalendar = sourceSelect.value;
-    
-    const targetSelect = document.getElementById('targetCalendar');
-    if (targetSelect) appConfig.targetCalendar = targetSelect.value;
-    
-    const importBehavior = document.querySelector('input[name="importBehavior"]:checked');
-    if (importBehavior) appConfig.importBehavior = importBehavior.value;
-    
-    appConfig.primaryTz = document.getElementById('configPrimaryTz').value;
-    appConfig.secondaryTz = document.getElementById('configSecondaryTz').value;
-
-    appConfig.defaultView = document.getElementById('configDefaultView').value;
-    appConfig.viewsEnabled = {
-        grid: document.getElementById('configViewGrid').checked,
-        kanban: document.getElementById('configViewKanban').checked,
-        tracker: document.getElementById('configViewTracker').checked,
-        overdue: document.getElementById('configViewOverdue').checked,
-        notebook: document.getElementById('configViewNotebook').checked
-    };
-    
-    if (!appConfig.viewsEnabled[appConfig.defaultView]) {
-        const firstEnabled = Object.keys(appConfig.viewsEnabled).find(k => appConfig.viewsEnabled[k]);
-        if (firstEnabled) {
-            appConfig.defaultView = firstEnabled;
-            document.getElementById('configDefaultView').value = firstEnabled;
-        } else {
-            appConfig.viewsEnabled.grid = true;
-            appConfig.defaultView = 'grid';
-            document.getElementById('configDefaultView').value = 'grid';
-            document.getElementById('configViewGrid').checked = true;
-        }
-    }
-    
-    localStorage.setItem('quadra_config', JSON.stringify(appConfig));
-    
-    const rows = document.querySelectorAll('.schedule-row');
-    appSchedule = Array.from(rows).map(row => {
-        const startStr = row.querySelector('.sched-start').value.split(':');
-        const endStr = row.querySelector('.sched-end').value.split(':');
-        let startH = parseInt(startStr[0] || 0) + (parseInt(startStr[1] || 0) / 60);
-        let endH = parseInt(endStr[0] || 0) + (parseInt(endStr[1] || 0) / 60);
-        if (endH <= startH) endH += 24;
-
-        return {
-            title: row.querySelector('.sched-title').value,
-            startHour: roundToQuarterHour(startH),
-            endHour: roundToQuarterHour(endH)
-        };
-    });
-    localStorage.setItem('quadra_schedule', JSON.stringify(appSchedule));
-    
-    applyViewVisibility();
-    closeSettingsPage(); 
-    showToast("Configuration saved!");
-    checkConfigState();
-    if (currentLayout === 'tracker') renderTrackerTimeline();
 }
 
 function updateQuickTags() {
@@ -2565,6 +2046,7 @@ function addNewProject() {
         localStorage.setItem('quadra_config', JSON.stringify(appConfig));
         renderProjectTabs();
         handleSearch();
+        saveProjectsToDB();
     }
 }
 
@@ -2586,68 +2068,61 @@ function isProjectVisible(note) {
 }
 
 
+// --- Delta DOM Update Engine (Pipeline Architecture) ---
 function renderNotes(searchQuery = '') {
-    ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'notes', 'closed'].forEach(q => { 
-        const el = document.getElementById(`list-${q}`); 
-        if (el) el.innerHTML = ''; 
-    });
-    
-    // 1. Filter out deleted, hidden projects, etc.
+    // 1. Filter and resolve tasks
     let filteredNotes = notes.filter(note => {
         if (note.deleted) return false;
         if (!isProjectVisible(note)) return false;
         
-        const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
+        const isClosed = note.status === 'closed';
+        const hasSearch = searchQuery.trim().length > 0;
+
+        // Hide closed tasks to keep the board clean, unless actively searching for them
+        if (isClosed && !hasSearch) return false;
+        
         const dueToggle = document.getElementById('dueFilterToggle');
-        if (dueToggle && dueToggle.checked && !note.dueDate && note.quadrant !== 'notes' && !isCalendarEvent) {
+        if (dueToggle && dueToggle.checked && !note.dueDate && note.quadrant !== 'notes' && !note.eventId) {
             return false; 
         }
         return matchesSearchQuery(note.text, searchQuery);
     });
 
-    // 2. Group into Bins & Count
-    let filteredCounts = { q1: 0, q2: 0, q3: 0, q4: 0, inbox: 0, calendar: 0, notes: 0, closed: 0 };
-    let bins = { q1: [], q2: [], q3: [], q4: [], inbox: [], calendar: [], notes: [], closed: [] };
+    // 2. Group into the 6 Pipeline Bins
+    let bins = { q1: [], q2: [], q3: [], q4: [], inbox: [], notes: [] };
 
     filteredNotes.forEach(note => {
-        let targetQuad = note.eventId ? 'calendar' : note.quadrant;
-        if (bins[targetQuad]) bins[targetQuad].push(note);
+        if (note.eventId) return; // Calendar events render exclusively on the timeline
         
-        const matchesSearch = matchesSearchQuery(note.text, searchQuery);
-        if (note.status === 'active' && !note.eventId && filteredCounts[note.quadrant] !== undefined && matchesSearch) {
-            filteredCounts[note.quadrant]++;
-        }
-        if (note.eventId && filteredCounts['calendar'] !== undefined) {
-            filteredCounts['calendar']++;
-        }
-        if (note.quadrant === 'inbox' && filteredCounts['inbox'] !== undefined && matchesSearch) {
-            filteredCounts['inbox']++;
-        }
+        // If it's closed but matches a search, dump it in the inbox so the user can see it
+        let targetQuad = note.status === 'closed' ? 'inbox' : (note.quadrant || 'inbox');
+        
+        if (bins[targetQuad]) bins[targetQuad].push(note);
+        else bins.inbox.push(note); 
     });
 
     if (!appConfig.sortPrefs) appConfig.sortPrefs = {};
 
-    // 3. Sort each bin individually and render
-    ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'notes', 'closed'].forEach(q => {
-        let list = document.getElementById(`list-${q}`);
-        if (!list) return;
-
-        // Default: Notes sort newest first, everything else sorts by impending due date
+    // 3. Sort & Reconcile each pipeline column instantly
+    ['q1', 'q2', 'q3', 'q4', 'inbox', 'notes'].forEach(q => {
         let pref = appConfig.sortPrefs[q] || (q === 'notes' ? 'created_desc' : 'due_asc');
         let [sortBy, sortDir] = pref.split('_');
 
         bins[q].sort((a, b) => {
+            // --- NEW: Force closed tasks to the absolute bottom universally ---
+            if (a.status === 'closed' && b.status !== 'closed') return 1;
+            if (a.status !== 'closed' && b.status === 'closed') return -1;
+
+            // Standard sort preferences
             if (sortBy === 'title') {
                 let valA = cleanHTMLToPlainText(a.text).split('\n')[0].toLowerCase();
                 let valB = cleanHTMLToPlainText(b.text).split('\n')[0].toLowerCase();
                 return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             } else if (sortBy === 'created') {
-                // Task IDs are generated via Date.now(), so they natively represent created time
                 let valA = parseFloat(a.id) || 0;
                 let valB = parseFloat(b.id) || 0;
                 return sortDir === 'asc' ? valA - valB : valB - valA;
             } else { 
-                // Due Date logic: Tasks without due dates safely sink to the bottom
                 if (!a.dueDate && !b.dueDate) return 0;
                 if (!a.dueDate) return 1; 
                 if (!b.dueDate) return -1;
@@ -2655,75 +2130,181 @@ function renderNotes(searchQuery = '') {
             }
         });
 
-        bins[q].forEach(note => {
-            const isCalendarEvent = note.eventId !== null && note.eventId !== undefined;
-            const noteEl = document.createElement('div'); 
-            noteEl.className = 'note' + (note.status === 'closed' ? ' closed-note' : '');
-            
-            if (note.status === 'active' && !note.eventId) { 
-                noteEl.draggable = true; 
-                noteEl.ondragstart = (e) => {
-                    e.stopPropagation();
-                    e.dataTransfer.setData('text/plain', note.id);
-                }; 
+        // --- NEW: Inject a visual separator before the first closed task in the Inbox ---
+        if (q === 'inbox') {
+            const firstClosedIdx = bins[q].findIndex(n => n.status === 'closed');
+            if (firstClosedIdx !== -1) {
+                bins[q].splice(firstClosedIdx, 0, {
+                    id: 'sys-closed-separator',
+                    isSeparator: true,
+                    quadrant: 'inbox',
+                    status: 'system'
+                });
             }
+        }
 
-            const contentWrapper = document.createElement('div'); 
-            contentWrapper.className = 'note-content-wrapper';
-            
-            let overdueIndicator = '';
-            if (!isCalendarEvent && note.status === 'active' && note.dueDate) {
-                const dueDateStr = note.dueDate.split('T')[0];
-                if (dueDateStr < todayStr) {
-                    overdueIndicator = `<span style="background: #FFF1F2; color: #9F1239; border: 1px solid #FECDD3; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">OVERDUE</span>`;
-                }
-            }
-
-            let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
-            contentWrapper.innerHTML = `<div class="note-text">${overdueIndicator}${parseTags(cleanTextTitle)}</div>`;
-            
-            if (note.dueDate) contentWrapper.innerHTML += `<div style="font-size:12px; color:var(--brand-primary); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>`;
-            
-            contentWrapper.onclick = (e) => openTaskModal(null, note.id, e);
-            noteEl.append(contentWrapper);
-
-            if (!note.eventId) {
-                if (note.status !== 'active') {
-                    const actionsDiv = document.createElement('div'); 
-                    actionsDiv.className = 'note-actions';
-                    actionsDiv.innerHTML = `<button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×</button>`;
-                    noteEl.append(actionsDiv);
-                }
-            } else {
-                const actionsDiv = document.createElement('div'); 
-                actionsDiv.className = 'note-actions';
-                actionsDiv.innerHTML = `<button class="action-btn delete-btn" onclick="deleteTask('${note.id}')" title="Remove event">×</button>`;
-                noteEl.append(actionsDiv);
-            }
-            list.appendChild(noteEl);
-        });
+        // Run Delta Update on the UI Column
+        reconcileList(`list-${q}`, bins[q]);
     });
 
-    document.getElementById('badge-q1').innerText = filteredCounts.q1;
-    document.getElementById('badge-q2').innerText = filteredCounts.q2;
-    document.getElementById('badge-q3').innerText = filteredCounts.q3;
-    document.getElementById('badge-q4').innerText = filteredCounts.q4;
-    document.getElementById('badge-closed').innerText = filteredNotes.filter(n => n.status === 'closed' && !n.eventId).length;
-    document.getElementById('badge-inbox').innerText = filteredCounts.inbox;
-    document.getElementById('badge-calendar').innerText = filteredCounts.calendar;
-    
-    const notesBadge = document.getElementById('badge-notes');
-    if (notesBadge) notesBadge.innerText = filteredCounts.notes;
-    
-    if (currentLayout === 'tracker') renderTrackerTimeline();
-    if (currentLayout === 'notebook') renderNotebookView(); 
-    if (currentLayout === 'overdue') renderOverdueTasksPage(); 
-    
     updateQuickTags();
+    renderTrackerTimeline();
 }
 
-function completeTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'closed'; note.quadrant = 'closed'; note.dirty = true; saveNotes(); syncSingleTask(id); handleSearch(); } }
-function restoreTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'active'; note.quadrant = 'inbox'; note.dirty = true; saveNotes(); syncSingleTask(id); handleSearch(); } }
+function reconcileList(containerId, expectedNotes) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Map existing DOM elements
+    const existingNodes = Array.from(container.children);
+    const existingMap = new Map();
+    existingNodes.forEach(node => {
+        if (node.id && node.id.startsWith('note-')) {
+            existingMap.set(node.id.replace('note-', ''), node);
+        }
+    });
+
+    const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
+
+    expectedNotes.forEach((note, index) => {
+        const noteId = String(note.id);
+        let el = existingMap.get(noteId);
+        
+        let innerHTML = '';
+        let cls = '';
+        
+        // --- NEW: Render Virtual Separator OR standard Task Card ---
+        if (note.isSeparator) {
+            cls = 'system-separator';
+            innerHTML = `
+                <div style="text-align: center; margin: 20px 0 12px 0; position: relative;">
+                    <hr style="border: none; border-top: 1px dashed var(--border-color); margin: 0; position: absolute; width: 100%; top: 50%; z-index: 1;">
+                    <span style="background: #FFF; padding: 0 10px; color: #94A3B8; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; position: relative; z-index: 2;">Completed Matches</span>
+                </div>
+            `;
+        } else {
+            let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+            let tagParsed = parseTags(cleanTextTitle);
+            
+            // Includes the visually softened Overdue badge from the previous UI polish
+            let overdueInd = (!note.eventId && note.status === 'active' && note.dueDate && note.dueDate < todayStr) 
+                ? `<span style="color: #E11D48; border: 1px solid #FDA4AF; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-right: 6px; text-transform: uppercase;">Overdue</span>` 
+                : '';
+                
+            let dueDateMeta = note.dueDate 
+                ? `<div style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>` 
+                : '';
+            
+            innerHTML = `
+                <div class="note-content-wrapper" onclick="openTaskModal(null, '${note.id}', event)">
+                    <div class="note-text">${overdueInd}${tagParsed}</div>
+                    ${dueDateMeta}
+                </div>
+                ${note.status !== 'active' ? `<div class="note-actions"><button class="action-btn restore-btn" onclick="restoreTask('${note.id}')" title="Restore">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')" title="Delete">×</button></div>` : ''}
+            `;
+            
+            cls = `note ${note.quadrant} ${note.status === 'closed' ? 'closed-note' : ''}`;
+        }
+
+        if (el) {
+            // Smart update: Only rewrite the DOM if the data actually changed
+            if (el.innerHTML !== innerHTML) el.innerHTML = innerHTML;
+            if (el.className !== cls) el.className = cls;
+            existingMap.delete(noteId);
+        } else {
+            // Create new block
+            el = document.createElement('div');
+            el.id = `note-${noteId}`;
+            el.className = cls;
+            if (note.status === 'active' && !note.isSeparator) {
+                el.draggable = true;
+                el.ondragstart = (e) => { e.stopPropagation(); e.dataTransfer.setData('text/plain', note.id); };
+            }
+            el.innerHTML = innerHTML;
+            container.appendChild(el);
+        }
+
+        // Ensure visual order matches sorted array without fully remounting the div
+        if (container.children[index] !== el) {
+            container.insertBefore(el, container.children[index]);
+        }
+    });
+
+    // Destroy any DOM elements that are no longer in the array
+    existingMap.forEach(node => node.remove());
+}
+
+function reconcileList(containerId, expectedNotes) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Map existing DOM elements
+    const existingNodes = Array.from(container.children);
+    const existingMap = new Map();
+    existingNodes.forEach(node => {
+        if (node.id && node.id.startsWith('note-')) {
+            existingMap.set(node.id.replace('note-', ''), node);
+        }
+    });
+
+    const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
+
+    // Inject or update expected elements
+    expectedNotes.forEach((note, index) => {
+        const noteId = String(note.id);
+        let el = existingMap.get(noteId);
+        
+        let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
+        let tagParsed = parseTags(cleanTextTitle);
+        
+        let overdueInd = (!note.eventId && note.status === 'active' && note.dueDate && note.dueDate < todayStr) 
+            ? `<span style="background: #FFF1F2; color: #9F1239; border: 1px solid #FECDD3; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">OVERDUE</span>` 
+            : '';
+            
+        let dueDateMeta = note.dueDate 
+            ? `<div style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>` 
+            : '';
+        
+        let innerHTML = `
+            <div class="note-content-wrapper" onclick="openTaskModal(null, '${note.id}', event)">
+                <div class="note-text">${overdueInd}${tagParsed}</div>
+                ${dueDateMeta}
+            </div>
+            ${note.status !== 'active' ? `<div class="note-actions"><button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×</button></div>` : ''}
+        `;
+        
+        let cls = `note ${note.quadrant} ${note.status === 'closed' ? 'closed-note' : ''}`;
+
+        if (el) {
+            // Smart update: Only rewrite the DOM if the data actually changed
+            if (el.innerHTML !== innerHTML) el.innerHTML = innerHTML;
+            if (el.className !== cls) el.className = cls;
+            existingMap.delete(noteId);
+        } else {
+            // Create new block
+            el = document.createElement('div');
+            el.id = `note-${noteId}`;
+            el.className = cls;
+            if (note.status === 'active') {
+                el.draggable = true;
+                el.ondragstart = (e) => { e.stopPropagation(); e.dataTransfer.setData('text/plain', note.id); };
+            }
+            el.innerHTML = innerHTML;
+            container.appendChild(el);
+        }
+
+        // Ensure visual order matches sorted array
+        if (container.children[index] !== el) {
+            container.insertBefore(el, container.children[index]);
+        }
+    });
+
+    // Destroy any DOM elements that are no longer in the array
+    existingMap.forEach(node => node.remove());
+}
+
+function completeTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'closed'; note.quadrant = 'closed'; note.dirty = true; saveNotes(); handleSearch(); } }
+function restoreTask(id) { const note = notes.find(n => n.id === id); if (note) { note.status = 'active'; note.quadrant = 'inbox'; note.dirty = true; saveNotes(); handleSearch(); } }
 function deleteTask(id) {
     const note = notes.find(n => n.id === id);
     if (note) {
@@ -2735,7 +2316,6 @@ function deleteTask(id) {
         note.deleted = true;
         note.dirty = true;
         saveNotes();
-        syncSingleTask(id);
         handleSearch();
     }
 }
@@ -2756,7 +2336,6 @@ function checkConfigState() {
         
         loadCalendars(); 
         startTokenHeartbeat();
-        startAutoSync(); // NEW: Start the 20-minute loop
         downloadDatabaseFromDrive(); // <-- NEW: Pre-fetch Drive file ID and DB in background
     } else {
         authorizeButton.style.display = 'inline-block';
@@ -2781,75 +2360,52 @@ function toggleStickyNotebook() {
 
 function applyNotebookVisibility() {
     const notesQuad = document.getElementById('notes'); 
-    const notebookBtn = document.getElementById('notebook-toggle-btn'); // Target specific button
+    const notebookBtn = document.getElementById('notebook-toggle-btn');
 
     if (!notesQuad) return;
 
-    if (currentLayout === 'notebook') {
-        // Force the sticky section to hide on the main Notebook view
-        notesQuad.style.display = 'none'; 
-        if (notebookBtn) notebookBtn.classList.remove('active');
-        
-    } else if (appConfig.showStickyNotebook) {
-        // Visible for other views
-        notesQuad.style.display = ''; 
+    if (appConfig.showStickyNotebook) {
+        notesQuad.style.display = 'flex'; 
         if (notebookBtn) notebookBtn.classList.add('active');
-        
     } else {
-        // Hidden for other views
         notesQuad.style.display = 'none'; 
         if (notebookBtn) notebookBtn.classList.remove('active');
     }
 }
 
 window.addEventListener('load', () => {
-
     if (!appConfig.sortPrefs) appConfig.sortPrefs = {};
-    ['q1', 'q2', 'q3', 'q4', 'inbox', 'calendar', 'notes', 'closed'].forEach(q => {
-        const sel = document.getElementById(`sort-${q}`);
-        if (sel) {
-            sel.value = appConfig.sortPrefs[q] || (q === 'notes' ? 'created_desc' : 'due_asc');
-        }
-    });
-    
-    renderProjectTabs();
-    // Apply saved notebook visibility state on load
-    applyNotebookVisibility();
-    
-    const matrixContainer = document.getElementById('matrix');
-    
-    if (appConfig.quadrantOrder && appConfig.quadrantOrder.length > 0) {
-        appConfig.quadrantOrder.forEach(id => {
-            if (id === 'notes') return;
-            const el = document.getElementById(id);
-            if (el) matrixContainer.appendChild(el);
+
+    if (!db) {
+        initSQLite(null).then(() => {
+            console.log("SQLite initialized locally.");
+        }).catch(err => {
+            console.error("Failed to initialize SQLite:", err);
         });
     }
     
-    document.querySelectorAll('.quadrant').forEach(q => {
-        if (appConfig.quadrantWidths && appConfig.quadrantWidths[q.id]) {
-            q.style.width = appConfig.quadrantWidths[q.id];
-        }
-        quadResizeObserver.observe(q);
-    });
+    renderProjectTabs();
+    applyNotebookVisibility();
 
-    if (!localStorage.getItem('quadra_layout')) {
-        currentLayout = appConfig.defaultView;
+    // 1. Set the visual tracker date to today if empty
+    const trackerDateEl = document.getElementById('trackerDate');
+    if (trackerDateEl && !trackerDateEl.value) {
+        trackerDateEl.value = new Date().toLocaleDateString('en-CA').split('T')[0];
     }
-    applyViewVisibility();
 
+    // 2. Initialize Google APIs
     if (typeof gapi !== 'undefined' && appConfig.apiKey) {
         gapi.load('client', () => {
             gapi.client.init({ 
                 apiKey: appConfig.apiKey, 
                 discoveryDocs: [
-                    'https://www.googleapis.com/discovery/v1/apis/tasks/v1/rest',
                     'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
                     'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
                 ] 
             }).catch(() => {});
         });
     }
+    
     if (typeof google !== 'undefined' && google.accounts && appConfig.clientId) {
         tokenClient = google.accounts.oauth2.initTokenClient({ 
             client_id: appConfig.clientId, 
@@ -2864,17 +2420,38 @@ window.addEventListener('load', () => {
                 if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
                 loadCalendars(); 
                 performBackgroundSync(); 
-                startAutoSync(); // NEW: Start the 20-minute loop
             }, 
         });
     }
+    
     checkConfigState();
 
-    const searchInput = document.getElementById('searchInput');
-    const tagsBar = document.getElementById('quick-tags-bar');
+    // 3. Restore Due Filter Toggle state BEFORE rendering
+    const savedDueFilter = localStorage.getItem('quadra_due_filter') !== 'false';
+    const dueToggleEl = document.getElementById('dueFilterToggle');
+    if (dueToggleEl) {
+        dueToggleEl.checked = savedDueFilter;
+        if (savedDueFilter && !localStorage.getItem('quadra_due_filter')) {
+            localStorage.setItem('quadra_due_filter', 'true');
+        }
+    }
 
-    if (searchInput && tagsBar) {
-        searchInput.addEventListener('keydown', function(e) {
+    // 4. Restore Search State
+    const savedSearch = localStorage.getItem('quadra_search') || '';
+    const searchInputEl = document.getElementById('searchInput');
+    if (searchInputEl && savedSearch) {
+        searchInputEl.value = savedSearch;
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        if (clearSearchBtn) clearSearchBtn.style.display = 'block';
+    }
+
+    // 5. Trigger the Initial Safe Render
+    renderNotes(savedSearch);
+
+    // 6. Bind Search Bar Tag Navigation
+    const tagsBar = document.getElementById('quick-tags-bar');
+    if (searchInputEl && tagsBar) {
+        searchInputEl.addEventListener('keydown', function(e) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 const firstTag = tagsBar.querySelector('.filter-tag');
@@ -2885,17 +2462,13 @@ window.addEventListener('load', () => {
         tagsBar.addEventListener('keydown', function(e) {
             if (e.key === 'ArrowRight') {
                 e.preventDefault();
-                if (document.activeElement.nextElementSibling) {
-                    document.activeElement.nextElementSibling.focus();
-                }
+                if (document.activeElement.nextElementSibling) document.activeElement.nextElementSibling.focus();
             } else if (e.key === 'ArrowLeft') {
                 e.preventDefault();
-                if (document.activeElement.previousElementSibling) {
-                    document.activeElement.previousElementSibling.focus();
-                }
+                if (document.activeElement.previousElementSibling) document.activeElement.previousElementSibling.focus();
             } else if (e.key === 'ArrowUp' || e.key === 'Escape') {
                 e.preventDefault();
-                searchInput.focus();
+                searchInputEl.focus();
             } else if (e.key === 'Enter') {
                 e.preventDefault();
                 document.activeElement.click();
@@ -2920,7 +2493,6 @@ function handleAuthClick() {
                 if(typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken({ access_token: resp.access_token });
                 loadCalendars(); 
                 performBackgroundSync(); 
-                startAutoSync(); // NEW: Start the 20-minute loop
             }, 
         }); 
     }
@@ -3108,6 +2680,7 @@ async function importCalendarEvents() {
 }
 
 async function performBackgroundSync() {
+    if (isSyncingSingle) return; // Prevent the race condition
     const savedToken = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
     if (!savedToken || !savedToken.token) return;
     
@@ -3296,11 +2869,20 @@ async function performBackgroundSync() {
                 newNotesArray.push(sn); 
             } 
         });
+
+        if (currentEditingId) {
+            const liveEditingNote = notes.find(n => n.id === currentEditingId);
+            if (liveEditingNote) {
+                const newIdx = newNotesArray.findIndex(n => n.id === currentEditingId);
+                if (newIdx !== -1) newNotesArray[newIdx] = liveEditingNote;
+                else newNotesArray.push(liveEditingNote);
+            }
+        }
         
         notes = newNotesArray; 
-        saveNotes(); 
+        saveNotes(); // Saves to SQLite
         localStorage.setItem('quadra_last_sync', new Date().toISOString());
-        handleSearch(); 
+        handleSearch();
         
         // --- NEW: Also trigger a SQLite backup to Drive when Tasks sync completes ---
         uploadDatabaseToDrive();
@@ -3319,30 +2901,6 @@ async function performBackgroundSync() {
         showToast("Tasks sync failed. Check your network or API configuration.");
     }
 }
-
-// --- Execute Initial Render logic with Search Preservation ---
-setLayout(currentLayout); 
-
-// 1. Restore Due Filter Toggle state BEFORE rendering
-const savedDueFilter = localStorage.getItem('quadra_due_filter') !== 'false';
-const dueToggleEl = document.getElementById('dueFilterToggle');
-if (dueToggleEl) {
-    dueToggleEl.checked = savedDueFilter;
-    if (savedDueFilter && !localStorage.getItem('quadra_due_filter')) {
-        localStorage.setItem('quadra_due_filter', 'true');
-    }
-}
-
-// 2. Restore Search State
-const savedSearch = localStorage.getItem('quadra_search') || '';
-const searchInputEl = document.getElementById('searchInput');
-if (searchInputEl && savedSearch) {
-    searchInputEl.value = savedSearch;
-    document.getElementById('clearSearchBtn').style.display = 'block';
-}
-
-// 3. Render safely
-renderNotes(savedSearch);
 
 // --- Editor Toolbar Logic ---
 document.getElementById('editorToolbar')?.addEventListener('click', function(e) {
@@ -3540,73 +3098,6 @@ function attemptSilentTokenRefresh() {
     tokenClient.requestAccessToken({ prompt: 'none' });
 }
 
-// --- Instant Push Engine (Hybrid Sync) ---
-async function syncSingleTask(noteId) {
-    if (!isGoogleSynced || typeof gapi === 'undefined' || !gapi.client || !gapi.client.tasks) return;
-    
-    const note = notes.find(n => n.id === noteId);
-    if (!note || note.eventId) return;
-
-    let listCache = JSON.parse(localStorage.getItem('quadra_gapi_lists')) || {};
-    let targetListId = listCache[note.quadrant];
-    if (!targetListId) return;
-
-    try {
-        if (note.deleted) {
-            await gapi.client.tasks.tasks.delete({ tasklist: targetListId, task: note.id }).catch(()=>{});
-            note.dirty = false;
-            saveNotes();
-            return;
-        }
-
-        const gStatus = note.status === 'closed' ? 'completed' : 'needsAction'; 
-        let plainTextPayload = cleanHTMLToPlainText(note.text);
-        let lines = plainTextPayload.split('\n');
-        
-        let tTitle = lines[0].trim() || 'Untitled Task';
-        let tNotes = lines.slice(1).join('\n').trim();
-
-        // --- PREVENT 400 ERRORS: Graceful Truncation ---
-        if (tTitle.length > 1000) tTitle = tTitle.substring(0, 1000) + '...';
-        if (tNotes.length > 8100) tNotes = tNotes.substring(0, 8100) + '\n\n[...Truncated for Google Tasks]';
-
-        let resourceBody = { title: tTitle, notes: tNotes, status: gStatus }; 
-
-        if (note.dueDate) {
-            const [y, m, d] = note.dueDate.split('-');
-            resourceBody.due = new Date(Date.UTC(y, m - 1, d, 0, 0, 0)).toISOString();
-        }
-
-        const isNew = !isNaN(note.id) || note.id.toString().includes('.'); 
-        
-        if (!isNew) {
-            try {
-                await gapi.client.tasks.tasks.patch({ tasklist: targetListId, task: note.id, resource: resourceBody });
-                note.dirty = false;
-            } catch(e) {
-                // --- PREVENT 404 LOOPS: If task was deleted remotely, recreate it ---
-                if (e.status === 404 || (e.result && e.result.error && e.result.error.code === 404)) {
-                    console.warn("Task missing on Google. Recreating it...");
-                    const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
-                    if (currentEditingId === note.id) currentEditingId = res.result.id;
-                    note.id = res.result.id;
-                    note.dirty = false;
-                    setTimeout(() => handleSearch(), 100); 
-                }
-            }
-        } else {
-            const res = await gapi.client.tasks.tasks.insert({ tasklist: targetListId, resource: resourceBody }); 
-            if (currentEditingId === note.id) currentEditingId = res.result.id;
-            note.id = res.result.id; 
-            note.dirty = false;
-            setTimeout(() => handleSearch(), 100); 
-        }
-        saveNotes();
-    } catch (error) {
-        console.error("Instant push failed:", error);
-    }
-}
-
 // --- Cloud Sync Status UI ---
 function setCloudSyncIcon(state) {
     const icon = document.getElementById('cloudSyncIcon');
@@ -3630,56 +3121,6 @@ function setCloudSyncIcon(state) {
         icon.title = 'Error saving to Drive';
     }
 }
-
-function toggleNotebookLayout(layout) {
-    currentNotebookLayout = layout;
-    const container = document.getElementById('notebook-container');
-    
-    const gridBtn = document.getElementById('notebook-grid-btn');
-    const listBtn = document.getElementById('notebook-list-btn');
-
-    if (layout === 'grid') {
-        container.className = 'notebook-grid';
-        gridBtn.style.borderColor = '#3B82F6'; gridBtn.style.color = '#3B82F6'; gridBtn.style.background = 'white';
-        listBtn.style.borderColor = 'transparent'; listBtn.style.color = 'var(--text-muted)'; listBtn.style.background = 'transparent';
-    } else {
-        container.className = 'notebook-list';
-        listBtn.style.borderColor = '#3B82F6'; listBtn.style.color = '#3B82F6'; listBtn.style.background = 'white';
-        gridBtn.style.borderColor = 'transparent'; gridBtn.style.color = 'var(--text-muted)'; gridBtn.style.background = 'transparent';
-    }
-}
-
-function renderNotebookView() {
-    const container = document.getElementById('notebook-container');
-    if (!container) return;
-    container.innerHTML = '';
-    
-    const searchInput = document.getElementById('searchInput');
-    const globalQuery = searchInput ? searchInput.value : '';
-    
-    // Grab only notes that belong to the 'notes' quadrant
-    const notebookNotes = notes.filter(n => !n.deleted && n.quadrant === 'notes' && matchesSearchQuery(n.text, globalQuery) && isProjectVisible(n));
-    
-    notebookNotes.forEach(note => {
-        const card = document.createElement('div');
-        card.className = 'notebook-card';
-        card.onclick = (e) => openTaskModal(null, note.id, e);
-        
-        let cleanText = cleanHTMLToPlainText(note.text);
-        let lines = cleanText.split('\n');
-        let title = lines[0] || 'Untitled Note';
-        
-        // --- FIX: Parse tags on each line individually, THEN join with actual <br> tags ---
-        let bodyText = lines.slice(1).map(line => parseTags(line)).join('<br>') || '';
-
-        card.innerHTML = `
-            <div class="notebook-card-title">${parseTags(title)}</div>
-            <div class="notebook-card-body">${bodyText}</div>
-        `;
-        container.appendChild(card);
-    });
-}
-
 
 async function pushWeekToTargetCalendar(silent = false) {
     if (!appConfig.targetCalendar) {
@@ -3909,6 +3350,7 @@ function saveProjectModal() {
     }
     
     closeProjectModal();
+    saveProjectsToDB();
 }
 
 function archiveProjectFromModal() {
@@ -3930,6 +3372,7 @@ function archiveProjectFromModal() {
         showToast(`Project '${proj.name}' archived.`);
     }
     closeProjectModal();
+    saveProjectsToDB();
 }
 
 function deleteProjectFromModal() {
@@ -3956,6 +3399,7 @@ function deleteProjectFromModal() {
         renderProjectTabs();
         handleSearch();
         closeProjectModal();
+        saveProjectsToDB();
     }
 }
 
@@ -4095,7 +3539,7 @@ function deleteTaskFromModal() {
     if (currentEditingId && confirm("Are you sure you want to delete this task/event?")) {
         deleteTask(currentEditingId);
         closeTaskModal();
-        if (currentLayout === 'tracker') renderTrackerTimeline();
+        renderTrackerTimeline();
     }
 }
 
@@ -4241,19 +3685,437 @@ function queueTargetEventDeletion(targetEventId) {
     }
 }
 
-// --- Auto-Sync Engine ---
-function startAutoSync() {
-    if (autoSyncTimerId) clearInterval(autoSyncTimerId);
-    
-    // Run every 20 minutes (1200000 milliseconds)
-    autoSyncTimerId = setInterval(() => {
-        const savedTokenData = JSON.parse(localStorage.getItem('quadra_gapi_token_v2'));
-        
-        // Only run if we are logged in and the token hasn't expired
-        if (savedTokenData && isGoogleSynced && savedTokenData.expires_at > Date.now()) {
-            console.log("⏰ Running 20-minute background auto-sync...");
-            performBackgroundSync();
-            uploadDatabaseToDrive();
+// --- SQLite Source of Truth Engine ---
+function loadNotesFromSQLite() {
+    if (!db) return;
+    try {
+        const res = db.exec("SELECT id, text, quadrant, status, dueDate, timeBlocks, deleted, projectId FROM tasks");
+        if (res.length > 0) {
+            notes = res[0].values.map(row => ({
+                id: row[0],
+                text: row[1] || '',
+                quadrant: row[2] || 'inbox',
+                status: row[3] || 'active',
+                dueDate: row[4] || null,
+                timeBlocks: JSON.parse(row[5] || '[]'),
+                deleted: row[6] === 1,
+                projectIds: JSON.parse(row[7] || '["p_default"]'),
+                projectId: row[7] || 'p_default',
+                dirty: false,
+                syncFailed: false
+            }));
+            console.log(`✅ Loaded ${notes.length} tasks directly from SQLite!`);
+            saveNotes();
+            handleSearch(); // Triggers the Delta DOM render
         }
-    }, 1200000); 
+    } catch (e) {
+        console.error("SQLite Read Error:", e);
+    }
+}
+
+async function downloadDatabaseFromDrive() {
+    if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.drive) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return await downloadDatabaseFromDrive(); 
+    }
+
+    try {
+        const response = await gapi.client.drive.files.list({
+            q: "name='quadra.sqlite' and trashed=false", 
+            fields: 'files(id, name)',
+            orderBy: 'createdTime desc'
+        });
+        
+        const files = response.result.files;
+        if (files && files.length > 0) {
+            driveFileId = files[0].id;
+            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+                headers: { 'Authorization': `Bearer ${gapi.client.getToken().access_token}` }
+            });
+            const arrayBuffer = await fileRes.arrayBuffer();
+            
+            await initSQLite(arrayBuffer);
+            loadNotesFromSQLite(); // <-- INJECTED HERE: Boot UI from DB
+            setCloudSyncIcon('saved');
+        } else {
+            await initSQLite(null);
+        }
+    } catch (e) {
+        await initSQLite(null);
+    }
+}
+
+function openSettingsPage() {
+    const workspace = document.getElementById('pipeline-workspace');
+    const settingsView = document.getElementById('settings-view');
+    const projectTabs = document.getElementById('project-tabs-bar');
+    const searchContainer = document.getElementById('searchHeaderContainer');
+    
+    // 1. Hide the V5 workspace safely
+    if (workspace) workspace.style.display = 'none';
+    
+    // 2. Hide any lingering old V4 elements safely (prevents the null error)
+    const oldQuad = document.getElementById('quadrant-workspace');
+    if (oldQuad) oldQuad.style.display = 'none';
+    const oldToolbar = document.getElementById('right-toolbar');
+    if (oldToolbar) oldToolbar.style.display = 'none';
+    
+    // 3. Prevent Settings from hiding if it was nested inside the workspace
+    if (settingsView) {
+        document.querySelector('.main-wrapper').appendChild(settingsView);
+        settingsView.style.display = 'block';
+    }
+
+    // 4. Hide top UI elements
+    if (projectTabs) projectTabs.style.display = 'none';
+    if (searchContainer) searchContainer.style.visibility = 'hidden';
+
+    // 5. Toggle Header Buttons
+    const settingsBtn = document.getElementById('settingsNavBtn');
+    if (settingsBtn) settingsBtn.style.display = 'none';
+    const backBtn = document.getElementById('backNavBtn');
+    if (backBtn) backBtn.style.display = 'inline-block';
+
+    // 6. Load data
+    if (typeof loadSettings === 'function') loadSettings();
+}
+
+function closeSettingsPage() {
+    const workspace = document.getElementById('pipeline-workspace');
+    const settingsView = document.getElementById('settings-view');
+    const projectTabs = document.getElementById('project-tabs-bar');
+    const searchContainer = document.getElementById('searchHeaderContainer');
+    
+    // 1. Restore the V5 workspace (Must be 'flex', not 'block')
+    if (workspace) workspace.style.display = 'flex';
+    
+    // 2. Hide Settings
+    if (settingsView) settingsView.style.display = 'none';
+
+    // 3. Restore top UI elements
+    if (projectTabs) projectTabs.style.display = 'flex';
+    if (searchContainer) searchContainer.style.visibility = 'visible';
+
+    // 4. Toggle Header Buttons
+    const settingsBtn = document.getElementById('settingsNavBtn');
+    if (settingsBtn) settingsBtn.style.display = 'inline-block';
+    const backBtn = document.getElementById('backNavBtn');
+    if (backBtn) backBtn.style.display = 'none';
+    
+    // 5. Force UI refresh
+    if (typeof renderTrackerTimeline === 'function') renderTrackerTimeline();
+}
+
+function saveSettings() {
+    const clientIdEl = document.getElementById('configClientId');
+    if (clientIdEl) appConfig.clientId = clientIdEl.value.trim();
+    
+    const apiKeyEl = document.getElementById('configApiKey');
+    if (apiKeyEl) appConfig.apiKey = apiKeyEl.value.trim();
+    
+    const timesheetUrlEl = document.getElementById('configTimesheetUrl');
+    if (timesheetUrlEl) appConfig.timesheetUrl = timesheetUrlEl.value.trim();
+    
+    const ignoreEl = document.getElementById('configIgnoreKeywords');
+    if (ignoreEl) appConfig.ignoreKeywords = ignoreEl.value.trim();
+    
+    const calSourceEl = document.getElementById('configCalSource');
+    if (calSourceEl) appConfig.calSource = calSourceEl.value;
+    
+    const sourceSelect = document.getElementById('sourceCalendar');
+    if (sourceSelect) appConfig.sourceCalendar = sourceSelect.value;
+    
+    const targetSelect = document.getElementById('targetCalendar');
+    if (targetSelect) appConfig.targetCalendar = targetSelect.value;
+    
+    const importBehavior = document.querySelector('input[name="importBehavior"]:checked');
+    if (importBehavior) appConfig.importBehavior = importBehavior.value;
+    
+    const primTz = document.getElementById('configPrimaryTz');
+    if (primTz) appConfig.primaryTz = primTz.value;
+    
+    const secTz = document.getElementById('configSecondaryTz');
+    if (secTz) appConfig.secondaryTz = secTz.value;
+
+    localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+    
+    const rows = document.querySelectorAll('.schedule-row');
+    appSchedule = Array.from(rows).map(row => {
+        const startStr = row.querySelector('.sched-start').value.split(':');
+        const endStr = row.querySelector('.sched-end').value.split(':');
+        let startH = parseInt(startStr[0] || 0) + (parseInt(startStr[1] || 0) / 60);
+        let endH = parseInt(endStr[0] || 0) + (parseInt(endStr[1] || 0) / 60);
+        if (endH <= startH) endH += 24;
+
+        return {
+            title: row.querySelector('.sched-title').value,
+            startHour: roundToQuarterHour(startH),
+            endHour: roundToQuarterHour(endH)
+        };
+    });
+    localStorage.setItem('quadra_schedule', JSON.stringify(appSchedule));
+    
+    closeSettingsPage(); 
+    showToast("Configuration saved!");
+    checkConfigState();
+    
+    // Safe pipeline render
+    const savedSearch = localStorage.getItem('quadra_search') || '';
+    renderNotes(savedSearch);
+}
+
+document.addEventListener('keydown', (e) => {
+    // --- 1. Global Save & Hybrid Backup Shortcut ---
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault(); // Stop default browser "Save Webpage" dialog
+        executeFullSave();  // Calls LocalStorage -> FileSystem -> Google Drive
+        return;
+    }
+
+    const isEditingText = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
+    
+    // --- 2. Rich Text Editor Shortcuts ---
+    if (isEditingText) {
+        // Ctrl+Alt+Shift+S : Code Block
+        if ((e.ctrlKey || e.metaKey) && e.altKey && e.shiftKey && e.key.toLowerCase() === 's') {
+            e.preventDefault(); insertCodeBlock(); return;
+        }
+        // Ctrl+Shift+X : Strikethrough
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'x' && !e.altKey) {
+            e.preventDefault(); document.execCommand('strikeThrough', false, null); triggerAutoSaveInterval(); return;
+        }
+        // Ctrl+B : Bold
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b' && !e.shiftKey && !e.altKey) {
+            e.preventDefault(); document.execCommand('bold', false, null); triggerAutoSaveInterval(); return;
+        }
+        // Ctrl+I : Italics
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i' && !e.shiftKey && !e.altKey) {
+            e.preventDefault(); document.execCommand('italic', false, null); triggerAutoSaveInterval(); return;
+        }
+        // Ctrl+1 : Custom Checklist
+        if (e.ctrlKey && e.key === '1' && !e.shiftKey && !e.altKey) {
+            e.preventDefault(); toggleChecklistFormatting(); return; 
+        }
+    }
+
+    // --- 3. App Navigation & Modals ---
+    if (e.key === 'Escape') {
+        const taskModal = document.getElementById('taskModal');
+        const shortcutsModal = document.getElementById('shortcutsModal');
+        const projectModal = document.getElementById('projectModal');
+
+        if (taskModal && taskModal.style.display === 'flex') closeTaskModal();
+        if (shortcutsModal && shortcutsModal.style.display === 'flex') closeShortcutsModal();
+        if (projectModal && projectModal.style.display === 'flex') closeProjectModal();
+    } else if (!isEditingText) {
+        // Alt + Up/Down Arrow for Project Traversal
+        if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            e.preventDefault();
+            const unarchived = appConfig.projects.filter(p => !p.archived);
+            
+            if (unarchived.length > 1) {
+                let currentIndex = unarchived.findIndex(p => p.visible);
+                if (currentIndex === -1) currentIndex = 0;
+                
+                let newIndex;
+                if (e.key === 'ArrowDown') {
+                    newIndex = (currentIndex + 1) % unarchived.length; // Next project
+                } else {
+                    newIndex = (currentIndex - 1 + unarchived.length) % unarchived.length; // Previous project
+                }
+                
+                const targetProjectId = unarchived[newIndex].id;
+                appConfig.projects.forEach(p => p.visible = (p.id === targetProjectId));
+                
+                localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+                renderProjectTabs();
+                handleSearch();
+            }
+            return;
+        }
+        // Shift + / : Show Shortcuts Modal
+        if (e.shiftKey && (e.key === '?' || e.key === '/')) {
+            e.preventDefault();
+            openShortcutsModal();
+        } 
+        // / : Focus Search Bar
+        else if (e.key === '/') {
+            e.preventDefault();
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+    }
+});
+
+function toggleRightPane(paneId) {
+    const paneContainer = document.getElementById('rightPane');
+    const planView = document.getElementById('todaysPlanView');
+    const noteView = document.getElementById('notebookView');
+    
+    const btnPlan = document.getElementById('nav-btn-todaysPlan');
+    const btnNote = document.getElementById('nav-btn-notebook');
+
+    // If clicking the pane that is already open, collapse it
+    if (activeRightPane === paneId) {
+        paneContainer.style.display = 'none';
+        btnPlan.style.background = 'transparent';
+        btnPlan.style.color = '#64748b';
+        btnNote.style.background = 'transparent';
+        btnNote.style.color = '#64748b';
+        activeRightPane = null;
+        return;
+    }
+
+    // Otherwise, open the container and show the requested pane
+    paneContainer.style.display = 'flex';
+    activeRightPane = paneId;
+
+    if (paneId === 'todaysPlan') {
+        planView.style.display = 'flex';
+        noteView.style.display = 'none';
+        btnPlan.style.background = '#e3f2fd';
+        btnPlan.style.color = '#1976d2';
+        btnNote.style.background = 'transparent';
+        btnNote.style.color = '#64748b';
+        
+        // Re-render timeline to adjust width
+        if (typeof renderTrackerTimeline === 'function') renderTrackerTimeline();
+    } else {
+        planView.style.display = 'none';
+        noteView.style.display = 'flex';
+        btnNote.style.background = '#e3f2fd';
+        btnNote.style.color = '#1976d2';
+        btnPlan.style.background = 'transparent';
+        btnPlan.style.color = '#64748b';
+    }
+}
+
+// ==========================================
+// FILE SYSTEM ACCESS & SQLITE PERSISTENCE
+// ==========================================
+
+// --- 1. THE LOAD FUNCTION ---
+async function loadLocalDatabase() {
+    try {
+        [dbFileHandle] = await window.showOpenFilePicker({
+            types: [{
+                description: 'SQLite Database',
+                accept: { 'application/octet-stream': ['.sqlite', '.db'] }
+            }],
+            multiple: false
+        });
+
+        const file = await dbFileHandle.getFile();
+        const buffer = await file.arrayBuffer();
+
+        if (db) db.close();
+        db = new SQL.Database(new Uint8Array(buffer));
+        
+        // Boot data from the newly loaded DB into memory
+        loadProjectsFromDB();
+        loadNotesFromSQLite(); 
+        renderProjectTabs();
+        
+        console.log("Database successfully loaded from local file.");
+        showToast("📂 Database Loaded Successfully!");
+
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error("Failed to load database:", error);
+            showToast("Error loading database file.");
+        }
+    }
+}
+
+// --- 2. THE SILENT SAVE FUNCTION ---
+async function saveLocalDatabase() {
+    if (!db) return;
+    
+    try {
+        // Flush current memory state into SQLite engine before exporting
+        saveProjectsToDB();
+        syncNotesToSQLite(); 
+        
+        const data = db.export(); 
+        
+        // If we don't have a file handle yet, ask the user where to save
+        if (!dbFileHandle) {
+            dbFileHandle = await window.showSaveFilePicker({
+                suggestedName: 'quadra.sqlite',
+                types: [{
+                    description: 'SQLite Database',
+                    accept: { 'application/octet-stream': ['.sqlite', '.db'] }
+                }]
+            });
+        }
+        
+        // Silently overwrite the connected file handle
+        const writable = await dbFileHandle.createWritable();
+        await writable.write(data);
+        await writable.close();
+        
+        console.log("Database saved silently!");
+        showToast("✓ Database saved locally!");
+
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error("Save failed:", error);
+            dbFileHandle = null; // Reset handle so user can try picking a file again
+        }
+    }
+}
+
+// --- 3. MASTER SAVE EXECUTION ---
+async function executeFullSave() {
+    saveNotes(); // Saves UI standard state to LocalStorage
+    await saveLocalDatabase(); // Flushes to local SQLite file
+    
+    if (isGoogleSynced && typeof uploadDatabaseToDrive === 'function') {
+        await uploadDatabaseToDrive(); // Flushes to Cloud
+    }
+}
+
+// --- 4. PROJECT SQLITE SYNC LOGIC ---
+function loadProjectsFromDB() {
+    if (!db) return;
+    try {
+        const res = db.exec("SELECT * FROM projects");
+        if (res.length > 0) {
+            const columns = res[0].columns;
+            const values = res[0].values;
+            
+            // Map rows directly to the appConfig array
+            appConfig.projects = values.map(row => {
+                let proj = {};
+                columns.forEach((col, index) => proj[col] = row[index]);
+                proj.archived = (proj.status === 'archived');
+                proj.visible = true; // Default to visible when loaded
+                return proj;
+            });
+            localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+        }
+    } catch (e) {
+        console.error("Error loading projects from DB:", e);
+    }
+}
+
+function saveProjectsToDB() {
+    if (!db || !appConfig.projects) return;
+    try {
+        // Failsafe to ensure table exists before writing
+        db.run("CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, name TEXT, status TEXT);");
+        db.run("DELETE FROM projects");
+        
+        appConfig.projects.forEach(proj => {
+            db.run(
+                `INSERT INTO projects (id, name, status) VALUES (?, ?, ?)`,
+                [proj.id, proj.name, proj.archived ? 'archived' : 'active']
+            );
+        });
+    } catch (e) {
+        console.error("Error saving projects to DB:", e);
+    }
 }
