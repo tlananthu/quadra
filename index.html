@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.02</span>
+                    <span class="version-badge">v5.03</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -152,6 +152,11 @@
                         <div class="form-group"><label>Source Calendar</label><select id="sourceCalendar"></select></div>
                         <div class="form-group" style="margin-top: 16px;"><label>Target Calendar</label><select id="targetCalendar"></select></div>
                         <div class="form-group" style="margin-top: 16px;"><label>Timesheet Web App URL</label><input type="text" id="configTimesheetUrl"></div>
+                        
+                        <!-- Restored Clear Cache Button -->
+                        <div style="margin-top: 24px;">
+                            <button class="btn btn-outline" style="color: #EF4444; border-color: #EF4444;" onclick="clearCalendarCache()">🗑️ Clear Calendar Cache</button>
+                        </div>
                     </div>
                     
                     <div class="form-group"><label>Google OAuth Client ID</label><input type="text" id="configClientId"></div>
