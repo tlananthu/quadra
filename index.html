@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.01</span>
+                    <span class="version-badge">v5.02</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -79,30 +79,30 @@
                     <h2 style="margin: 0; font-size: 16px;">⚡ Action Board</h2>
                 </div>
                 <div class="action-board" style="display: flex; gap: 15px; overflow-x: auto; flex-grow: 1; padding: 15px;">
+                    
                     <!-- Do First -->
-                    <div class="kanban-col do-first" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #ffebee; border-radius: 8px; border: 1px solid #e0e0e0;">
+                    <div id="q1" class="kanban-col do-first" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #ffebee; border-radius: 8px; border: 1px solid #e0e0e0;">
                         <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #c62828;">Do First</div>
                         <div class="task-list" id="list-q1" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                     </div>
                     
                     <!-- Schedule -->
-                    <div class="kanban-col schedule" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #e3f2fd; border-radius: 8px; border: 1px solid #e0e0e0;">
+                    <div id="q2" class="kanban-col schedule" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #e3f2fd; border-radius: 8px; border: 1px solid #e0e0e0;">
                         <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #1565c0;">Schedule</div>
                         <div class="task-list" id="list-q2" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                     </div>
                     
                     <!-- Delegate -->
-                    <div class="kanban-col delegate" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #fff8e1; border-radius: 8px; border: 1px solid #e0e0e0;">
+                    <div id="q3" class="kanban-col delegate" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #fff8e1; border-radius: 8px; border: 1px solid #e0e0e0;">
                         <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #f57f17;">Delegate</div>
                         <div class="task-list" id="list-q3" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                     </div>
                     
                     <!-- Later -->
-                    <div class="kanban-col later" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #f5f5f5; border-radius: 8px; border: 1px solid #e0e0e0;">
+                    <div id="q4" class="kanban-col later" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #f5f5f5; border-radius: 8px; border: 1px solid #e0e0e0;">
                         <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #424242;">Later</div>
                         <div class="task-list" id="list-q4" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                     </div>
-                    
                 </div>
             </div>
 

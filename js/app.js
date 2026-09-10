@@ -1,4 +1,4 @@
-let version = '5.01';
+let version = '5.02';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -317,6 +317,14 @@ notes = notes.map(note => {
     };
 });
 
+const uniqueIds = new Set();
+notes = notes.filter(n => {
+    if (uniqueIds.has(n.id)) return false; // Destroy the clone
+    uniqueIds.add(n.id);
+    return true; // Keep the original
+});
+
+
 const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0]; 
 let savedDate = localStorage.getItem('quadra_tracker_date');
 document.getElementById('trackerDate').value = savedDate || todayStr;
@@ -504,20 +512,21 @@ function dropQuad(e) {
         if(!noteId) return;
         const note = notes.find(n => n.id === noteId);
         
-        // Extract and clean the target ID properly
-        let targetKey = e.currentTarget.id || ''; 
+        // 1. Grab the exact ID we just added to the HTML columns
+        let targetKey = e.currentTarget.id; 
+        
+        // 2. Fallback for Inbox/Notebook which drop onto the inner .task-list
         if (!targetKey) {
-            const listEl = e.currentTarget.querySelector('.task-list');
-            if (listEl) targetKey = listEl.id;
+            const listEl = e.currentTarget.querySelector('.task-list') || e.currentTarget;
+            targetKey = listEl.id;
         }
         
-        // Strip out HTML container prefixes to match database expectations
-        targetKey = targetKey.replace('list-', '').replace('tray-', '');
-        if (!targetKey) targetKey = 'inbox'; // Ultimate failsafe
+        // 3. Strip prefixes and assign ultimate failsafe
+        targetKey = (targetKey || '').replace('list-', '').replace('tray-', '');
+        if (!targetKey) targetKey = 'inbox'; 
         
         if (note && note.status === 'active' && note.quadrant !== targetKey) { 
             if (targetKey === 'closed') note.status = 'closed';
-            
             if (targetKey === 'notes' && !note.text.includes('#note')) {
                 note.text += ' #note';
             }
