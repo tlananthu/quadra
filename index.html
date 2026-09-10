@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.03</span>
+                    <span class="version-badge">v5.04</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -64,10 +64,18 @@
         <!-- THE PIPELINE WORKSPACE -->
         <div id="pipeline-workspace" class="pipeline-workspace" style="display: flex; flex-direction: row; height: 100%; width: 100%; overflow: hidden;">
             
-            <!-- 1. LEFT PANE: INTAKE & BACKLOG -->
-            <div class="pipeline-col backlog-col" style="width: 320px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border-color);">
-                <div class="col-header" style="display: flex; align-items: center; justify-content: space-between; height: 60px; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color);">
-                    <h2 style="margin: 0; font-size: 16px;">📥 Intake & Backlog</h2>
+            <!-- 0. EXTREME LEFT NAV BAR -->
+            <div class="left-nav-bar" style="width: 50px; flex-shrink: 0; background: #f8fafc; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding-top: 15px; gap: 15px; z-index: 10;">
+                <button class="nav-icon active" onclick="toggleLeftPane()" id="nav-btn-backlog" title="Toggle Backlog" style="width: 36px; height: 36px; border: none; background: #e3f2fd; color: #1976d2; border-radius: 8px; cursor: pointer; font-size: 18px;">📥</button>
+                <div style="width: 30px; height: 1px; background: #cbd5e1;"></div>
+                <button class="nav-icon active" onclick="toggleRightPane('todaysPlan')" id="nav-btn-todaysPlan" title="Timeline" style="width: 36px; height: 36px; border: none; background: #e3f2fd; color: #1976d2; border-radius: 8px; cursor: pointer; font-size: 18px;">⏱️</button>
+                <button class="nav-icon" onclick="toggleRightPane('notebook')" id="nav-btn-notebook" title="Notebook" style="width: 36px; height: 36px; border: none; background: transparent; color: #64748b; border-radius: 8px; cursor: pointer; font-size: 18px;">📓</button>
+            </div>
+
+            <!-- 1. LEFT PANE: BACKLOG -->
+            <div class="pipeline-col backlog-col" id="leftPane" style="width: 320px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); background: #ffffff;">
+                <div class="col-header" style="flex: 0 0 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: #ffffff; overflow: hidden;">
+                    <h2 style="margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">📥 Backlog</h2>
                     <button class="icon-btn add-btn" onclick="openTaskModal('inbox')">+</button>
                 </div>
                 <div class="task-list" id="list-inbox" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex-grow: 1; overflow-y: auto;"></div>
@@ -75,8 +83,8 @@
 
             <!-- 2. CENTER: ACTION KANBAN BOARD -->
             <div class="pipeline-col matrix-col" style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
-                <div class="col-header" style="display: flex; align-items: center; height: 60px; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color);">
-                    <h2 style="margin: 0; font-size: 16px;">⚡ Action Board</h2>
+                <div class="col-header" style="flex: 0 0 60px; display: flex; align-items: center; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: #ffffff; overflow: hidden;">
+                    <h2 style="margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">⚡ Action Board</h2>
                 </div>
                 <div class="action-board" style="display: flex; gap: 15px; overflow-x: auto; flex-grow: 1; padding: 15px;">
                     
@@ -103,21 +111,28 @@
                         <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #424242;">Later</div>
                         <div class="task-list" id="list-q4" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                     </div>
+                    
                 </div>
             </div>
 
             <!-- 3. RIGHT TOGGLABLE PANE -->
-            <div class="right-sliding-pane" id="rightPane" style="display: flex; width: 360px; flex-shrink: 0; flex-direction: column; border-left: 1px solid var(--border-color); background: #ffffff;">
+            <div class="right-sliding-pane" id="rightPane" style="display: flex; width: 360px; flex-shrink: 0; flex-direction: column; border-left: 1px solid var(--border-color); background: #ffffff; position: relative;">
+                
+                <!-- Invisible Drag Handle for Resizing -->
+                <div class="pane-resizer" onmousedown="initRightPaneResize(event)" style="width: 8px; cursor: col-resize; background: transparent; position: absolute; left: -4px; top: 0; bottom: 0; z-index: 20;" title="Drag to resize"></div>
                 
                 <!-- Today's Plan (Timeline) View -->
                 <div id="todaysPlanView" class="pane-content" style="display: flex; flex-direction: column; height: 100%;">
-                    <div class="col-header" style="display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: space-between; align-items: center; height: 60px; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color);">
+                    <div class="col-header" style="flex: 0 0 45px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: #ffffff; overflow: hidden;">
                         <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
                             <button class="icon-btn" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="changeTrackerDay(-1)">←</button>
-                            <h2 style="font-size: 15px; margin: 0; color: var(--text-main); white-space: nowrap;">Today's Plan</h2>
+                            <h2 style="font-size: 16px; font-weight: 700; margin: 0; color: var(--text-main); white-space: nowrap; display: flex; align-items: center;">Timeline</h2>
                             <button class="icon-btn" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="changeTrackerDay(1)">→</button>
                         </div>
-                        <input type="date" id="trackerDate" onchange="renderTrackerTimeline()" style="padding: 4px 6px; width: 115px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 6px; background: #F8FAFC; color: var(--text-main); cursor: pointer; outline: none; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="date" id="trackerDate" onchange="renderTrackerTimeline()" style="padding: 4px 6px; width: 115px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 6px; background: #F8FAFC; color: var(--text-main); cursor: pointer; outline: none; flex-shrink: 0;">
+                            <button class="icon-btn" onclick="closeRightPane()" title="Close" style="font-size: 20px; line-height: 1; padding: 0 4px; color: #94a3b8; border: none; background: transparent; cursor: pointer;">×</button>
+                        </div>
                     </div>
                     <div class="timeline-scroll-area" id="timelineScrollArea" style="flex-grow: 1; overflow-y: auto; padding: 12px 0;">
                         <div class="timeline" id="timelineCanvas" style="margin: 0 12px;"></div>
@@ -126,18 +141,15 @@
 
                 <!-- Notebook View -->
                 <div id="notebookView" class="pane-content" style="display: none; flex-direction: column; height: 100%; background: var(--notebook-bg);">
-                    <div class="col-header" style="display: flex; align-items: center; justify-content: space-between; height: 60px; padding: 0 16px; box-sizing: border-box; background: transparent; border-bottom: 1px solid rgba(129, 140, 248, 0.3);">
-                        <h2 style="color: var(--notebook-text); margin: 0; font-size: 16px;">📓 Notebook</h2>
-                        <button class="icon-btn add-btn" onclick="openTaskModal('notes')" style="color: var(--notebook-text);">+</button>
+                    <div class="col-header" style="flex: 0 0 45px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: transparent; overflow: hidden;">
+                        <h2 style="color: var(--notebook-text); margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">📓 Notebook</h2>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button class="icon-btn add-btn" onclick="openTaskModal('notes')" style="color: var(--notebook-text);">+</button>
+                            <button class="icon-btn" onclick="closeRightPane()" title="Close" style="font-size: 20px; line-height: 1; padding: 0 4px; color: var(--notebook-text); border: none; background: transparent; cursor: pointer;">×</button>
+                        </div>
                     </div>
                     <div class="task-list" id="list-notes" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                 </div>
-            </div>
-
-            <!-- 4. EXTREME RIGHT NAV BAR -->
-            <div class="right-nav-bar" style="width: 50px; flex-shrink: 0; background: #f8fafc; border-left: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding-top: 15px; gap: 15px;">
-                <button class="nav-icon active" onclick="toggleRightPane('todaysPlan')" id="nav-btn-todaysPlan" title="Today's Plan" style="width: 36px; height: 36px; border: none; background: #e3f2fd; color: #1976d2; border-radius: 8px; cursor: pointer; font-size: 18px;">⏱️</button>
-                <button class="nav-icon" onclick="toggleRightPane('notebook')" id="nav-btn-notebook" title="Notebook" style="width: 36px; height: 36px; border: none; background: transparent; color: #64748b; border-radius: 8px; cursor: pointer; font-size: 18px;">📓</button>
             </div>
 
             <div id="settings-view" style="display: none; background: #F8FAFC; width: 100%; height: 100%; padding: 40px; overflow-y: auto; box-sizing: border-box;">
@@ -335,65 +347,58 @@
         <div class="modal-content" style="max-width: 450px;">
             <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">Keyboard Shortcuts</h3>
             <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Focus Search Bar</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">/</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Show Keyboard Shortcuts</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Shift + /</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Focus Quick Tags Bar</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">↓ Arrow</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Navigate Quick Tags</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">← / → Arrow</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Select Quick Tag</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Enter</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Return to Search Input</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">↑ Arrow / Esc</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Toggle Task Checklist Box</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Ctrl + 1</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Cycle Active Projects</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Alt + ↑ / ↓</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Quadrant View</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Q</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Kanban View</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">K</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Calendar View</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">C</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Overdue View</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">O</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Cycle Views Forward</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">`</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                    <span>Cycle Views Backward</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Shift + `</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>Close Open Modals</span>
-                    <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Esc</kbd>
+                <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Focus Search Bar</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">/</kbd>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Show Keyboard Shortcuts</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Shift + /</kbd>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Focus Quick Tags Bar</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">↓ Arrow</kbd>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Navigate Quick Tags</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">← / → Arrow</kbd>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Select Quick Tag</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Enter</kbd>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Return to Search Input</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">↑ Arrow / Esc</kbd>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Toggle Task Checklist Box</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Ctrl + 1</kbd>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Cycle Active Projects</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Alt + ↑ / ↓</kbd>
+                    </div>
+                    
+                    <!-- NEW V5 PANEL TOGGLES -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Toggle Backlog</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">B</kbd>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Toggle Timeline</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">T</kbd>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                        <span>Toggle Notebook</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">N</kbd>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Close Open Modals</span>
+                        <kbd style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Esc</kbd>
+                    </div>
                 </div>
             </div>
             <div class="modal-actions" style="margin-top: 16px;">

@@ -1,4 +1,4 @@
-let version = '5.03';
+let version = '5.04';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -8,6 +8,7 @@ let localDbFileHandle = null;
 let currentTrackerMode = 'day';
 let dbFileHandle = null; 
 let activeRightPane = 'todaysPlan';
+let isLeftPaneOpen = true;
 
 if (!appConfig.ignoreKeywords) appConfig.ignoreKeywords = 'out of office, ooo, away, vacation, holiday';
 if (!appConfig.calSource) appConfig.calSource = 'google';
@@ -1142,19 +1143,15 @@ function onBlockDrag(e) {
     let tBlock = note.timeBlocks.find(b => b.blockId === dragState.blockId);
     if (!tBlock) return;
     
-    const paletteEl = document.querySelector('.tracker-palette');
-    let isOverPalette = false;
+    // --- V5 LOGIC: Check if dragging outside the Calendar Pane ---
+    const rightPane = document.getElementById('rightPane');
+    let isOutsideCalendar = false;
     
-    if (paletteEl && !dragState.isResize) {
-        const rect = paletteEl.getBoundingClientRect();
-        if (e.clientX >= rect.left && e.clientX <= rect.right &&
-            e.clientY >= rect.top && e.clientY <= rect.bottom) {
-            isOverPalette = true;
-            paletteEl.style.background = 'rgba(239, 68, 68, 0.05)';
-            paletteEl.style.boxShadow = 'inset 0 0 0 2px #EF4444';
-        } else {
-            paletteEl.style.background = '';
-            paletteEl.style.boxShadow = '';
+    if (rightPane && !dragState.isResize) {
+        const rect = rightPane.getBoundingClientRect();
+        // If the mouse moves past the left edge of the right pane
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+            isOutsideCalendar = true;
         }
     }
 
@@ -1174,12 +1171,15 @@ function onBlockDrag(e) {
         if (dragState.el) {
             dragState.el.style.top = `${(newStart % 24) * hourPx}px`;
             
-            if (isOverPalette) {
+            // Visual feedback: block follows the mouse left and turns red
+            if (isOutsideCalendar) {
                 dragState.el.style.transform = `translateX(${dx}px)`;
                 dragState.el.style.opacity = '0.5';
+                dragState.el.style.border = '2px dashed #EF4444';
             } else {
                 dragState.el.style.transform = '';
                 dragState.el.style.opacity = '1';
+                dragState.el.style.border = '';
             }
 
             const actualEndHour = (newStart + tBlock.duration) % 24;
@@ -1198,15 +1198,15 @@ function stopBlockDrag(e) {
         let didMove = dragState.hasMoved;
         let unscheduled = false;
 
-        const paletteEl = document.querySelector('.tracker-palette');
-        if (paletteEl && !dragState.isResize) {
-            const rect = paletteEl.getBoundingClientRect();
-            if (e.clientX >= rect.left && e.clientX <= rect.right &&
-                e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        // --- V5 LOGIC: Unschedule if dropped outside the Calendar Pane ---
+        const rightPane = document.getElementById('rightPane');
+        if (rightPane && !dragState.isResize) {
+            const rect = rightPane.getBoundingClientRect();
+            if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
                 
                 const note = notes.find(n => n.id === dragState.noteId);
                 if (note && note.timeBlocks) {
-                    // 1. Queue the target calendar event for deletion if it exists
+                    // 1. Queue the target calendar event for deletion if synced
                     const tbToRemove = note.timeBlocks.find(b => b.blockId === dragState.blockId);
                     if (tbToRemove && tbToRemove.targetEventId) {
                         queueTargetEventDeletion(tbToRemove.targetEventId);
@@ -1219,8 +1219,6 @@ function stopBlockDrag(e) {
                     saveNotes();
                 }
             }
-            paletteEl.style.background = '';
-            paletteEl.style.boxShadow = '';
         }
 
         if (didMove && !unscheduled) {
@@ -1233,11 +1231,16 @@ function stopBlockDrag(e) {
             dragState.el.style.transition = ''; 
             dragState.el.style.transform = ''; 
             dragState.el.style.opacity = '1';
+            dragState.el.style.border = ''; // Clean up dashed border
         }
         
         dragState = null;
-        if (didMove || unscheduled) { renderTrackerTimeline(); setTimeout(() => { isDraggingBlock = false; }, 50); } 
-        else { isDraggingBlock = false; }
+        if (didMove || unscheduled) { 
+            renderTrackerTimeline(); 
+            setTimeout(() => { isDraggingBlock = false; }, 50); 
+        } else { 
+            isDraggingBlock = false; 
+        }
     }
 }
 
@@ -2417,6 +2420,12 @@ window.addEventListener('load', () => {
         }).catch(err => {
             console.error("Failed to initialize SQLite:", err);
         });
+    }
+
+    // Restore saved right pane width
+    if (appConfig.rightPaneWidth) {
+        const rp = document.getElementById('rightPane');
+        if (rp) rp.style.width = appConfig.rightPaneWidth;
     }
     
     renderProjectTabs();
@@ -3943,6 +3952,30 @@ document.addEventListener('keydown', (e) => {
         if (shortcutsModal && shortcutsModal.style.display === 'flex') closeShortcutsModal();
         if (projectModal && projectModal.style.display === 'flex') closeProjectModal();
     } else if (!isEditingText) {
+        
+        // --- V5 PANEL TOGGLES ---
+        
+        // Alt + B : Toggle Backlog
+        if (e.key.toLowerCase() === 'b' && e.altKey) {
+            e.preventDefault();
+            toggleLeftPane();
+            return;
+        }
+        
+        // Alt + T : Toggle Timeline
+        if (e.key.toLowerCase() === 't' && e.altKey) {
+            e.preventDefault();
+            toggleRightPane('todaysPlan');
+            return;
+        }
+
+        // Alt + N : Toggle Notebook
+        if (e.key.toLowerCase() === 'n' && e.altKey) {
+            e.preventDefault();
+            toggleRightPane('notebook');
+            return;
+        }
+
         // Alt + Up/Down Arrow for Project Traversal
         if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
             e.preventDefault();
@@ -3985,6 +4018,53 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+function closeRightPane() {
+    const paneContainer = document.getElementById('rightPane');
+    const btnPlan = document.getElementById('nav-btn-todaysPlan');
+    const btnNote = document.getElementById('nav-btn-notebook');
+    
+    paneContainer.style.display = 'none';
+    btnPlan.style.background = 'transparent';
+    btnPlan.style.color = '#64748b';
+    btnNote.style.background = 'transparent';
+    btnNote.style.color = '#64748b';
+}
+
+function initRightPaneResize(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const paneEl = document.getElementById('rightPane');
+    if (!paneEl) return;
+    
+    const startX = event.clientX;
+    const startWidth = paneEl.getBoundingClientRect().width;
+    document.body.style.cursor = 'col-resize';
+    
+    function onMouseMove(e) {
+        // Since the handle is on the left edge, moving the mouse LEFT (negative deltaX) INCREASES the width
+        const deltaX = startX - e.clientX; 
+        const newWidth = Math.max(280, Math.min(800, Math.round(startWidth + deltaX)));
+        paneEl.style.width = newWidth + 'px';
+        appConfig.rightPaneWidth = newWidth + 'px';
+    }
+    
+    function onMouseUp() {
+        document.body.style.cursor = '';
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+        
+        // Redraw timeline canvas to fit new width
+        if (activeRightPane === 'todaysPlan' && typeof renderTrackerTimeline === 'function') {
+            renderTrackerTimeline();
+        }
+    }
+    
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+}
+
 function toggleRightPane(paneId) {
     const paneContainer = document.getElementById('rightPane');
     const planView = document.getElementById('todaysPlanView');
@@ -3993,18 +4073,12 @@ function toggleRightPane(paneId) {
     const btnPlan = document.getElementById('nav-btn-todaysPlan');
     const btnNote = document.getElementById('nav-btn-notebook');
 
-    // If clicking the pane that is already open, collapse it
-    if (activeRightPane === paneId) {
-        paneContainer.style.display = 'none';
-        btnPlan.style.background = 'transparent';
-        btnPlan.style.color = '#64748b';
-        btnNote.style.background = 'transparent';
-        btnNote.style.color = '#64748b';
-        activeRightPane = null;
+    // If clicking the button of the pane that is currently open, close it
+    if (activeRightPane === paneId && paneContainer.style.display !== 'none') {
+        closeRightPane();
         return;
     }
 
-    // Otherwise, open the container and show the requested pane
     paneContainer.style.display = 'flex';
     activeRightPane = paneId;
 
@@ -4016,7 +4090,6 @@ function toggleRightPane(paneId) {
         btnNote.style.background = 'transparent';
         btnNote.style.color = '#64748b';
         
-        // Re-render timeline to adjust width
         if (typeof renderTrackerTimeline === 'function') renderTrackerTimeline();
     } else {
         planView.style.display = 'none';
@@ -4152,5 +4225,22 @@ function saveProjectsToDB() {
         });
     } catch (e) {
         console.error("Error saving projects to DB:", e);
+    }
+}
+
+function toggleLeftPane() {
+    const paneContainer = document.getElementById('leftPane');
+    const btnBacklog = document.getElementById('nav-btn-backlog');
+
+    if (isLeftPaneOpen) {
+        paneContainer.style.display = 'none';
+        btnBacklog.style.background = 'transparent';
+        btnBacklog.style.color = '#64748b';
+        isLeftPaneOpen = false;
+    } else {
+        paneContainer.style.display = 'flex';
+        btnBacklog.style.background = '#e3f2fd';
+        btnBacklog.style.color = '#1976d2';
+        isLeftPaneOpen = true;
     }
 }
