@@ -1,4 +1,4 @@
-let version = '5.0';
+let version = '5.01';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -503,8 +503,17 @@ function dropQuad(e) {
         const noteId = e.dataTransfer.getData("text/plain");
         if(!noteId) return;
         const note = notes.find(n => n.id === noteId);
-        let targetKey = e.currentTarget.id; 
-        if(targetKey.startsWith('tray-')) targetKey = targetKey.replace('tray-', '');
+        
+        // Extract and clean the target ID properly
+        let targetKey = e.currentTarget.id || ''; 
+        if (!targetKey) {
+            const listEl = e.currentTarget.querySelector('.task-list');
+            if (listEl) targetKey = listEl.id;
+        }
+        
+        // Strip out HTML container prefixes to match database expectations
+        targetKey = targetKey.replace('list-', '').replace('tray-', '');
+        if (!targetKey) targetKey = 'inbox'; // Ultimate failsafe
         
         if (note && note.status === 'active' && note.quadrant !== targetKey) { 
             if (targetKey === 'closed') note.status = 'closed';
@@ -1384,7 +1393,17 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
         formatEditorNodes('taskInfoInput');
 
         dueDateInput.value = note.dueDate || '';
-        if (quadrantInput) quadrantInput.value = note.quadrant || 'inbox'; 
+        
+        // AUTO-HEAL: Clean up any incorrectly saved quadrants and apply a strict fallback
+        if (quadrantInput) {
+            let qVal = (note.quadrant || 'inbox').replace('list-', '').replace('tray-', '');
+            quadrantInput.value = qVal;
+            
+            // Failsafe: if the value STILL doesn't match an option, force it to 'inbox'
+            if (!quadrantInput.value) {
+                quadrantInput.value = 'inbox';
+            }
+        } 
 
         completeBtn.style.display = 'inline-block';
         if (note.status === 'closed') {
@@ -1404,7 +1423,14 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
         titleInput.innerHTML = '';
         infoInput.innerHTML = '';
         dueDateInput.value = timelineContext ? timelineContext.date : '';
-        if (quadrantInput) quadrantInput.value = currentAddingQuadrant; 
+        
+        // SAFE FALLBACK FOR NEW TASKS
+        if (quadrantInput) {
+            let qVal = currentAddingQuadrant.replace('list-', '').replace('tray-', '');
+            quadrantInput.value = qVal;
+            if (!quadrantInput.value) quadrantInput.value = 'inbox';
+        } 
+        
         completeBtn.style.display = 'none';
         
         pendingTimelineContext = timelineContext || null;
