@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.04</span>
+                    <span class="version-badge">v5.05</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -175,8 +175,77 @@
                     <div class="form-group"><label>Google API Key</label><input type="text" id="configApiKey"></div>
                     <div class="form-group"><label>Ignore Keywords</label><input type="text" id="configIgnoreKeywords"></div>
                     
-                    <div class="form-group form-row-inline"><label>Home Timezone</label><select id="configPrimaryTz"><option value="local">Local</option></select></div>
-                    <div class="form-group form-row-inline"><label>Secondary Timezone</label><select id="configSecondaryTz"><option value="none">None</option></select></div>
+                    <div class="form-group form-row-inline">
+                        <label>Home Timezone</label>
+                        <select id="configPrimaryTz">
+                            <option value="local">Local (Browser Default)</option>
+                            <optgroup label="India & South Asia">
+                                <option value="Asia/Kolkata">India (IST - Kolkata/Bengaluru)</option>
+                            </optgroup>
+                            <optgroup label="Australia">
+                                <option value="Australia/Melbourne">Australia (AET - Melbourne)</option>
+                                <option value="Australia/Sydney">Australia (AET - Sydney)</option>
+                                <option value="Australia/Brisbane">Australia (AEST - Brisbane)</option>
+                                <option value="Australia/Adelaide">Australia (ACT - Adelaide)</option>
+                                <option value="Australia/Perth">Australia (AWT - Perth)</option>
+                            </optgroup>
+                            <optgroup label="Southeast Asia">
+                                <option value="Asia/Singapore">Singapore (SGT)</option>
+                                <option value="Asia/Kuala_Lumpur">Malaysia (MYT - Kuala Lumpur)</option>
+                                <option value="Asia/Jakarta">Indonesia (WIB - Jakarta)</option>
+                                <option value="Asia/Makassar">Indonesia (WITA - Bali/Makassar)</option>
+                            </optgroup>
+                            <optgroup label="Middle East">
+                                <option value="Asia/Dubai">UAE (GST - Dubai)</option>
+                                <option value="Asia/Riyadh">Saudi Arabia (AST - Riyadh)</option>
+                            </optgroup>
+                            <optgroup label="UK & Europe">
+                                <option value="Europe/London">UK (GMT/BST - London)</option>
+                            </optgroup>
+                            <optgroup label="United States">
+                                <option value="America/New_York">US Eastern (ET - New York)</option>
+                                <option value="America/Chicago">US Central (CT - Chicago)</option>
+                                <option value="America/Denver">US Mountain (MT - Denver)</option>
+                                <option value="America/Los_Angeles">US Pacific (PT - Los Angeles)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="form-group form-row-inline">
+                        <label>Secondary Timezone</label>
+                        <select id="configSecondaryTz">
+                            <option value="none">None</option>
+                            <optgroup label="India & South Asia">
+                                <option value="Asia/Kolkata">India (IST - Kolkata/Bengaluru)</option>
+                            </optgroup>
+                            <optgroup label="Australia">
+                                <option value="Australia/Melbourne">Australia (AET - Melbourne)</option>
+                                <option value="Australia/Sydney">Australia (AET - Sydney)</option>
+                                <option value="Australia/Brisbane">Australia (AEST - Brisbane)</option>
+                                <option value="Australia/Adelaide">Australia (ACT - Adelaide)</option>
+                                <option value="Australia/Perth">Australia (AWT - Perth)</option>
+                            </optgroup>
+                            <optgroup label="Southeast Asia">
+                                <option value="Asia/Singapore">Singapore (SGT)</option>
+                                <option value="Asia/Kuala_Lumpur">Malaysia (MYT - Kuala Lumpur)</option>
+                                <option value="Asia/Jakarta">Indonesia (WIB - Jakarta)</option>
+                                <option value="Asia/Makassar">Indonesia (WITA - Bali/Makassar)</option>
+                            </optgroup>
+                            <optgroup label="Middle East">
+                                <option value="Asia/Dubai">UAE (GST - Dubai)</option>
+                                <option value="Asia/Riyadh">Saudi Arabia (AST - Riyadh)</option>
+                            </optgroup>
+                            <optgroup label="UK & Europe">
+                                <option value="Europe/London">UK (GMT/BST - London)</option>
+                            </optgroup>
+                            <optgroup label="United States">
+                                <option value="America/New_York">US Eastern (ET - New York)</option>
+                                <option value="America/Chicago">US Central (CT - Chicago)</option>
+                                <option value="America/Denver">US Mountain (MT - Denver)</option>
+                                <option value="America/Los_Angeles">US Pacific (PT - Los Angeles)</option>
+                            </optgroup>
+                        </select>
+                    </div>
 
                     <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border-color);">
                     <h4 style="margin-bottom: 8px; font-size: 14px; font-weight: 600;">Recurring Overlays</h4>
