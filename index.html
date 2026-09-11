@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.06</span>
+                    <span class="version-badge">v5.07</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -39,9 +39,9 @@
                 <span class="slider round"></span>
             </label>
             
-            <!-- New Load Button -->
-            <button class="btn btn-outline" onclick="loadLocalDatabase()" title="Load local database">📂 Load</button>
-            <button class="btn btn-outline" onclick="executeFullSave()" title="Save all changes">💾 Save</button>
+            <!-- Icon-only Local Database Controls -->
+            <button class="btn btn-outline icon-button" onclick="loadLocalDatabase()" title="Load local database">📂</button>
+            <button class="btn btn-outline icon-button" onclick="executeFullSave()" title="Save all changes">💾</button>
             
             <button id="authorize_button" class="btn" onclick="handleAuthClick()">Sign In</button>
             <button id="signout_button" class="btn btn-outline icon-button" onclick="handleSignoutClick()" title="Sign out of Google">⏻</button>

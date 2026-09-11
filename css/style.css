@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="5.06"]{
+[version="5.07"]{
     display:none;
 }
 
@@ -2204,4 +2204,13 @@ input:checked + .slider:after {
 /* Give the scheduled task blocks a tiny lift */
 .logged-block {
     box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+
+/* Ensure icon-only buttons match the rounded rectangle shape of standard buttons */
+.btn.icon-button {
+    padding: 8px 12px;
+    border-radius: 6px; /* Adjust radius to match your Sign In button */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }

@@ -10,6 +10,8 @@ let dbFileHandle = null;
 let activeRightPane = 'todaysPlan';
 let isLeftPaneOpen = true;
 let timeIndicatorInterval = null;
+const IDB_NAME = 'QuadraFileCache';
+const IDB_STORE = 'handles';
 
 if (!appConfig.ignoreKeywords) appConfig.ignoreKeywords = 'out of office, ooo, away, vacation, holiday';
 if (!appConfig.calSource) appConfig.calSource = 'google';
@@ -4125,6 +4127,7 @@ function toggleRightPane(paneId) {
 // --- 1. THE LOAD FUNCTION ---
 async function loadLocalDatabase() {
     try {
+        // Request a new file handle via picker
         [dbFileHandle] = await window.showOpenFilePicker({
             types: [{
                 description: 'SQLite Database',
@@ -4133,19 +4136,21 @@ async function loadLocalDatabase() {
             multiple: false
         });
 
+        // Cache the handle for future silent saves
+        await saveFileHandleToCache(dbFileHandle);
+
         const file = await dbFileHandle.getFile();
         const buffer = await file.arrayBuffer();
 
         if (db) db.close();
         db = new SQL.Database(new Uint8Array(buffer));
         
-        // Boot data from the newly loaded DB into memory
         loadProjectsFromDB();
         loadNotesFromSQLite(); 
         renderProjectTabs();
         
         console.log("Database successfully loaded from local file.");
-        showToast("📂 Database Loaded Successfully!");
+        showToast("📂 Database Loaded & Cached Successfully!");
 
     } catch (error) {
         if (error.name !== 'AbortError') {
@@ -4160,13 +4165,28 @@ async function saveLocalDatabase() {
     if (!db) return;
     
     try {
-        // Flush current memory state into SQLite engine before exporting
         saveProjectsToDB();
         syncNotesToSQLite(); 
         
         const data = db.export(); 
         
-        // If we don't have a file handle yet, ask the user where to save
+        // 1. If we don't have an active handle in memory, try fetching it from IndexedDB cache
+        if (!dbFileHandle) {
+            dbFileHandle = await getCachedFileHandle();
+        }
+
+        // 2. If we found a cached handle, verify/request readwrite permission
+        if (dbFileHandle) {
+            const options = { mode: 'readwrite' };
+            if ((await dbFileHandle.queryPermission(options)) !== 'granted') {
+                if ((await dbFileHandle.requestPermission(options)) !== 'granted') {
+                    // User denied permission, clear handle and force picker fallback
+                    dbFileHandle = null;
+                }
+            }
+        }
+
+        // 3. If still no handle available, prompt the user via save picker (triggers only once)
         if (!dbFileHandle) {
             dbFileHandle = await window.showSaveFilePicker({
                 suggestedName: 'quadra.sqlite',
@@ -4175,9 +4195,11 @@ async function saveLocalDatabase() {
                     accept: { 'application/octet-stream': ['.sqlite', '.db'] }
                 }]
             });
+            // Cache the newly picked handle for future silent saves
+            await saveFileHandleToCache(dbFileHandle);
         }
         
-        // Silently overwrite the connected file handle
+        // 4. Silently overwrite the file handle
         const writable = await dbFileHandle.createWritable();
         await writable.write(data);
         await writable.close();
@@ -4188,7 +4210,8 @@ async function saveLocalDatabase() {
     } catch (error) {
         if (error.name !== 'AbortError') {
             console.error("Save failed:", error);
-            dbFileHandle = null; // Reset handle so user can try picking a file again
+            dbFileHandle = null; 
+            showToast("❌ Save failed. Try clicking 'Load' once to re-link.");
         }
     }
 }
@@ -4426,7 +4449,58 @@ function init() {
             }
         }, 100);
     }
+
+    // Automatically restore the cached file handle on startup
+    getCachedFileHandle().then(handle => {
+        if (handle) {
+            dbFileHandle = handle;
+            console.log("🔗 Cached local SQLite file handle restored.");
+        }
+    });
+}
+
+function openFileHandleDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(IDB_NAME, 1);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+                db.createObjectStore(IDB_STORE);
+            }
+        };
+        request.onsuccess = (e) => resolve(e.target.result);
+        request.onerror = (e) => reject(e.target.error);
+    });
+}
+
+async function saveFileHandleToCache(handle) {
+    try {
+        const db = await openFileHandleDB();
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(handle, 'dbHandle');
+        return new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {
+        console.error("Failed to cache file handle:", e);
+    }
+}
+
+async function getCachedFileHandle() {
+    try {
+        const db = await openFileHandleDB();
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const req = tx.objectStore(IDB_STORE).get('dbHandle');
+        return new Promise((resolve, reject) => {
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+        });
+    } catch (e) {
+        return null;
+    }
 }
 
 // Trigger the init function as soon as the DOM is fully constructed
 document.addEventListener('DOMContentLoaded', init);
+
