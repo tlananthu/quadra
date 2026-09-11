@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="5.03"]{
+[version="5.06"]{
     display:none;
 }
 
@@ -31,6 +31,8 @@
     --notebook-bg: #EEF2FF;      /* Indigo 50 */
     --notebook-border: #818CF8;  /* Indigo 400 */
     --notebook-text: #312E81;    /* Indigo 900 */
+
+    --timeline-bg: #F8FAFC;
 }
 
 [data-theme="dark"] {
@@ -71,6 +73,11 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
     background: #94A3B8; 
+}
+
+#timelineScrollArea {
+    background-color: var(--timeline-bg);
+    box-shadow: inset 0px 4px 8px -6px rgba(0, 0, 0, 0.1);
 }
 
 .main-wrapper {
@@ -1054,11 +1061,14 @@ header h1 {
     position: absolute; 
     left: 8px; 
     top: -8px; 
-    background: #ffffff; 
     padding: 0 4px; 
     line-height: 1; 
     z-index: 5; 
     white-space: nowrap; 
+    background-color: var(--timeline-bg);
+    padding: 2px 4px;
+    border-radius: 4px;
+    margin-left: -4px;
 }
 
 .timeline-cols-container { 
@@ -2174,4 +2184,24 @@ input:checked + .slider:after {
 .nav-icon.active {
     background: #e3f2fd;
     color: #1976d2;
+}
+
+/* Force the inner calendar containers to be transparent so the solid color shows through */
+#timelineCanvas,
+.timeline-bg-lines,
+.time-col {
+    background-color: transparent !important;
+}
+
+/* Match the time row labels to the new solid background */
+.time-row-label {
+    background-color: var(--timeline-bg);
+    padding: 2px 4px;
+    border-radius: 4px;
+    margin-left: -4px; 
+}
+
+/* Give the scheduled task blocks a tiny lift */
+.logged-block {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
 }
