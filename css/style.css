@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="5.07"]{
+[version="5.08"]{
     display:none;
 }
 
@@ -33,6 +33,9 @@
     --notebook-text: #312E81;    /* Indigo 900 */
 
     --timeline-bg: #F8FAFC;
+
+    --backlog-bg: #F1F5F9;       /* Soft slate tint for the pane */
+    --backlog-text: #334155;     /* Dark slate for header text */
 }
 
 [data-theme="dark"] {
@@ -1054,21 +1057,23 @@ header h1 {
     padding-left: 0; 
 }
 
-.time-row-label { 
-    color: var(--text-muted); 
-    font-size: 11px; 
-    font-weight: 500; 
-    position: absolute; 
-    left: 8px; 
-    top: -8px; 
-    padding: 0 4px; 
-    line-height: 1; 
-    z-index: 5; 
-    white-space: nowrap; 
+
+/* Right-aligned time row labels */
+.time-row-label {
+    position: absolute;
+    left: 0;
+    /* Dynamically match the gutter width, subtracting 8px for padding gap */
+    width: calc(var(--gutter-width, 55px) - 8px); 
+    text-align: right;
+    
     background-color: var(--timeline-bg);
     padding: 2px 4px;
     border-radius: 4px;
-    margin-left: -4px;
+    font-size: 11px;
+    color: #64748b;
+    
+    /* Centers text vertically exactly over the row line */
+    transform: translateY(-50%); 
 }
 
 .timeline-cols-container { 
@@ -2213,4 +2218,18 @@ input:checked + .slider:after {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+.current-time-badge {
+    /* Explicitly set left to auto to override any inherited values */
+    left: auto; 
+    
+    /* Anchor the badge to the right side (adjust the 6px value as needed) */
+    right: 6px; 
+}
+
+#list-inbox .note {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Soft drop shadow */
+    border-color: #E2E8F0; /* Slightly lighter border to match the aesthetic */
 }

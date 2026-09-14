@@ -1,0 +1,598 @@
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EDS Ledger Workflow Chart</title>
+  
+  <!-- Font Setup: System Fonts aligned with Ellucian Path Guidelines -->
+  <link rel="preconnect" href="https://googleapis.com">
+  <link rel="preconnect" href="https://gstatic.com" crossorigin="">
+  <link href="https://googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  
+  <style>
+    /* --- Ellucian Path Design System Tokens --- */
+    :root {
+      --eds-color-bg-main: #FAFBFC;
+      --eds-color-surface: #FFFFFF;
+      --eds-color-border: #E2E8F0;
+      --eds-font-sans: 'Inter', sans-serif;
+      --eds-text-muted: #64748B;
+
+      /* Aligned Color Palette Tokens from Ledger Component */
+      --eds-color-banner: darkblue;    /* Green */
+      --eds-color-erp-bal: #9A3412;    /* Orange */
+      --eds-color-net-pos: #6B21A8;    /* Purple */
+      
+      --eds-radius-sm: 4px;
+      --eds-radius-md: 12px;
+      --eds-shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      background-color: var(--eds-color-bg-main);
+      font-family: var(--eds-font-sans);
+      margin: 0;
+      padding: 2rem 1.5rem;
+    }
+
+    /* --- Container Architecture --- */
+    .eds-chart-card {
+      background-color: var(--eds-color-surface);
+      border: 1px solid var(--eds-color-border);
+      border-radius: var(--eds-radius-md);
+      box-shadow: var(--eds-shadow-sm);
+      padding: 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .eds-chart-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .eds-chart-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+    }
+
+    /* --- Chart Legend Component --- */
+    .eds-chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--eds-color-border);
+    }
+
+    .eds-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--eds-text-muted);
+    }
+
+    .eds-legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: var(--eds-radius-sm);
+    }
+
+    /* --- Primary Chart Axis Canvas --- */
+    .eds-chart-canvas {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      height: 320px; /* Target visualization height matrix */
+      border-bottom: 2px solid #CBD5E1;
+      padding-bottom: 0.5rem;
+      overflow-x: auto;
+      gap: 0.5rem;
+    }
+
+    /* --- Grouped Columns Structure --- */
+    .eds-chart-day-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 70px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .eds-bars-container {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 100%;
+      width: 100%;
+      padding: 0 4px;
+    }
+
+    /* Target Bar Element Utility styling */
+    .eds-bar {
+      flex: 1;
+      border-radius: var(--eds-radius-sm) var(--eds-radius-sm) 0 0;
+      min-height: 2px; /* Ensures zero value states show a pixel row hint */
+      transition: height 0.3s ease, opacity 0.2s ease;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .eds-bar:hover {
+      opacity: 0.85;
+    }
+
+    /* Interactive Data Flyouts */
+    .eds-bar::after {
+      content: attr(data-value);
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #0F172A;
+      color: #FFFFFF;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 2px 4px;
+      border-radius: 3px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+
+    .eds-bar:hover::after {
+      opacity: 1;
+    }
+
+    /* --- Timeline Horizontal Labels --- */
+    .eds-day-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--eds-text-muted);
+      margin-top: 0.5rem;
+      text-align: center;
+    }
+
+    /* Semantic Color Mapping Classes */
+    .bar--banner { background-color: var(--eds-color-banner); height: var(--h-rev); }
+    .bar--erp { background-color: var(--eds-color-erp-bal); height: var(--h-erp); }
+  </style>
+  <style>
+    /* --- Parent Flex Wrapper to force a Single Row --- */
+.eds-dashboard-row {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  max-width: 1600px; /* Optional: adjust based on your maximum layout allowance */
+  margin: 0 auto;
+  gap: 1.5rem; /* Space between the two charts */
+  align-items: stretch; /* Forces both chart cards to be the exact same height */
+}
+
+/* --- Modify your existing container class to balance evenly --- */
+.eds-container {
+  flex: 1; /* Assigns equal width space to both charts dynamically */
+  min-width: 0; /* Critical fix: prevents SVGs or grids from pushing widths out */
+  max-width: 50%; /* Limits both containers to half the layout space */
+}
+
+/* --- Responsive Fallback (Optional) --- */
+@media (max-width: 1024px) {
+  .eds-dashboard-row {
+    flex-direction: column; /* Stacks charts cleanly into rows on tablet/mobile screens */
+  }
+  .eds-container {
+    max-width: 100%; /* Resets width allocation on smaller mobile screens */
+  }
+}
+
+    /* --- Ellucian Path Corporate Token Sets --- */
+    :root {
+      --eds-color-bg-main: #F8FAFC;
+      --eds-color-surface: #FFFFFF;
+      --eds-color-border: #E2E8F0;
+      --eds-color-grid-line: #F1F5F9;
+      --eds-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --eds-text-primary: #0F172A;
+      --eds-text-muted: #475569;
+
+      /* Enterprise Metrics Branding Palettes */
+      --eds-color-payments: #1D4ED8;     /* Corporate Royal Blue */
+      --eds-color-balance: #0F766E;      /* Deep Teal Accent */
+      
+      --eds-radius-md: 8px;
+      --eds-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      background-color: var(--eds-color-bg-main);
+      font-family: var(--eds-font-sans);
+      margin: 0;
+      padding: 2.5rem 1.5rem;
+      color: var(--eds-text-primary);
+    }
+
+    .eds-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* --- Container Card Setup --- */
+    .eds-chart-card {
+      background-color: var(--eds-color-surface);
+      border: 1px solid var(--eds-color-border);
+      border-radius: var(--eds-radius-md);
+      box-shadow: var(--eds-shadow-sm);
+      padding: 2rem;
+    }
+
+    .eds-chart-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 1.5rem 0;
+      color: var(--eds-text-primary);
+    }
+
+    /* --- Legend Section --- */
+    .eds-chart-legend {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--eds-color-border);
+    }
+
+    .eds-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--eds-text-muted);
+    }
+
+    .eds-legend-line {
+      width: 24px;
+      height: 3px;
+      border-radius: 2px;
+    }
+
+    /* --- Chart Viewport Area --- */
+    .eds-chart-workspace {
+      position: relative;
+      padding: 0 3.5rem 2.5rem 3.5rem; /* Space for Y-Axes and X-Axis labels */
+      height: 360px;
+    }
+
+    /* --- Background Horizontal Y-Axis Lines --- */
+    .eds-chart-grid-lines {
+      position: absolute;
+      top: 0;
+      left: 3.5rem;
+      right: 3.5rem;
+      bottom: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .eds-grid-line {
+      width: 100%;
+      height: 1px;
+      background-color: var(--eds-color-grid-line);
+      position: relative;
+    }
+
+    /* Left Y-Axis Values (Payments Received) */
+    .eds-grid-line::before {
+      content: attr(data-left-label);
+      position: absolute;
+      left: -3.5rem;
+      top: -7px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--eds-text-muted);
+      width: 2.75rem;
+      text-align: right;
+    }
+
+    /* Right Y-Axis Values (Running Account Balance) */
+    .eds-grid-line::after {
+      content: attr(data-right-label);
+      position: absolute;
+      right: -3.5rem;
+      top: -7px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--eds-text-muted);
+      width: 2.75rem;
+      text-align: left;
+    }
+
+    /* --- SVG Graphic Layer Viewport --- */
+    .eds-chart-svg-viewport {
+      position: absolute;
+      top: 0;
+      left: 3.5rem;
+      right: 3.5rem;
+      bottom: 2.5rem;
+      width: calc(100% - 7rem);
+      height: calc(100% - 2.5rem);
+      overflow: visible;
+    }
+
+    /* Vector Trend Path Settings */
+    .eds-trend-line {
+      fill: none;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .eds-trend-line--payments {
+      stroke: var(--eds-color-payments);
+    }
+
+    .eds-trend-line--balance {
+      stroke: var(--eds-color-balance);
+    }
+
+    /* Data Coordinates Node Point */
+    .eds-chart-node {
+      fill: var(--eds-color-surface);
+      stroke-width: 2;
+      cursor: pointer;
+      transition: r 0.1s ease;
+    }
+
+    .eds-chart-node:hover {
+      r: 6px;
+    }
+
+    .eds-chart-node--payments { stroke: var(--eds-color-payments); }
+    .eds-chart-node--balance { stroke: var(--eds-color-balance); }
+
+    /* --- Timeline Horizontal X-Axis Text Wrapper --- */
+    .eds-chart-x-axis {
+      position: absolute;
+      bottom: 0;
+      left: 3.5rem;
+      right: 3.5rem;
+      display: flex;
+      justify-content: space-between;
+      padding-top: 0.75rem;
+      border-top: 1px solid #94A3B8;
+    }
+
+    .eds-x-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--eds-text-muted);
+      width: calc(100% / 12);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div class="eds-dashboard-row">
+<div class="eds-container">
+  <div class="eds-chart-card">
+    
+    <div class="eds-chart-header">
+      <h2 class="eds-chart-title">Current Month Performance</h2>
+    </div>
+
+    <!-- Color Legend Component Grid Mapping -->
+    <div class="eds-chart-legend">
+      <div class="eds-legend-item"><div class="eds-legend-color" style="background-color: var(--eds-color-banner);"></div>Banner Balance</div>
+      <div class="eds-legend-item"><div class="eds-legend-color" style="background-color: var(--eds-color-erp-bal);"></div>ERP Balance</div>
+    </div>
+
+    <!-- Primary Graphical Render Track -->
+    <!-- Heights are controlled inline cleanly using CSS variables mapping percentages (0% - 100%) -->
+    <div class="eds-chart-canvas">
+
+      <!-- Day 01 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 62%;" data-value="$62k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 48%;" data-value="$48k"></div>
+        </div>
+        <div class="eds-day-label">01/09</div>
+      </div>
+      
+      <!-- Day 02 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 78%;" data-value="$78k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 52%;" data-value="$52k"></div>
+        </div>
+        <div class="eds-day-label">02/09</div>
+      </div>
+      
+      <!-- Day 03 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 45%;" data-value="$45k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 61%;" data-value="$61k"></div>
+        </div>
+        <div class="eds-day-label">03/09</div>
+      </div>
+      
+      <!-- Day 04 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 88%;" data-value="$88k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 70%;" data-value="$70k"></div>
+        </div>
+        <div class="eds-day-label">04/09</div>
+      </div>
+      
+      <!-- Day 05 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 95%;" data-value="$95k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 82%;" data-value="$82k"></div>
+        </div>
+        <div class="eds-day-label">05/09</div>
+      </div>
+      
+      <!-- Day 06 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 54%;" data-value="$54k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 40%;" data-value="$40k"></div>
+        </div>
+        <div class="eds-day-label">06/09</div>
+      </div>
+      
+      <!-- Day 07 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 67%;" data-value="$67k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 59%;" data-value="$59k"></div>
+        </div>
+        <div class="eds-day-label">07/09</div>
+      </div>
+      
+      <!-- Day 08 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 73%;" data-value="$73k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 66%;" data-value="$66k"></div>
+        </div>
+        <div class="eds-day-label">08/09</div>
+      </div>
+      
+      <!-- Day 09 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 81%;" data-value="$81k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 74%;" data-value="$74k"></div>
+        </div>
+        <div class="eds-day-label">09/09</div>
+      </div>
+      
+      <!-- Day 10 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 58%;" data-value="$58k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 49%;" data-value="$49k"></div>
+        </div>
+        <div class="eds-day-label">10/09</div>
+      </div>
+      
+      <!-- Day 11 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 91%;" data-value="$91k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 85%;" data-value="$85k"></div>
+        </div>
+        <div class="eds-day-label">11/09</div>
+      </div>
+      
+      <!-- Day 12 Container -->
+      <div class="eds-chart-day-group">
+        <div class="eds-bars-container">
+          <div class="eds-bar bar--banner" style="--h-rev: 70%;" data-value="$70k"></div>
+          <div class="eds-bar bar--erp" style="--h-erp: 63%;" data-value="$63k"></div>
+        </div>
+        <div class="eds-day-label">12/09</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+    
+<!-- Legend -->
+ <div class="eds-container">
+    <div class="eds-chart-card">
+    <div class="eds-chart-legend">
+      <div class="eds-legend-item">
+        <div class="eds-legend-line" style="background-color: var(--eds-color-payments);"></div>
+        Payments Received (Left Axis)
+      </div>
+      <div class="eds-legend-item">
+        <div class="eds-legend-line" style="background-color: var(--eds-color-balance);"></div>
+        Running Account Balance (Right Axis)
+      </div>
+    </div>
+
+    <!-- Chart Workspace Base Grid Matrix -->
+    <div class="eds-chart-workspace">
+      
+      <!-- Axis Reference Labels Grid Map -->
+      <div class="eds-chart-grid-lines">
+        <div class="eds-grid-line" data-left-label="$100k" data-right-label="$500k"></div>
+        <div class="eds-grid-line" data-left-label="$75k"  data-right-label="$375k"></div>
+        <div class="eds-grid-line" data-left-label="$50k"  data-right-label="$250k"></div>
+        <div class="eds-grid-line" data-left-label="$25k"  data-right-label="$125k"></div>
+        <div class="eds-grid-line" data-left-label="$0"    data-right-label="$0"></div>
+      </div>
+
+      <!-- Vector Graphics Viewport (Rendered completely via percentage mapping coordinates coordinates) -->
+      <!-- viewBox width="1100" height="300" mapping coordinates logic across a 12 point index line -->
+      <svg class="eds-chart-svg-viewport" viewBox="0 0 1100 300" preserveAspectRatio="none">
+        
+        <!-- Trend 1: Payments Received Curve Path -->
+        <path class="eds-trend-line eds-trend-line--payments" 
+              d="M 0,210 L 100,240 L 200,150 L 300,180 L 400,90 L 500,120 L 600,60 L 700,150 L 800,90 L 900,120 L 1000,45 L 1100,75" />
+
+        <!-- Trend 2: Running Account Balance Curve Path -->
+        <path class="eds-trend-line eds-trend-line--balance" 
+              d="M 0,270 L 100,225 L 200,240 L 300,195 L 400,165 L 500,180 L 600,120 L 700,105 L 800,135 L 900,90 L 1000,60 L 1100,30" />
+
+        <!-- Interactive Plot Nodes Layer (Payments Received) -->
+        <circle class="eds-chart-node eds-chart-node--payments" cx="0" cy="210" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="100" cy="240" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="200" cy="150" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="300" cy="180" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="400" cy="90" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="500" cy="120" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="600" cy="60" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="700" cy="150" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="800" cy="90" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="900" cy="120" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="1000" cy="45" r="4" />
+        <circle class="eds-chart-node eds-chart-node--payments" cx="1100" cy="75" r="4" />
+
+        <!-- Interactive Plot Nodes Layer (Account Balance) -->
+        <circle class="eds-chart-node eds-chart-node--balance" cx="0" cy="270" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="100" cy="225" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="200" cy="240" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="300" cy="195" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="400" cy="165" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="500" cy="180" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="600" cy="120" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="700" cy="105" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="800" cy="135" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="900" cy="90" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="1000" cy="60" r="4" />
+        <circle class="eds-chart-node eds-chart-node--balance" cx="1100" cy="30" r="4" />
+      </svg>
+
+      <!-- Horizontal Time Axis -->
+      <div class="eds-chart-x-axis">
+        <div class="eds-x-label">Jan</div>
+        <div class="eds-x-label">Feb</div>
+        <div class="eds-x-label">Mar</div>
+        <div class="eds-x-label">Apr</div>
+        <div class="eds-x-label">May</div>
+        <div class="eds-x-label">Jun</div>
+        <div class="eds-x-label">Jul</div>
+        <div class="eds-x-label">Aug</div>
+        <div class="eds-x-label">Sep</div>
+        <div class="eds-x-label">Oct</div>
+        <div class="eds-x-label">Nov</div>
+        <div class="eds-x-label">Dev</div>
+        </div></div></div></div></div>
+    </body></html>

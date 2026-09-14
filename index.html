@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quadra | Eisenhower Matrix & Calendar</title>
+    <title>Quadra | xEisenhower Matrix & Calendar</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -17,7 +17,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.07</span>
+                    <span class="version-badge">v5.08</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -73,18 +73,19 @@
             </div>
 
             <!-- 1. LEFT PANE: BACKLOG -->
-            <div class="pipeline-col backlog-col" id="leftPane" style="width: 320px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); background: #ffffff;">
-                <div class="col-header" style="flex: 0 0 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: #ffffff; overflow: hidden;">
-                    <h2 style="margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">📥 Backlog</h2>
-                    <button class="icon-btn add-btn" onclick="openTaskModal('inbox')">+</button>
+            <div class="pipeline-col backlog-col" id="leftPane" style="width: 320px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); background: var(--backlog-bg);">
+                <div class="col-header" style="flex: 0 0 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: transparent; overflow: hidden;">
+                    <h2 style="color: var(--backlog-text); margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">📥 Backlog</h2>
+                    <button class="icon-btn add-btn" onclick="openTaskModal('inbox')" style="color: var(--backlog-text);">+</button>
                 </div>
-                <div class="task-list" id="list-inbox" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex-grow: 1; overflow-y: auto;"></div>
+                <div class="task-list" id="list-inbox" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
             </div>
 
             <!-- 2. CENTER: ACTION KANBAN BOARD -->
             <div class="pipeline-col matrix-col" style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
-                <div class="col-header" style="flex: 0 0 60px; display: flex; align-items: center; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: #ffffff; overflow: hidden;">
+                <div class="col-header" style="flex: 0 0 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: #ffffff; overflow: hidden;">
                     <h2 style="margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">⚡ Action Board</h2>
+                    <button id="actionBoardMaxBtn" class="icon-btn" onclick="toggleActionBoardMaximize()" title="Maximize Action Board" style="font-size: 16px; color: #64748b; background: transparent; border: none; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">⛶</button>
                 </div>
                 <div class="action-board" style="display: flex; gap: 15px; overflow-x: auto; flex-grow: 1; padding: 15px;">
                     

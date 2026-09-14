@@ -1,4 +1,4 @@
-let version = '5.06';
+let version = '5.08';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -10,6 +10,10 @@ let dbFileHandle = null;
 let activeRightPane = 'todaysPlan';
 let isLeftPaneOpen = true;
 let timeIndicatorInterval = null;
+let preMaxLeftOpen = true;
+let preMaxRightOpen = false;
+let isActionBoardMaximized = false;
+
 const IDB_NAME = 'QuadraFileCache';
 const IDB_STORE = 'handles';
 
@@ -724,9 +728,12 @@ function renderTrackerTimeline() {
         secOffsetDiff = secOff - primOff;
     }
 
+    const timeGutterWidth = hasSecTz ? 120 : 55;
+
     for (let i = 0; i <= 24; i++) {
         const row = document.createElement('div');
-        row.className = 'time-row'; row.style.top = `${i * hourPx}px`;
+        row.className = 'time-row'; 
+        row.style.top = `${i * hourPx}px`;
         
         let labelText = `${i.toString().padStart(2, '0')}:00`;
         if (hasSecTz) {
@@ -740,7 +747,8 @@ function renderTrackerTimeline() {
             labelText += ` (${dispH.toString().padStart(2, '0')}:${sM.toString().padStart(2, '0')})`;
         }
         
-        row.innerHTML = `<span class="time-row-label">${labelText}</span>`;
+        // 2. Force the display, width, and alignment directly inline
+        row.innerHTML = `<span class="time-row-label" style="display: inline-block; width: ${timeGutterWidth - 8}px; text-align: right;">${labelText}</span>`;
         bgLines.appendChild(row);
     }
     canvas.appendChild(bgLines);
@@ -786,10 +794,11 @@ function renderTrackerTimeline() {
 
     const colsContainer = document.createElement('div');
     colsContainer.className = 'timeline-cols-container';
-    const timeGutterWidth = hasSecTz ? 120 : 55;
+    //const timeGutterWidth = hasSecTz ? 120 : 55;
     const overlayPadding = hasSecTz ? 130 : 65;
     
     colsContainer.style.left = `${timeGutterWidth}px`;
+    canvas.style.setProperty('--gutter-width', `${timeGutterWidth}px`);
     canvas.appendChild(colsContainer);
 
     let totalTimeRendered = 0;
@@ -4501,6 +4510,41 @@ async function getCachedFileHandle() {
     }
 }
 
+function toggleActionBoardMaximize() {
+    const btn = document.getElementById('actionBoardMaxBtn');
+    
+    if (!isActionBoardMaximized) {
+        // Capture current pane states before maximizing
+        preMaxLeftOpen = isLeftPaneOpen;
+        preMaxRightOpen = document.getElementById('rightPane') && document.getElementById('rightPane').style.display !== 'none';
+        
+        // Hide both side panels
+        if (preMaxLeftOpen) toggleLeftPane(); 
+        if (preMaxRightOpen) closeRightPane(); 
+        
+        isActionBoardMaximized = true;
+        if (btn) {
+            btn.innerHTML = '🗗';
+            btn.title = "Restore Panels";
+            btn.style.background = '#e3f2fd';
+            btn.style.color = '#1976d2';
+        }
+    } else {
+        // Restore panes to their previous states
+        if (preMaxLeftOpen && !isLeftPaneOpen) toggleLeftPane();
+        if (preMaxRightOpen) toggleRightPane(activeRightPane);
+        
+        isActionBoardMaximized = false;
+        if (btn) {
+            btn.innerHTML = '⛶';
+            btn.title = "Maximize Action Board";
+            btn.style.background = 'transparent';
+            btn.style.color = '#64748b';
+        }
+    }
+}
+
 // Trigger the init function as soon as the DOM is fully constructed
 document.addEventListener('DOMContentLoaded', init);
+
 

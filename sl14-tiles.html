@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compact Ledger Dashboard</title>
+  <link rel="preconnect" href="https://googleapis.com">
+  <link rel="preconnect" href="https://gstatic.com" crossorigin>
+  <link href="https://googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --eds-color-bg-main: #FAFBFC;
+      --eds-color-surface: #FFFFFF;
+      --eds-color-border-base: #E2E8F0;
+      --eds-tile-green-bg: #F0FDF4;   --eds-tile-green-border: #BBF7D0;   --eds-tile-green-text: #166534;
+      --eds-tile-blue-bg: #EFF6FF;    --eds-tile-blue-border: #BFDBFE;    --eds-tile-blue-text: #1E40AF;
+      --eds-tile-pink-bg: #FFF1F2;    --eds-tile-pink-border: #FECDD3;    --eds-tile-pink-text: #9F1239;
+      --eds-tile-orange-bg: #FFF7ED;  --eds-tile-orange-border: #FFEDD5;  --eds-tile-orange-text: #9A3412;
+      --eds-tile-purple-bg: #FAF5FF;  --eds-tile-purple-border: #E9D5FF;  --eds-tile-purple-text: #6B21A8;
+      --eds-tile-red-bg: #FEF2F2;     --eds-tile-red-border: #FEE2E2;     --eds-tile-red-text: #991B1B;
+      --eds-text-muted: #64748B;
+      --eds-radius-md: 10px;
+      --eds-radius-circle: 50%;
+      --eds-font-sans: 'Inter', sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { background-color: var(--eds-color-bg-main); font-family: var(--eds-font-sans); margin: 0; padding: 1.5rem 1rem; }
+    .eds-container { max-width: 1400px; margin: 0 auto; }
+    
+    /* Optimized Grid Scaling to Fit Cleanly */
+    .eds-ledger-grid { 
+      display: grid; 
+      grid-template-columns: 1fr 32px 1fr 32px 1fr 32px 1fr; 
+      row-gap: 0.75rem; 
+      column-gap: 0.35rem; 
+      align-items: start; 
+    }
+    
+    /* Scaled-down Compact Tile Component */
+    .eds-tile { 
+      background-color: var(--eds-color-surface); 
+      border: 1px solid var(--eds-color-border-base); 
+      border-radius: var(--eds-radius-md); 
+      padding: 0.65rem 0.85rem; 
+      min-height: 82px; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: center; 
+    }
+    .eds-tile__header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+    .eds-tile__icon-box { width: 28px; height: 28px; border-radius: var(--eds-radius-circle); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .eds-tile__icon-box svg { width: 15px; height: 15px; fill: currentColor; }
+    .eds-tile__title { font-size: 0.75rem; font-weight: 600; color: var(--eds-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .eds-tile__value { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+    .eds-tile__subtitle { font-size: 0.7rem; font-weight: 500; color: var(--eds-text-muted); margin-top: 0.15rem; white-space: nowrap; }
+    
+    /* Theme Injections */
+    .eds-tile--green { background-color: var(--eds-tile-green-bg); border-color: var(--eds-tile-green-border); }
+    .eds-tile--green .eds-tile__icon-box { background-color: #DCFCE7; color: var(--eds-tile-green-text); }
+    .eds-tile--green .eds-tile__value { color: var(--eds-tile-green-text); }
+    .eds-tile--blue { background-color: var(--eds-tile-blue-bg); border-color: var(--eds-tile-blue-border); }
+    .eds-tile--blue .eds-tile__icon-box { background-color: #DBEAFE; color: var(--eds-tile-blue-text); }
+    .eds-tile--blue .eds-tile__value { color: var(--eds-tile-blue-text); }
+    .eds-tile--pink { background-color: var(--eds-tile-pink-bg); border-color: var(--eds-tile-pink-border); }
+    .eds-tile--pink .eds-tile__icon-box { background-color: #FFE4E6; color: var(--eds-tile-pink-text); }
+    .eds-tile--pink .eds-tile__value { color: var(--eds-tile-pink-text); }
+    .eds-tile--orange { background-color: var(--eds-tile-orange-bg); border-color: var(--eds-tile-orange-border); }
+    .eds-tile--orange .eds-tile__icon-box { background-color: #FFEDD5; color: var(--eds-tile-orange-text); }
+    .eds-tile--orange .eds-tile__value { color: var(--eds-tile-orange-text); }
+    .eds-tile--purple { background-color: var(--eds-tile-purple-bg); border-color: var(--eds-tile-purple-border); }
+    .eds-tile--purple .eds-tile__icon-box { background-color: #F3E8FF; color: var(--eds-tile-purple-text); }
+    .eds-tile--purple .eds-tile__value { color: var(--eds-tile-purple-text); }
+    .eds-tile--red { background-color: var(--eds-tile-red-bg); border-color: var(--eds-tile-red-border); }
+    .eds-tile--red .eds-tile__icon-box { background-color: #FEE2E2; color: var(--eds-tile-red-text); }
+    .eds-tile--red .eds-tile__value { color: var(--eds-tile-red-text); }
+    
+    /* Micro Operators */
+    .eds-operator { display: flex; align-items: center; justify-content: center; background-color: var(--eds-color-surface); border: 1px solid var(--eds-color-border-base); color: #64748B; border-radius: var(--eds-radius-circle); width: 26px; height: 26px; font-weight: 600; font-size: 1rem; margin: 1.75rem auto 0 auto; }
+    
+    /* Strict Matrix Cell Placements */
+    .row-1 { grid-row: 1; } .row-2 { grid-row: 2; } .row-3 { grid-row: 3; }
+    .col-1 { grid-column: 1; } .col-2 { grid-column: 2; } .col-3 { grid-column: 3; }
+    .col-4 { grid-column: 4; } .col-5 { grid-column: 5; } .col-6 { grid-column: 6; } .col-7 { grid-column: 7; }
+  </style>
+</head>
+<body>
+<div class="eds-container">
+  <div class="eds-ledger-grid">
+    <!-- ROW 1 -->
+    <div class="eds-tile eds-tile--green row-1 col-1">
+      <div class="eds-tile__header">
+        <div class="eds-tile__icon-box"><svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg></div>
+        <span class="eds-tile__title">Revenue</span>
+      </div>
+      <div>
+        <div class="eds-tile__value">$100,000</div>
+        <div class="eds-tile__subtitle">total revenue</div>
+      </div>
+    </div>
+    <div class="eds-operator row-1 col-2">−</div>
+    <div class="eds-tile eds-tile--blue row-1 col-3">
+      <div class="eds-tile__header">
+        <div class="eds-tile__icon-box"><svg viewBox="0 0 24 24"><path d="M2 17h20v2H2zm11.84-9.21L11.01 6.34 4.11 10.2l2.83 4.9 6.9-3.99-1.32-2.28 1.39-.81 1.32 2.28 2.08-1.2-1.32-2.28 1.39-.81 1.32 2.28 1.94-1.12c.42-.24.56-.78.32-1.2l-1-1.73a.993.993 0 0 0-1.37-.37l-1.93 1.12z"/></svg></div>
+        <span class="eds-tile__title">Payments Delivered</span>
+      </div>
+      <div>
+        <div class="eds-tile__value">$50,000</div>
+        <div class="eds-tile__subtitle">total payments delivered</div>
+      </div>
+    </div>
+    <div class="eds-operator row-1 col-4">+</div>
+    <div class="eds-tile eds-tile--pink row-1 col-5">
+      <div class="eds-tile__header">
+        <div class="eds-tile__icon-box"><svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C23.77 11.48 19.92 8 12.5 8z"/></svg></div>
+        <span class="eds-tile__title">Refunds Issued</span>
+      </div>
+      <div>
+        <div class="eds-tile__value">$5,000</div>
+        <div class="eds-tile__subtitle">total refunds issued</div>
+      </div>
+    </div>
+    <div class="eds-operator row-1 col-6">=</div>
+    <div class="eds-tile eds-tile--orange row-1 col-7">
+      <div class="eds-tile__header">
+        <div class="eds-tile__icon-box"><svg viewBox="0 0 24 24"><path d="M12 22c4.97 0 9-4.03 9-9-4.97 0-9 4.03-9 9zM12 2c-4.97 0-9 4.03-9 9 4.97 0 9-4.03 9-9zm0 11c0 4.97 4.03 9 9 9V2c-4.97 0-9 4.03-9 9z"/></svg></div>
+        <span class="eds-tile__title">Banner AR Account</span>
+      </div>
+      <div>
+        <div class="eds-tile__value">Bal $55,000</div>
+        <div class="eds-tile__subtitle">Banner Balance</div>
+      </div>
+    </div>
+
+    <!-- ROW 2 -->
+    <div class="eds-tile eds-tile--purple row-2 col-1">
+      <div class="eds-tile__header">
+        <div class="eds-tile__icon-box"><svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L3 15.66l.5 2.83z"/></svg></div>
+        <span class="eds-tile__title">ERP Control Account Balance</span>
+      </div>
+      <div>
+        <div class="eds-tile__value">$60,000</div>
+                <div class="eds-tile__subtitle">ERP Balance</div>
+
+      </div>
+    </div>
+    <div class="eds-tile eds-tile--orange row-2 col-3">
+      <div class="eds-tile__header">
+        <div class="eds-tile__icon-box"><svg viewBox="0 0 24 24"><path d="M12 22c4.97 0 9-4.03 9-9-4.97 0-9 4.03-9 9zM12 2c-4.97 0-9 4.03-9 9 4.97 0 9-4.03 9-9zm0 11c0 4.97 4.03 9 9 9V2c-4.97 0-9 4.03-9 9z"/></svg></div>
+        <span class="eds-tile__title">Banner AR Account</span>
+      </div>
+      <div>
+        <div class="eds-tile__value">Bal $55,000</div>
+                <div class="eds-tile__subtitle">Banner Balance</div>
+
+      </div>
+    </div>
+    <div class="eds-tile eds-tile--purple row-2 col-5">
+      <div class="eds-tile__header">
+        <div class="eds-tile__icon-box"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3.01 10.59L12.4 9.42l-4.24 4.24-1.41-1.41L12.4 6.58l3.59 3.59L20 6.18V9h2V4h-5v2h2.59l-3.6 3.59z"/></svg></div>
+        <span class="eds-tile__title">Net Position</span>
+      </div>
+      <div>
+        <div class="eds-tile__value">$5,000</div>
+                <div class="eds-tile__subtitle">difference between Banner and ERP</div>
+
+      </div>
+    </div>
+
+    <div class="eds-tile eds-tile--red row-2 col-7">
+      <div class="eds-tile__header">
+        <div class="eds-tile__icon-box"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+        <span class="eds-tile__title">Failed/Error</span>
+      </div>
+      <div>
+        <div class="eds-tile__value">Click to review</div>
+        <div class="eds-tile__subtitle">&nbsp;</div>
+      </div>
+    </div>
+</div></div></div></body></html>
