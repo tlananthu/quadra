@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="5.09"]{
+[version="5.10"]{
     display:none;
 }
 
@@ -1379,6 +1379,28 @@ header h1 {
 .rich-task-input[placeholder]:empty:before { 
     content: attr(placeholder); color: var(--text-muted); 
     cursor: text; pointer-events: none; display: block; 
+}
+
+/* --- RICH TEXT TABLE STYLING --- */
+.rich-task-input table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+
+.rich-task-input th, 
+.rich-task-input td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: left;
+    min-width: 50px;
+    vertical-align: top;
+}
+
+.rich-task-input th {
+    background-color: black;
+    color:white;
+    font-weight: bold;
 }
 
 /* Toast Notification System */

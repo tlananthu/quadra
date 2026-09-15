@@ -1,4 +1,4 @@
-let version = '5.08';
+let version = '5.10';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -4544,7 +4544,89 @@ function toggleActionBoardMaximize() {
     }
 }
 
+// --- INSERT BLANK TABLE ---
+function insertBlankTable() {
+    // Focus the editor first to ensure the table drops at the cursor position
+    const editor = document.getElementById('taskInfoInput');
+    editor.focus();
+    
+    // Define a basic 2x2 table layout
+    const tableHTML = `
+        <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+            <tbody>
+                <tr>
+                    <td><br></td>
+                    <td><br></td>
+                </tr>
+                <tr>
+                    <td><br></td>
+                    <td><br></td>
+                </tr>
+            </tbody>
+        </table>
+        <p><br></p> <!-- Adds an empty line below the table so you can type after it -->
+    `;
+    
+    // Inject the table
+    document.execCommand('insertHTML', false, tableHTML);
+    
+    // Trigger your existing save functionality
+    triggerAutoSaveInterval();
+}
+
+// --- GET FOCUSED TABLE ELEMENT HELPER ---
+function getFocusedTableElement(tagName) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return null;
+    
+    let node = selection.anchorNode;
+    // If it's a text node, grab its parent element instead
+    if (node.nodeType === 3) node = node.parentNode; 
+    
+    return node.closest(tagName);
+}
+
+// --- ADD ROW BELOW ---
+function addTableRow() {
+    const tr = getFocusedTableElement('tr');
+    if (!tr) {
+        alert('Please click inside a table row first.');
+        return;
+    }
+    
+    const newRow = document.createElement('tr');
+    const colCount = tr.cells.length;
+    
+    // Create the correct number of empty cells
+    for (let i = 0; i < colCount; i++) {
+        newRow.innerHTML += '<td><br></td>';
+    }
+    
+    // Insert the new row immediately after the currently focused row
+    tr.parentNode.insertBefore(newRow, tr.nextSibling);
+    triggerAutoSaveInterval();
+}
+
+// --- ADD COLUMN TO THE RIGHT ---
+function addTableCol() {
+    const td = getFocusedTableElement('td') || getFocusedTableElement('th');
+    const tr = getFocusedTableElement('tr');
+    if (!td || !tr) {
+        //alert('Please click inside a table column first.');
+        return;
+    }
+    
+    const table = tr.closest('table');
+    const targetIndex = td.cellIndex + 1; // Insert to the right of the cursor
+    
+    // Loop through every row in the table and append a cell at the target index
+    Array.from(table.rows).forEach(row => {
+        const newCell = row.insertCell(targetIndex);
+        newCell.innerHTML = '<br>';
+    });
+    
+    triggerAutoSaveInterval();
+}
+
 // Trigger the init function as soon as the DOM is fully constructed
 document.addEventListener('DOMContentLoaded', init);
-
-
