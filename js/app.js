@@ -1,4 +1,4 @@
-let version = '5.10';
+let version = '5.11';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -12,6 +12,7 @@ let isLeftPaneOpen = true;
 let timeIndicatorInterval = null;
 let preMaxLeftOpen = true;
 let preMaxRightOpen = false;
+let isMaximizingTransition = false;
 let isActionBoardMaximized = false;
 
 const IDB_NAME = 'QuadraFileCache';
@@ -1527,6 +1528,18 @@ function updateModalForQuadrant() {
 document.addEventListener('DOMContentLoaded', () => {
     const quadrantInput = document.getElementById('taskQuadrant');
     if (quadrantInput) quadrantInput.addEventListener('change', updateModalForQuadrant);
+
+    // Restore Left Pane (Backlog)
+    const leftState = localStorage.getItem('quadra_leftPane');
+    if (leftState === 'closed' && typeof isLeftPaneOpen !== 'undefined' && isLeftPaneOpen) {
+        toggleLeftPane(); // Close it if it was saved as closed
+    }
+
+    // Restore Right Pane (Notebook or Timeline)
+    const rightState = localStorage.getItem('quadra_rightPane');
+    if (rightState && rightState !== 'closed') {
+        toggleRightPane(rightState);
+    }
 });
 
 // --- 1. NEW: Save Modal (Multi-Day Architecture & Projects) ---
@@ -3988,6 +4001,12 @@ document.addEventListener('keydown', (e) => {
             return;
         }
 
+        // Check if Alt and F are pressed simultaneously
+        if (e.altKey && e.key.toLowerCase() === 'f') {
+            e.preventDefault(); // Prevent native browser menus
+            toggleActionBoardMaximize();
+        }
+
         // Alt + Up/Down Arrow for Project Traversal
         if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
             e.preventDefault();
@@ -4042,6 +4061,9 @@ function closeRightPane() {
     btnNote.style.color = '#64748b';
 
     stopTimeIndicator();
+    if (!isMaximizingTransition) {
+        localStorage.setItem('quadra_rightPane', 'closed');
+    }
 }
 
 function initRightPaneResize(event) {
@@ -4080,6 +4102,7 @@ function initRightPaneResize(event) {
 }
 
 function toggleRightPane(paneId) {
+    if (!isMaximizingTransition) resetActionBoardMaximize();
     const paneContainer = document.getElementById('rightPane');
     const planView = document.getElementById('todaysPlanView');
     const noteView = document.getElementById('notebookView');
@@ -4126,6 +4149,9 @@ function toggleRightPane(paneId) {
         if (typeof stopTimeIndicator === 'function') {
             stopTimeIndicator(); 
         }
+    }
+    if (!isMaximizingTransition) {
+        localStorage.setItem('quadra_rightPane', paneId);
     }
 }
 
@@ -4278,6 +4304,7 @@ function saveProjectsToDB() {
 }
 
 function toggleLeftPane() {
+    if (!isMaximizingTransition) resetActionBoardMaximize();
     const paneContainer = document.getElementById('leftPane');
     const btnBacklog = document.getElementById('nav-btn-backlog');
 
@@ -4291,6 +4318,9 @@ function toggleLeftPane() {
         btnBacklog.style.background = '#e3f2fd';
         btnBacklog.style.color = '#1976d2';
         isLeftPaneOpen = true;
+    }
+    if (!isMaximizingTransition) {
+        localStorage.setItem('quadra_leftPane', isLeftPaneOpen ? 'open' : 'closed');
     }
 }
 
@@ -4514,11 +4544,14 @@ function toggleActionBoardMaximize() {
     const btn = document.getElementById('actionBoardMaxBtn');
     
     if (!isActionBoardMaximized) {
-        // Capture current pane states before maximizing
-        preMaxLeftOpen = isLeftPaneOpen;
-        preMaxRightOpen = document.getElementById('rightPane') && document.getElementById('rightPane').style.display !== 'none';
+        // 1. We are maximizing. Lock the transition flag.
+        isMaximizingTransition = true;
         
-        // Hide both side panels
+        preMaxLeftOpen = typeof isLeftPaneOpen !== 'undefined' ? isLeftPaneOpen : true;
+        const rightPane = document.getElementById('rightPane');
+        preMaxRightOpen = rightPane && rightPane.style.display !== 'none';
+        
+        // Hide both side panels (this will natively update their sidebar icons)
         if (preMaxLeftOpen) toggleLeftPane(); 
         if (preMaxRightOpen) closeRightPane(); 
         
@@ -4529,10 +4562,15 @@ function toggleActionBoardMaximize() {
             btn.style.background = '#e3f2fd';
             btn.style.color = '#1976d2';
         }
+        
+        isMaximizingTransition = false; // Unlock
     } else {
+        // 2. We are restoring. Lock the transition flag.
+        isMaximizingTransition = true;
+        
         // Restore panes to their previous states
-        if (preMaxLeftOpen && !isLeftPaneOpen) toggleLeftPane();
-        if (preMaxRightOpen) toggleRightPane(activeRightPane);
+        if (preMaxLeftOpen && (!typeof isLeftPaneOpen !== 'undefined' || !isLeftPaneOpen)) toggleLeftPane();
+        if (preMaxRightOpen && typeof activeRightPane !== 'undefined') toggleRightPane(activeRightPane);
         
         isActionBoardMaximized = false;
         if (btn) {
@@ -4541,6 +4579,8 @@ function toggleActionBoardMaximize() {
             btn.style.background = 'transparent';
             btn.style.color = '#64748b';
         }
+        
+        isMaximizingTransition = false; // Unlock
     }
 }
 
@@ -4550,15 +4590,24 @@ function insertBlankTable() {
     const editor = document.getElementById('taskInfoInput');
     editor.focus();
     
-    // Define a basic 2x2 table layout
+    // Define a basic 3x3 table layout
     const tableHTML = `
         <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+            <thead>
+                <tr>
+                    <th><br></th>
+                    <th><br></th>
+                    <th><br></th>
+                </tr>
+            </thead>
             <tbody>
                 <tr>
                     <td><br></td>
                     <td><br></td>
+                    <td><br></td>
                 </tr>
                 <tr>
+                    <td><br></td>
                     <td><br></td>
                     <td><br></td>
                 </tr>
@@ -4626,6 +4675,21 @@ function addTableCol() {
     });
     
     triggerAutoSaveInterval();
+}
+
+// --- HELPER: RESET MAXIMIZE STATE ---
+function resetActionBoardMaximize() {
+    // Only reset if we are maximized AND not actively running the transition
+    if (isActionBoardMaximized && !isMaximizingTransition) {
+        isActionBoardMaximized = false;
+        const btn = document.getElementById('actionBoardMaxBtn');
+        if (btn) {
+            btn.innerHTML = '⛶';
+            btn.title = "Maximize Action Board";
+            btn.style.background = 'transparent';
+            btn.style.color = '#64748b';
+        }
+    }
 }
 
 // Trigger the init function as soon as the DOM is fully constructed
