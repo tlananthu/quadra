@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="5.08"]{
+[version="5.09"]{
     display:none;
 }
 
@@ -1364,7 +1364,7 @@ header h1 {
     width: 100%; min-height: 220px; max-height: 450px; padding: 12px; 
     border: 1px solid var(--border-color); border-bottom-left-radius: 8px; 
     border-bottom-right-radius: 8px; outline: none; font-size: 14px; 
-    line-height: 1.5; background: #ffffff; overflow-y: auto; overflow-x: hidden; 
+    line-height: 1.5; background: #ffffff; overflow-y: auto; overflow-x: auto; 
 }
 
 .rich-task-input:focus { 
