@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quadra Mobile Carousel Sample</title>
+    <style>
+        /* Mobile-only carousel layout */
+        @media (max-width: 768px) {
+            .action-board {
+                display: flex !important;
+                flex-direction: row !important;
+                overflow-x: auto !important;
+                scroll-snap-type: x mandatory !important;
+                -webkit-overflow-scrolling: touch;
+                gap: 0 !important;
+                padding: 0 !important;
+            }
+
+            .kanban-col {
+                flex: 0 0 100vw !important; /* Forces each quadrant to take full screen width */
+                min-width: 100vw !important;
+                scroll-snap-align: start;
+                box-sizing: border-box;
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Container representing your Action Board -->
+    <div class="action-board" style="display: flex; gap: 15px; overflow-x: auto; flex-grow: 1; padding: 15px;">
+        
+        <!-- Do First -->
+        <div id="q1" class="kanban-col do-first" style="display: flex; flex-direction: column; background: #ffebee; border: 1px solid #e0e0e0; height: 70vh;">
+            <div class="col-header" style="padding: 12px; font-weight: 700; color: #c62828;">Do First (Q1)</div>
+            <div class="task-list" style="flex-grow: 1; overflow-y: auto; padding: 10px;">
+                <div style="background: #fff; padding: 12px; margin-bottom: 8px; border-radius: 6px;">Sample Task 1</div>
+            </div>
+        </div>
+        
+        <!-- Schedule -->
+        <div id="q2" class="kanban-col schedule" style="display: flex; flex-direction: column; background: #e3f2fd; border: 1px solid #e0e0e0; height: 70vh;">
+            <div class="col-header" style="padding: 12px; font-weight: 700; color: #1565c0;">Schedule (Q2)</div>
+            <div class="task-list" style="flex-grow: 1; overflow-y: auto; padding: 10px;">
+                <div style="background: #fff; padding: 12px; margin-bottom: 8px; border-radius: 6px;">Sample Task 2</div>
+            </div>
+        </div>
+        
+        <!-- Delegate -->
+        <div id="q3" class="kanban-col delegate" style="display: flex; flex-direction: column; background: #fff8e1; border: 1px solid #e0e0e0; height: 70vh;">
+            <div class="col-header" style="padding: 12px; font-weight: 700; color: #f57f17;">Delegate (Q3)</div>
+            <div class="task-list" style="flex-grow: 1; overflow-y: auto; padding: 10px;">
+                <div style="background: #fff; padding: 12px; margin-bottom: 8px; border-radius: 6px;">Sample Task 3</div>
+            </div>
+        </div>
+        
+        <!-- Later -->
+        <div id="q4" class="kanban-col later" style="display: flex; flex-direction: column; background: #f5f5f5; border: 1px solid #e0e0e0; height: 70vh;">
+            <div class="col-header" style="padding: 12px; font-weight: 700; color: #424242;">Later (Q4)</div>
+            <div class="task-list" style="flex-grow: 1; overflow-y: auto; padding: 10px;">
+                <div style="background: #fff; padding: 12px; margin-bottom: 8px; border-radius: 6px;">Sample Task 4</div>
+            </div>
+        </div>
+        
+    </div>
+
+</body>
+</html>

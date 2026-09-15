@@ -1,4 +1,4 @@
-let version = '5.11';
+let version = '5.12';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1526,19 +1526,34 @@ function updateModalForQuadrant() {
 
 // Add the listener right after DOM load or just float it in the global scope:
 document.addEventListener('DOMContentLoaded', () => {
+    const isMobile = window.innerWidth <= 768;
+
     const quadrantInput = document.getElementById('taskQuadrant');
     if (quadrantInput) quadrantInput.addEventListener('change', updateModalForQuadrant);
 
     // Restore Left Pane (Backlog)
     const leftState = localStorage.getItem('quadra_leftPane');
     if (leftState === 'closed' && typeof isLeftPaneOpen !== 'undefined' && isLeftPaneOpen) {
-        toggleLeftPane(); // Close it if it was saved as closed
+        toggleLeftPane(); 
     }
 
     // Restore Right Pane (Notebook or Timeline)
     const rightState = localStorage.getItem('quadra_rightPane');
-    if (rightState && rightState !== 'closed') {
-        toggleRightPane(rightState);
+    const rightPane = document.getElementById('rightPane');
+
+    if (rightPane) rightPane.style.display = 'none';
+
+    if (isMobile) {
+        // MOBILE: Always start closed. 
+        // We do not call toggleRightPane here, so it remains hidden.
+        if (rightState && rightState !== 'closed') {
+            toggleRightPane(rightState);
+        }
+    } else {
+        // DESKTOP: Restore previous state from memory
+        if (rightState && rightState !== 'closed') {
+            toggleRightPane(rightState);
+        }
     }
 });
 
@@ -2212,6 +2227,7 @@ function renderNotes(searchQuery = '') {
 
     updateQuickTags();
     renderTrackerTimeline();
+    updateTaskCounters();
 }
 
 function reconcileList(containerId, expectedNotes) {
@@ -2259,10 +2275,19 @@ function reconcileList(containerId, expectedNotes) {
                 : '';
             
             innerHTML = `
-                <div class="note-content-wrapper" onclick="openTaskModal(null, '${note.id}', event)">
+                <div class="note-content-wrapper" 
+                     ontouchstart="startLongPress(event, '${note.id}')" 
+                     ontouchend="cancelLongPress()" 
+                     ontouchmove="cancelLongPressMove(event)"
+                     onmousedown="startLongPress(event, '${note.id}')"
+                     onmouseup="cancelLongPress()"
+                     onmouseleave="cancelLongPress()"
+                     onclick="handleTaskClick(event, '${note.id}')">
+                    
                     <div class="note-text">${overdueInd}${tagParsed}</div>
                     ${dueDateMeta}
                 </div>
+                
                 ${note.status !== 'active' ? `<div class="note-actions"><button class="action-btn restore-btn" onclick="restoreTask('${note.id}')" title="Restore">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')" title="Delete">×</button></div>` : ''}
             `;
             
@@ -2288,75 +2313,6 @@ function reconcileList(containerId, expectedNotes) {
         }
 
         // Ensure visual order matches sorted array without fully remounting the div
-        if (container.children[index] !== el) {
-            container.insertBefore(el, container.children[index]);
-        }
-    });
-
-    // Destroy any DOM elements that are no longer in the array
-    existingMap.forEach(node => node.remove());
-}
-
-function reconcileList(containerId, expectedNotes) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    // Map existing DOM elements
-    const existingNodes = Array.from(container.children);
-    const existingMap = new Map();
-    existingNodes.forEach(node => {
-        if (node.id && node.id.startsWith('note-')) {
-            existingMap.set(node.id.replace('note-', ''), node);
-        }
-    });
-
-    const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
-
-    // Inject or update expected elements
-    expectedNotes.forEach((note, index) => {
-        const noteId = String(note.id);
-        let el = existingMap.get(noteId);
-        
-        let cleanTextTitle = cleanHTMLToPlainText(note.text).split('\n')[0];
-        let tagParsed = parseTags(cleanTextTitle);
-        
-        let overdueInd = (!note.eventId && note.status === 'active' && note.dueDate && note.dueDate < todayStr) 
-            ? `<span style="background: #FFF1F2; color: #9F1239; border: 1px solid #FECDD3; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">OVERDUE</span>` 
-            : '';
-            
-        let dueDateMeta = note.dueDate 
-            ? `<div style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>` 
-            : '';
-        
-        let innerHTML = `
-            <div class="note-content-wrapper" onclick="openTaskModal(null, '${note.id}', event)">
-                <div class="note-text">${overdueInd}${tagParsed}</div>
-                ${dueDateMeta}
-            </div>
-            ${note.status !== 'active' ? `<div class="note-actions"><button class="action-btn restore-btn" onclick="restoreTask('${note.id}')">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')">×</button></div>` : ''}
-        `;
-        
-        let cls = `note ${note.quadrant} ${note.status === 'closed' ? 'closed-note' : ''}`;
-
-        if (el) {
-            // Smart update: Only rewrite the DOM if the data actually changed
-            if (el.innerHTML !== innerHTML) el.innerHTML = innerHTML;
-            if (el.className !== cls) el.className = cls;
-            existingMap.delete(noteId);
-        } else {
-            // Create new block
-            el = document.createElement('div');
-            el.id = `note-${noteId}`;
-            el.className = cls;
-            if (note.status === 'active') {
-                el.draggable = true;
-                el.ondragstart = (e) => { e.stopPropagation(); e.dataTransfer.setData('text/plain', note.id); };
-            }
-            el.innerHTML = innerHTML;
-            container.appendChild(el);
-        }
-
-        // Ensure visual order matches sorted array
         if (container.children[index] !== el) {
             container.insertBefore(el, container.children[index]);
         }
@@ -4150,6 +4106,14 @@ function toggleRightPane(paneId) {
             stopTimeIndicator(); 
         }
     }
+    const rightPane = document.getElementById('rightPane');
+    if (rightPane && rightPane.style.display !== 'none' && window.innerWidth <= 768) {
+        // Check if backlog is open, and if so, trigger its toggle to close it
+        if (typeof isLeftPaneOpen !== 'undefined' && isLeftPaneOpen) {
+            toggleLeftPane(); 
+        }
+    }
+
     if (!isMaximizingTransition) {
         localStorage.setItem('quadra_rightPane', paneId);
     }
@@ -4318,6 +4282,9 @@ function toggleLeftPane() {
         btnBacklog.style.background = '#e3f2fd';
         btnBacklog.style.color = '#1976d2';
         isLeftPaneOpen = true;
+    }
+    if (typeof isLeftPaneOpen !== 'undefined' && isLeftPaneOpen && window.innerWidth <= 768) {
+        closeRightPane();
     }
     if (!isMaximizingTransition) {
         localStorage.setItem('quadra_leftPane', isLeftPaneOpen ? 'open' : 'closed');
@@ -4690,6 +4657,122 @@ function resetActionBoardMaximize() {
             btn.style.color = '#64748b';
         }
     }
+}
+
+// --- MOBILE MENU DRAWER LOGIC ---
+function openMobileMenu() {
+    document.getElementById('mobileDrawer').classList.add('open');
+    document.getElementById('mobileDrawerOverlay').classList.add('open');
+}
+
+function closeMobileMenu() {
+    document.getElementById('mobileDrawer').classList.remove('open');
+    document.getElementById('mobileDrawerOverlay').classList.remove('open');
+}
+
+// --- MOBILE QUICK MOVE HANDLER ---
+function quickMoveTask(taskId, targetQuadrant) {
+    if (!targetQuadrant) return;
+    
+    const note = notes.find(n => n.id === taskId);
+    if (note) {
+        note.quadrant = targetQuadrant;
+        note.dirty = true;
+        saveNotes();
+        handleSearch(); // This forces the UI to instantly refresh
+        showToast(`Task moved!`);
+    }
+}
+
+// --- LONG PRESS & QUICK MOVE ENGINE ---
+let lpTimer = null;
+let lpFired = false;
+let lpStartX = 0;
+let lpStartY = 0;
+
+function startLongPress(e, noteId) {
+    lpFired = false;
+    const pointer = e.touches ? e.touches[0] : e;
+    lpStartX = pointer.clientX;
+    lpStartY = pointer.clientY;
+
+    lpTimer = setTimeout(() => {
+        lpFired = true;
+        // Trigger a tiny physical vibration on mobile phones!
+        if (navigator.vibrate) navigator.vibrate(50); 
+        openQuickMoveModal(noteId);
+    }, 500); // 500 milliseconds = long press
+}
+
+function cancelLongPressMove(e) {
+    if (!lpTimer) return;
+    const pointer = e.touches ? e.touches[0] : e;
+    // Cancel the long-press if the user is just scrolling the page
+    if (Math.abs(pointer.clientX - lpStartX) > 10 || Math.abs(pointer.clientY - lpStartY) > 10) {
+        clearTimeout(lpTimer);
+        lpTimer = null;
+    }
+}
+
+function cancelLongPress() {
+    if (lpTimer) {
+        clearTimeout(lpTimer);
+        lpTimer = null;
+    }
+}
+
+// Intercepts the click so the Task Modal doesn't open if you just long-pressed
+function handleTaskClick(e, noteId) {
+    if (lpFired) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+    }
+    openTaskModal(null, noteId, e);
+}
+
+function openQuickMoveModal(taskId) {
+    document.getElementById('quickMoveTaskId').value = taskId;
+    document.getElementById('quickMoveOverlay').classList.add('open');
+    document.getElementById('quickMoveSheet').classList.add('open');
+}
+
+function closeQuickMoveModal() {
+    document.getElementById('quickMoveOverlay').classList.remove('open');
+    document.getElementById('quickMoveSheet').classList.remove('open');
+}
+
+function executeQuickMove(targetQuadrant) {
+    const taskId = document.getElementById('quickMoveTaskId').value;
+    const note = notes.find(n => n.id === taskId);
+    
+    if (note) {
+        note.quadrant = targetQuadrant;
+        note.dirty = true;
+        saveNotes();
+        handleSearch(); // Forces UI to refresh instantly
+        updateTaskCounters(); // Update the numbering badges
+        showToast(`Task moved!`);
+    }
+    closeQuickMoveModal();
+}
+
+// --- DYNAMIC TASK COUNTERS ---
+function updateTaskCounters() {
+    const columns = ['inbox', 'q1', 'q2', 'q3', 'q4', 'notes'];
+    
+    columns.forEach(col => {
+        const list = document.getElementById(`list-${col}`);
+        const countBadge = document.getElementById(`count-${col}`);
+        
+        if (list && countBadge) {
+            // Count actual tasks, ignoring the "Completed" system separator
+            const taskCount = Array.from(list.children).filter(child => !child.classList.contains('system-separator')).length;
+            
+            countBadge.textContent = taskCount;
+            countBadge.style.display = taskCount === 0 ? 'none' : 'inline-flex';
+        }
+    });
 }
 
 // Trigger the init function as soon as the DOM is fully constructed

@@ -7,8 +7,42 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- MOBILE SLIDE-OUT DRAWER -->
+    <div id="mobileDrawerOverlay" class="mobile-drawer-overlay" onclick="closeMobileMenu()"></div>
+    <div id="mobileDrawer" class="mobile-drawer">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            <h2 style="font-size: 18px; margin: 0;">Menu</h2>
+            <button onclick="closeMobileMenu()" style="background: none; border: none; font-size: 24px; color: var(--text-muted); padding: 0;">×</button>
+        </div>
+        
+        <!-- Duplicated actions for mobile access -->
+        <button class="btn btn-outline" onclick="loadLocalDatabase(); closeMobileMenu();" style="width: 100%; text-align: left; justify-content: flex-start;">📂 Load Local Database</button>
+        <button class="btn btn-outline" onclick="executeFullSave(); closeMobileMenu();" style="width: 100%; text-align: left; justify-content: flex-start;">💾 Save All Changes</button>
+        
+        <div style="height: 1px; background: var(--border-color); margin: 10px 0;"></div>
+        
+        <button id="mobile_authorize_button" class="btn" onclick="handleAuthClick(); closeMobileMenu();" style="width: 100%;">Sign In</button>
+        <button id="mobile_signout_button" class="btn btn-outline" onclick="handleSignoutClick(); closeMobileMenu();" style="width: 100%;">⏻ Sign Out</button>
+        <button class="btn btn-outline" onclick="openSettingsPage(); closeMobileMenu();" style="width: 100%; text-align: left; justify-content: flex-start;">⚙️ Settings</button>
+    </div>
+    <!-- MOBILE QUICK MOVE SHEET -->
+    <div id="quickMoveOverlay" class="mobile-drawer-overlay" onclick="closeQuickMoveModal()"></div>
+    <div id="quickMoveSheet" class="quick-move-sheet">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Move Task To...</h3>
+            <button onclick="closeQuickMoveModal()" style="background: none; border: none; font-size: 24px; color: var(--text-muted);">×</button>
+        </div>
+        <input type="hidden" id="quickMoveTaskId">
+        
+        <button class="btn btn-outline" style="width:100%; margin-bottom:10px; justify-content:flex-start; border-color:var(--q1-border); color:var(--q1-text);" onclick="executeQuickMove('q1')">⚡ Do First (Q1)</button>
+        <button class="btn btn-outline" style="width:100%; margin-bottom:10px; justify-content:flex-start; border-color:var(--q2-border); color:var(--q2-text);" onclick="executeQuickMove('q2')">📅 Schedule (Q2)</button>
+        <button class="btn btn-outline" style="width:100%; margin-bottom:10px; justify-content:flex-start; border-color:var(--q3-border); color:var(--q3-text);" onclick="executeQuickMove('q3')">🤝 Delegate (Q3)</button>
+        <button class="btn btn-outline" style="width:100%; margin-bottom:10px; justify-content:flex-start; border-color:var(--q4-border); color:var(--q4-text);" onclick="executeQuickMove('q4')">☕ Later (Q4)</button>
+        <button class="btn btn-outline" style="width:100%; justify-content:flex-start;" onclick="executeQuickMove('inbox')">📥 Backlog</button>
+    </div>
     <header>
         <div class="header-left">
+            <button id="mobileMenuBtn" class="btn btn-outline icon-button mobile-only" title="Menu" style="display: none; border: none; font-size: 24px; background: transparent; padding: 0 8px 0 0; color: var(--text-main);">☰</button>
             <div class="brand-container">
                 <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
@@ -17,7 +51,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.11</span>
+                    <span class="version-badge">v5.12</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -74,9 +108,24 @@
 
             <!-- 1. LEFT PANE: BACKLOG -->
             <div class="pipeline-col backlog-col" id="leftPane" style="width: 320px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); background: var(--backlog-bg);">
-                <div class="col-header" style="flex: 0 0 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: transparent; overflow: hidden;">
-                    <h2 style="color: var(--backlog-text); margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">📥 Backlog</h2>
-                    <button class="icon-btn add-btn" onclick="openTaskModal('inbox')" style="color: var(--backlog-text);">+</button>
+                    <div class="col-header" style="flex: 0 0 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: transparent; overflow: visible; position: relative;">
+                    <h2 style="color: var(--backlog-text); margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">
+                        📥 Backlog <span class="task-count" id="count-inbox">0</span>
+                    </h2>
+                    
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <!-- NEW: Sort Dropdown Container -->
+                        <div class="custom-dropdown" style="position: relative;">
+                            <button class="icon-btn" onclick="toggleSortMenu('inbox', event)" title="Sort Backlog" style="color: var(--text-muted); font-size: 16px; border: none; background: transparent; cursor: pointer; padding: 4px;">⇅</button>
+                            <div id="sort-menu-inbox" class="dropdown-content" style="display: none; position: absolute; right: 0; top: 100%; background: #fff; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 6px; z-index: 100; min-width: 150px; overflow: hidden;">
+                                <div class="sort-option" onclick="changeSort('inbox', 'due_asc')" style="padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--border-color);">📅 Due Date</div>
+                                <div class="sort-option" onclick="changeSort('inbox', 'created_desc')" style="padding: 10px 12px; font-size: 13px; cursor: pointer;">⏱️ Newest First</div>
+                            </div>
+                        </div>
+                        
+                        <button class="icon-btn add-btn" onclick="openTaskModal('inbox')" style="color: var(--backlog-text); padding: 0 4px;">+</button>
+                        <button class="icon-btn" onclick="toggleLeftPane()" title="Close Backlog" style="font-size: 24px; line-height: 1; padding: 0 4px; color: var(--backlog-text); border: none; background: transparent; cursor: pointer;">×</button>
+                    </div>
                 </div>
                 <div class="task-list" id="list-inbox" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
             </div>
@@ -91,25 +140,37 @@
                     
                     <!-- Do First -->
                     <div id="q1" class="kanban-col do-first" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #ffebee; border-radius: 8px; border: 1px solid #e0e0e0;">
-                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #c62828;">Do First</div>
+                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #c62828; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center;">Do First <span class="task-count" id="count-q1">0</span></div>
+                            <button class="icon-btn" onclick="openTaskModal('q1')" title="Add Task" style="color: inherit; background: transparent; border: none; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px;">+</button>
+                        </div>
                         <div class="task-list" id="list-q1" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                     </div>
                     
                     <!-- Schedule -->
                     <div id="q2" class="kanban-col schedule" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #e3f2fd; border-radius: 8px; border: 1px solid #e0e0e0;">
-                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #1565c0;">Schedule</div>
+                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #1565c0; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center;">Schedule <span class="task-count" id="count-q2">0</span></div>
+                            <button class="icon-btn" onclick="openTaskModal('q2')" title="Add Task" style="color: inherit; background: transparent; border: none; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px;">+</button>
+                        </div>
                         <div class="task-list" id="list-q2" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                     </div>
                     
                     <!-- Delegate -->
                     <div id="q3" class="kanban-col delegate" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #fff8e1; border-radius: 8px; border: 1px solid #e0e0e0;">
-                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #f57f17;">Delegate</div>
+                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #f57f17; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center;">Delegate <span class="task-count" id="count-q3">0</span></div>
+                            <button class="icon-btn" onclick="openTaskModal('q3')" title="Add Task" style="color: inherit; background: transparent; border: none; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px;">+</button>
+                        </div>
                         <div class="task-list" id="list-q3" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                     </div>
                     
                     <!-- Later -->
                     <div id="q4" class="kanban-col later" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #f5f5f5; border-radius: 8px; border: 1px solid #e0e0e0;">
-                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #424242;">Later</div>
+                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #424242; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center;">Later <span class="task-count" id="count-q4">0</span></div>
+                            <button class="icon-btn" onclick="openTaskModal('q4')" title="Add Task" style="color: inherit; background: transparent; border: none; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px;">+</button>
+                        </div>
                         <div class="task-list" id="list-q4" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                     </div>
                     
@@ -117,7 +178,7 @@
             </div>
 
             <!-- 3. RIGHT TOGGLABLE PANE -->
-            <div class="right-sliding-pane" id="rightPane" style="display: flex; width: 360px; flex-shrink: 0; flex-direction: column; border-left: 1px solid var(--border-color); background: #ffffff; position: relative;">
+            <div class="right-sliding-pane" id="rightPane" style="display: none; width: 360px; flex-shrink: 0; flex-direction: column; border-left: 1px solid var(--border-color); background: #ffffff; position: relative;">
                 
                 <!-- Invisible Drag Handle for Resizing -->
                 <div class="pane-resizer" onmousedown="initRightPaneResize(event)" style="width: 8px; cursor: col-resize; background: transparent; position: absolute; left: -4px; top: 0; bottom: 0; z-index: 20;" title="Drag to resize"></div>
@@ -143,7 +204,9 @@
                 <!-- Notebook View -->
                 <div id="notebookView" class="pane-content" style="display: none; flex-direction: column; height: 100%; background: var(--notebook-bg);">
                     <div class="col-header" style="flex: 0 0 45px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: transparent; overflow: hidden;">
-                        <h2 style="color: var(--notebook-text); margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">📓 Notebook</h2>
+                        <h2 style="color: var(--notebook-text); margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">
+                            📓 Notebook <span class="task-count" id="count-notes">0</span>
+                        </h2>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <button class="icon-btn add-btn" onclick="openTaskModal('notes')" style="color: var(--notebook-text);">+</button>
                             <button class="icon-btn" onclick="closeRightPane()" title="Close" style="font-size: 20px; line-height: 1; padding: 0 4px; color: var(--notebook-text); border: none; background: transparent; cursor: pointer;">×</button>

@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="5.10"]{
+[version="5.12"]{
     display:none;
 }
 
@@ -1936,7 +1936,16 @@ input:checked + .slider:after {
 }
 
 .dropdown-content.show {
-    display: block;
+    display: block !important;
+}
+
+.sort-option:hover {
+    background-color: #f1f5f9;
+}
+.sort-option.active-sort {
+    background-color: #e0f2fe;
+    color: #0369a1;
+    font-weight: 600;
 }
 
 .dropdown-content div {
@@ -2254,4 +2263,214 @@ input:checked + .slider:after {
     background-color: #ffffff;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Soft drop shadow */
     border-color: #E2E8F0; /* Slightly lighter border to match the aesthetic */
+}
+/* ==========================================================================
+   MOBILE UI OPTIMIZATION (V5 LAYOUT)
+   ========================================================================== */
+@media (max-width: 768px) {
+    /* --- 1. HEADER COMPRESSION --- */
+    header {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        height: 60px !important;
+        padding: 0 10px !important;
+        gap: 10px !important;
+    }
+    
+    .header-left {
+        display: flex !important;
+        flex-direction: row !important; /* Forces logo and search on the same line */
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+        gap: 10px !important;
+    }
+
+    .brand-container { flex-shrink: 0 !important; }
+    .brand-container h1 { font-size: 18px !important; }
+    .version-badge, #cloudSyncIcon { display: none !important; }
+    
+    #searchHeaderContainer {
+        flex: 1 1 auto !important;
+        min-width: 50px !important; /* Allows search bar to shrink heavily without breaking */
+        margin: 0 !important;
+    }
+    #searchInput { width: 100% !important; min-width: 0 !important; }
+    
+    .header-actions {
+        flex-shrink: 0 !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+    }
+    .header-actions > *:not(.switch):not(.mobile-only) { display: none !important; }
+    .mobile-only { display: block !important; }
+
+    /* --- 2. WORKSPACE TO COLUMN --- */
+    #pipeline-workspace { flex-direction: column !important; }
+
+    /* --- 3. BOTTOM NAVIGATION STACK --- */
+    /* Pin the main navigation to the very bottom */
+    .left-nav-bar {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 60px !important;
+        flex-direction: row !important;
+        padding: 0 !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        background: #ffffff !important;
+        border-right: none !important;
+        border-top: 1px solid var(--border-color) !important;
+        z-index: 999 !important;
+    }
+    .left-nav-bar .nav-icon { margin: 0 !important; width: 44px !important; height: 44px !important; }
+    .left-nav-bar div { display: none !important; }
+
+    /* Pin the project tabs directly above the navigation bar */
+    #project-tabs-bar {
+        position: fixed !important;
+        bottom: 60px !important; /* Exactly the height of the nav bar */
+        left: 0 !important;
+        width: 100vw !important;
+        z-index: 998 !important;
+        background: #f8fafc !important;
+        border-top: 1px solid var(--border-color) !important;
+        display: flex !important;
+        overflow-x: auto !important; /* Allows swiping through many projects */
+        white-space: nowrap !important;
+    }
+
+    /* --- 4. ACTION BOARD & PANES (Height Adjustment) --- */
+    /* Header (60px) + Nav (60px) + Projects (~45px) = ~165px of UI chrome */
+    .action-board {
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        scroll-snap-type: x mandatory !important;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 !important;
+        gap: 0 !important;
+        height: calc(100vh - 165px) !important; 
+    }
+    .kanban-col {
+        flex: 0 0 100vw !important;
+        min-width: 100vw !important;
+        scroll-snap-align: start;
+        border-radius: 0 !important;
+        border: none !important;
+    }
+
+    /* --- 5. FULL-SCREEN SIDE PANES (Timeline / Backlog) --- */
+    #leftPane, #rightPane {
+        position: fixed !important;
+        top: 60px !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: calc(100vh - 165px) !important; 
+        z-index: 90 !important;
+        border: none !important;
+    }
+    .pane-resizer, #actionBoardMaxBtn { display: none !important; }
+
+    /* --- 6. TASK MODAL STACKING --- */
+    .modal-content {
+        width: 95vw !important;
+        max-height: 90vh !important;
+        flex-direction: column !important;
+        overflow-y: auto !important;
+    }
+    #taskModalLeftPane { overflow: visible !important; }
+    #taskModalRightPane { width: 100% !important; border-left: none !important; border-top: 1px solid var(--border-color); }
+}
+
+/* --- 7. MOBILE SLIDE-OUT DRAWER --- */
+    .mobile-drawer-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; 
+        width: 100vw; height: 100vh;
+        background: rgba(15, 23, 42, 0.4); /* Dark backdrop */
+        z-index: 2000 !important;
+        backdrop-filter: blur(2px);
+    }
+    
+    .mobile-drawer {
+        position: fixed;
+        top: 0; left: -280px; /* Hidden off-screen to the left */
+        width: 280px; height: 100vh;
+        background: #ffffff;
+        box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 2001 !important;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .mobile-drawer.open {
+        left: 0; /* Slides in */
+    }
+    
+    .mobile-drawer-overlay.open {
+        display: block;
+    }
+
+.task-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.08);
+    color: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 2px 8px;
+    margin-left: 8px;
+    opacity: 0.8;
+}
+
+/* --- MOBILE QUICK-MOVE DROPDOWN --- */
+.mobile-move-select {
+    display: none; /* Hidden on desktop */
+}
+
+@media (max-width: 768px) {
+    .mobile-move-select {
+        display: block;
+        width: 100%;
+        margin-top: 10px;
+        padding: 8px;
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--text-main);
+    }
+}
+
+/* --- QUICK MOVE BOTTOM SHEET --- */
+.quick-move-sheet {
+    position: fixed;
+    bottom: -500px; /* Hidden below screen */
+    left: 50%; /* Move to the center of the screen */
+    transform: translateX(-50%); /* Perfectly align the center */
+    width: 100%; /* Take up full width on phones... */
+    max-width: 450px; /* ...but never grow wider than 450px on desktop */
+    background: #ffffff;
+    z-index: 2005 !important;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 -4px 25px rgba(0,0,0,0.15);
+    transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+}
+
+.quick-move-sheet.open {
+    bottom: 0;
 }
