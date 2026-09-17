@@ -1,4 +1,4 @@
-let version = '5.12';
+let version = '5.13';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -4691,6 +4691,7 @@ let lpStartX = 0;
 let lpStartY = 0;
 
 function startLongPress(e, noteId) {
+    if (window.innerWidth > 768) return;
     lpFired = false;
     const pointer = e.touches ? e.touches[0] : e;
     lpStartX = pointer.clientX;
