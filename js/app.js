@@ -1,4 +1,4 @@
-let version = '5.13';
+let version = '5.14';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -8,9 +8,7 @@ let localDbFileHandle = null;
 let currentTrackerMode = 'day';
 let dbFileHandle = null; 
 let activeRightPane = 'todaysPlan';
-let isLeftPaneOpen = true;
 let timeIndicatorInterval = null;
-let preMaxLeftOpen = true;
 let preMaxRightOpen = false;
 let isMaximizingTransition = false;
 let isActionBoardMaximized = false;
@@ -1530,12 +1528,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const quadrantInput = document.getElementById('taskQuadrant');
     if (quadrantInput) quadrantInput.addEventListener('change', updateModalForQuadrant);
-
-    // Restore Left Pane (Backlog)
-    const leftState = localStorage.getItem('quadra_leftPane');
-    if (leftState === 'closed' && typeof isLeftPaneOpen !== 'undefined' && isLeftPaneOpen) {
-        toggleLeftPane(); 
-    }
 
     // Restore Right Pane (Notebook or Timeline)
     const rightState = localStorage.getItem('quadra_rightPane');
@@ -3936,13 +3928,6 @@ document.addEventListener('keydown', (e) => {
         
         // --- V5 PANEL TOGGLES ---
         
-        // Alt + B : Toggle Backlog
-        if (e.key.toLowerCase() === 'b' && e.altKey) {
-            e.preventDefault();
-            toggleLeftPane();
-            return;
-        }
-        
         // Alt + T : Toggle Timeline
         if (e.key.toLowerCase() === 't' && e.altKey) {
             e.preventDefault();
@@ -4107,13 +4092,6 @@ function toggleRightPane(paneId) {
         }
     }
     const rightPane = document.getElementById('rightPane');
-    if (rightPane && rightPane.style.display !== 'none' && window.innerWidth <= 768) {
-        // Check if backlog is open, and if so, trigger its toggle to close it
-        if (typeof isLeftPaneOpen !== 'undefined' && isLeftPaneOpen) {
-            toggleLeftPane(); 
-        }
-    }
-
     if (!isMaximizingTransition) {
         localStorage.setItem('quadra_rightPane', paneId);
     }
@@ -4264,30 +4242,6 @@ function saveProjectsToDB() {
         });
     } catch (e) {
         console.error("Error saving projects to DB:", e);
-    }
-}
-
-function toggleLeftPane() {
-    if (!isMaximizingTransition) resetActionBoardMaximize();
-    const paneContainer = document.getElementById('leftPane');
-    const btnBacklog = document.getElementById('nav-btn-backlog');
-
-    if (isLeftPaneOpen) {
-        paneContainer.style.display = 'none';
-        btnBacklog.style.background = 'transparent';
-        btnBacklog.style.color = '#64748b';
-        isLeftPaneOpen = false;
-    } else {
-        paneContainer.style.display = 'flex';
-        btnBacklog.style.background = '#e3f2fd';
-        btnBacklog.style.color = '#1976d2';
-        isLeftPaneOpen = true;
-    }
-    if (typeof isLeftPaneOpen !== 'undefined' && isLeftPaneOpen && window.innerWidth <= 768) {
-        closeRightPane();
-    }
-    if (!isMaximizingTransition) {
-        localStorage.setItem('quadra_leftPane', isLeftPaneOpen ? 'open' : 'closed');
     }
 }
 
@@ -4514,12 +4468,10 @@ function toggleActionBoardMaximize() {
         // 1. We are maximizing. Lock the transition flag.
         isMaximizingTransition = true;
         
-        preMaxLeftOpen = typeof isLeftPaneOpen !== 'undefined' ? isLeftPaneOpen : true;
         const rightPane = document.getElementById('rightPane');
         preMaxRightOpen = rightPane && rightPane.style.display !== 'none';
         
         // Hide both side panels (this will natively update their sidebar icons)
-        if (preMaxLeftOpen) toggleLeftPane(); 
         if (preMaxRightOpen) closeRightPane(); 
         
         isActionBoardMaximized = true;
@@ -4536,7 +4488,6 @@ function toggleActionBoardMaximize() {
         isMaximizingTransition = true;
         
         // Restore panes to their previous states
-        if (preMaxLeftOpen && (!typeof isLeftPaneOpen !== 'undefined' || !isLeftPaneOpen)) toggleLeftPane();
         if (preMaxRightOpen && typeof activeRightPane !== 'undefined') toggleRightPane(activeRightPane);
         
         isActionBoardMaximized = false;
