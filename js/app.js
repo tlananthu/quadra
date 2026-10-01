@@ -1,4 +1,4 @@
-let version = '5.14';
+let version = '5.15';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -3958,10 +3958,11 @@ document.addEventListener('keydown', (e) => {
                 if (currentIndex === -1) currentIndex = 0;
                 
                 let newIndex;
+                // ArrowDown moves to the next project, ArrowUp moves to previous
                 if (e.key === 'ArrowDown') {
-                    newIndex = (currentIndex + 1) % unarchived.length; // Next project
+                    newIndex = (currentIndex + 1) % unarchived.length; 
                 } else {
-                    newIndex = (currentIndex - 1 + unarchived.length) % unarchived.length; // Previous project
+                    newIndex = (currentIndex - 1 + unarchived.length) % unarchived.length; 
                 }
                 
                 const targetProjectId = unarchived[newIndex].id;
@@ -3970,6 +3971,9 @@ document.addEventListener('keydown', (e) => {
                 localStorage.setItem('quadra_config', JSON.stringify(appConfig));
                 renderProjectTabs();
                 handleSearch();
+                
+                // NEW: Visual confirmation toast so you know the shortcut worked
+                showToast(`🌐 Project: ${unarchived[newIndex].name}`);
             }
             return;
         }
