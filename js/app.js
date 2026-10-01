@@ -1,4 +1,4 @@
-let version = '5.16';
+let version = '5.17';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -13,6 +13,7 @@ let preMaxRightOpen = false;
 let isMaximizingTransition = false;
 let isActionBoardMaximized = false;
 let currentSprintStart = getMonday(new Date());
+let sweptTaskIds = new Set();
 
 const IDB_NAME = 'QuadraFileCache';
 const IDB_STORE = 'handles';
@@ -2280,12 +2281,17 @@ function reconcileList(containerId, expectedNotes) {
             let tagParsed = parseTags(cleanTextTitle);
             
             // Includes the visually softened Overdue badge from the previous UI polish
+            // Includes the visually softened Overdue badge from the previous UI polish
             let overdueInd = (!note.eventId && note.status === 'active' && note.dueDate && note.dueDate < todayStr) 
                 ? `<span style="color: #E11D48; border: 1px solid #FDA4AF; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-right: 6px; text-transform: uppercase;">Overdue</span>` 
                 : '';
                 
+            // NEW: Inject the Swept visual cue if the task's ID is in our tracker
+            let isSwept = typeof sweptTaskIds !== 'undefined' && sweptTaskIds.has(note.id);
+            let sweptInd = isSwept ? `<span style="color: #D97706; background: #FEF3C7; border: 1px solid #FDE68A; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 6px; text-transform: uppercase;">🔄 Swept</span>` : '';
+                
             let dueDateMeta = note.dueDate 
-                ? `<div style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:500;">🗓️ ${note.dueDate.split('T')[0]}</div>` 
+                ? `<div style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:500; display:flex; align-items:center;">🗓️ ${note.dueDate.split('T')[0]} ${sweptInd}</div>` 
                 : '';
             
             innerHTML = `
@@ -2305,7 +2311,8 @@ function reconcileList(containerId, expectedNotes) {
                 ${note.status !== 'active' ? `<div class="note-actions"><button class="action-btn restore-btn" onclick="restoreTask('${note.id}')" title="Restore">↺</button><button class="action-btn delete-btn" onclick="deleteTask('${note.id}')" title="Delete">×</button></div>` : ''}
             `;
             
-            cls = `note ${note.quadrant} ${note.status === 'closed' ? 'closed-note' : ''}`;
+            // NEW: Add the 'swept-task' CSS class to the main wrapper
+            cls = `note ${note.quadrant} ${note.status === 'closed' ? 'closed-note' : ''} ${isSwept ? 'swept-task' : ''}`;
         }
 
         if (el) {
@@ -4780,6 +4787,38 @@ function changeSprintWeek(offset) {
     currentSprintStart.setDate(currentSprintStart.getDate() + (offset * 7));
     updateSprintDisplay();
     handleSearch(); // Forces the UI to re-render with the new dates
+}
+
+// --- JUMP TO CURRENT SPRINT ---
+function goToCurrentSprint() {
+    currentSprintStart = getMonday(new Date());
+    updateSprintDisplay();
+    handleSearch();
+}
+
+// --- ROLLOVER MACRO ---
+function rolloverPastTasks() {
+    const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
+    let movedCount = 0;
+    
+    notes.forEach(note => {
+        // Find active tasks that have a due date in the past
+        if (note.status === 'active' && note.dueDate && note.dueDate < todayStr && note.quadrant !== 'notes' && !note.eventId) {
+            
+            note.dueDate = todayStr;
+            note.dirty = true;
+            sweptTaskIds.add(note.id); // <-- NEW: Add ID to the volatile memory tracker
+            movedCount++;
+        }
+    });
+    
+    if (movedCount > 0) {
+        saveNotes();
+        goToCurrentSprint(); 
+        showToast(`Rolled over ${movedCount} overdue tasks to Today.`);
+    } else {
+        showToast("No overdue tasks found.");
+    }
 }
 
 // Trigger the init function as soon as the DOM is fully constructed

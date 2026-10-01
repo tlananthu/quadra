@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="5.12"]{
+[version="5.17"]{
     display:none;
 }
 
@@ -2473,4 +2473,23 @@ input:checked + .slider:after {
 
 .quick-move-sheet.open {
     bottom: 0;
+}
+
+/* --- SWEPT TASK VISUAL CUE --- */
+@keyframes sweepPulse {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+    70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.swept-task {
+    animation: sweepPulse 1.5s ease-out;
+    border-color: #FCD34D !important;
+    background-color: #FFFBEB !important;
+    transition: background-color 0.3s ease;
+}
+
+/* Override the dark border for the specific quadrant while swept */
+.note.swept-task {
+    border-left: 4px solid #F59E0B !important;
 }
