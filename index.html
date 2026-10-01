@@ -51,7 +51,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.15</span>
+                    <span class="version-badge">v5.16</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -68,10 +68,10 @@
         </div>
         
         <div class="header-actions">
-            <label class="switch" title="Filter by Due Date">
+            <!--<label class="switch" title="Filter by Due Date">
                 <input type="checkbox" id="dueFilterToggle" onchange="toggleDueFilter()">
                 <span class="slider round"></span>
-            </label>
+            </label>-->
             
             <!-- Icon-only Local Database Controls -->
             <button class="btn btn-outline icon-button" onclick="loadLocalDatabase()" title="Load local database">📂</button>
@@ -108,6 +108,19 @@
             <div class="pipeline-col matrix-col" style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
                 <div class="col-header" style="flex: 0 0 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: #ffffff; overflow: hidden;">
                     <h2 style="margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">⚡ Action Board</h2>
+                    <!-- NEW: Sprint Date Scrubber & Toggle -->
+                    <div style="display: flex; align-items: center; gap: 12px; background: #F8FAFC; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <button class="icon-btn" onclick="changeSprintWeek(-1)" title="Previous Week" style="width: 24px; height: 24px; padding: 0; font-size: 14px;">←</button>
+                            <span id="sprintDateRange" style="font-size: 13px; font-weight: 600; color: var(--text-main); min-width: 140px; text-align: center;">Loading...</span>
+                            <button class="icon-btn" onclick="changeSprintWeek(1)" title="Next Week" style="width: 24px; height: 24px; padding: 0; font-size: 14px;">→</button>
+                        </div>
+                        <div style="width: 1px; height: 18px; background: var(--border-color);"></div>
+                        <label class="switch" title="Filter by Due Date within Sprint" style="margin-right: 4px;">
+                            <input type="checkbox" id="dueFilterToggle" onchange="toggleDueFilter()">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
                     <button id="actionBoardMaxBtn" class="icon-btn" onclick="toggleActionBoardMaximize()" title="Maximize Action Board" style="font-size: 16px; color: #64748b; background: transparent; border: none; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">⛶</button>
                 </div>
                 <div class="action-board" style="display: flex; gap: 15px; overflow-x: auto; flex-grow: 1; padding: 15px;">

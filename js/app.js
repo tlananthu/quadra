@@ -1,4 +1,4 @@
-let version = '5.15';
+let version = '5.16';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -12,6 +12,7 @@ let timeIndicatorInterval = null;
 let preMaxRightOpen = false;
 let isMaximizingTransition = false;
 let isActionBoardMaximized = false;
+let currentSprintStart = getMonday(new Date());
 
 const IDB_NAME = 'QuadraFileCache';
 const IDB_STORE = 'handles';
@@ -2140,7 +2141,15 @@ function isProjectVisible(note) {
 
 // --- Delta DOM Update Engine (Pipeline Architecture) ---
 function renderNotes(searchQuery = '') {
-    // 1. Filter and resolve tasks
+    // 1. Get current Sprint Boundaries
+    const sprintDates = updateSprintDisplay();
+    const startStr = sprintDates.startStr;
+    const endStr = sprintDates.endStr;
+    
+    const dueToggle = document.getElementById('dueFilterToggle');
+    const isDueFilterOn = dueToggle && dueToggle.checked;
+
+    // 2. Filter and resolve tasks
     let filteredNotes = notes.filter(note => {
         if (note.deleted) return false;
         if (!isProjectVisible(note)) return false;
@@ -2151,10 +2160,23 @@ function renderNotes(searchQuery = '') {
         // Hide closed tasks to keep the board clean, unless actively searching for them
         if (isClosed && !hasSearch) return false;
         
-        const dueToggle = document.getElementById('dueFilterToggle');
-        if (dueToggle && dueToggle.checked && !note.dueDate && note.quadrant !== 'notes' && !note.eventId) {
-            return false; 
+        // --- NEW SPRINT FILTER LOGIC ---
+        // Exclude notebook tasks and calendar events from sprint constraints
+        if (note.quadrant !== 'notes' && !note.eventId) {
+            const hasDate = !!note.dueDate;
+            const inSprint = hasDate && note.dueDate >= startStr && note.dueDate <= endStr;
+
+            if (isDueFilterOn) {
+                // DUE ONLY: Must have a date AND fall within the Mon-Fri sprint
+                if (!inSprint) return false;
+            } else {
+                // ALL: Show if undated, OR if dated, it MUST fall within the sprint
+                if (hasDate && !inSprint) return false;
+            }
+        } else if (note.eventId) {
+            return false; // Hide calendar events from kanban entirely
         }
+        
         return matchesSearchQuery(note.text, searchQuery);
     });
 
@@ -4729,6 +4751,35 @@ function updateTaskCounters() {
             countBadge.style.display = taskCount === 0 ? 'none' : 'inline-flex';
         }
     });
+}
+
+function getMonday(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(date.setDate(diff));
+}
+
+function updateSprintDisplay() {
+    const start = new Date(currentSprintStart);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 4); // Friday
+    
+    const startStr = start.toLocaleDateString('en-CA').split('T')[0];
+    const endStr = end.toLocaleDateString('en-CA').split('T')[0];
+    
+    const displayEl = document.getElementById('sprintDateRange');
+    if (displayEl) {
+        const formatOpts = { month: 'short', day: 'numeric' };
+        displayEl.innerText = `${start.toLocaleDateString('en-US', formatOpts)} - ${end.toLocaleDateString('en-US', formatOpts)}`;
+    }
+    return { startStr, endStr };
+}
+
+function changeSprintWeek(offset) {
+    currentSprintStart.setDate(currentSprintStart.getDate() + (offset * 7));
+    updateSprintDisplay();
+    handleSearch(); // Forces the UI to re-render with the new dates
 }
 
 // Trigger the init function as soon as the DOM is fully constructed
