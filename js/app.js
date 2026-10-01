@@ -1,4 +1,4 @@
-let version = '5.17';
+let version = '5.18';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2288,7 +2288,7 @@ function reconcileList(containerId, expectedNotes) {
                 
             // NEW: Inject the Swept visual cue if the task's ID is in our tracker
             let isSwept = typeof sweptTaskIds !== 'undefined' && sweptTaskIds.has(note.id);
-            let sweptInd = isSwept ? `<span style="color: #D97706; background: #FEF3C7; border: 1px solid #FDE68A; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 6px; text-transform: uppercase;">🔄 Swept</span>` : '';
+            let sweptInd = isSwept ? `<span style="color: #D97706; background: #FEF3C7; border: 1px solid #FDE68A; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 6px; ">🔄 Moved</span>` : '';
                 
             let dueDateMeta = note.dueDate 
                 ? `<div style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:500; display:flex; align-items:center;">🗓️ ${note.dueDate.split('T')[0]} ${sweptInd}</div>` 
