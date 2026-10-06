@@ -1,4 +1,4 @@
-let version = '5.18';
+let version = '5.19';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -27,7 +27,7 @@ if (!appConfig.defaultView) appConfig.defaultView = 'grid';
 if (!appConfig.primaryTz) appConfig.primaryTz = 'local';
 if (!appConfig.secondaryTz) appConfig.secondaryTz = 'none';
 if (!appConfig.quadrantOrder) {
-    appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'q4', 'tray-inbox', 'tray-calendar', 'tray-closed'];
+    appConfig.quadrantOrder = ['q1', 'q2', 'q3', 'tray-inbox', 'tray-calendar', 'tray-closed'];
 } else if (!appConfig.quadrantOrder.includes('notes')) {
     // Force inject 'notes' after 'tray-inbox' for existing saved layouts
     const inboxIdx = appConfig.quadrantOrder.indexOf('tray-inbox');
@@ -604,7 +604,7 @@ function renderTrackerPalette() {
         paletteNotes = paletteNotes.filter(n => n.dueDate && n.dueDate <= todayStr);
     }
 
-    const quadPriority = { 'q1': 1, 'q2': 2, 'q3': 3, 'q4': 4, 'inbox': 5, 'calendar': 6 };
+    const quadPriority = { 'q1': 1, 'q2': 2, 'q3': 3, 'inbox': 5, 'calendar': 6 };
     
     paletteNotes.sort((a, b) => {
         const aIsDueSelectedDay = a.dueDate === trackerDate;
@@ -631,7 +631,6 @@ function renderTrackerPalette() {
         'q1': { color: 'var(--q1-text)', border: 'var(--q1-border)', bg: 'var(--q1-bg)', label: 'Q1 (Urgent)' },
         'q2': { color: 'var(--q2-text)', border: 'var(--q2-border)', bg: 'var(--q2-bg)', label: 'Q2 (Schedule)' },
         'q3': { color: 'var(--q3-text)', border: 'var(--q3-border)', bg: 'var(--q3-bg)', label: 'Q3 (Delegate)' },
-        'q4': { color: 'var(--q4-text)', border: 'var(--q4-border)', bg: 'var(--q4-bg)', label: 'Q4 (Later)' },
         'inbox': { color: 'var(--text-muted)', border: 'var(--border-color)', bg: '#F1F5F9', label: 'Inbox' },
         'calendar': { color: 'var(--cal-text)', border: 'var(--cal-border)', bg: 'var(--cal-bg)', label: 'Calendar' }
     };
@@ -2182,7 +2181,7 @@ function renderNotes(searchQuery = '') {
     });
 
     // 2. Group into the 6 Pipeline Bins
-    let bins = { q1: [], q2: [], q3: [], q4: [], inbox: [], notes: [] };
+    let bins = { q1: [], q2: [], q3: [], inbox: [], notes: [] };
 
     filteredNotes.forEach(note => {
         if (note.eventId) return; // Calendar events render exclusively on the timeline
@@ -2197,7 +2196,7 @@ function renderNotes(searchQuery = '') {
     if (!appConfig.sortPrefs) appConfig.sortPrefs = {};
 
     // 3. Sort & Reconcile each pipeline column instantly
-    ['q1', 'q2', 'q3', 'q4', 'inbox', 'notes'].forEach(q => {
+    ['q1', 'q2', 'q3', 'inbox', 'notes'].forEach(q => {
         let pref = appConfig.sortPrefs[q] || (q === 'notes' ? 'created_desc' : 'due_asc');
         let [sortBy, sortDir] = pref.split('_');
 
@@ -2740,8 +2739,8 @@ async function performBackgroundSync() {
         
         const response = await gapi.client.tasks.tasklists.list();
         const remoteLists = response.result.items || [];
-        const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'q4': 'Quadra: Later', 'notes': 'Quadra: Notes', 'closed': 'Quadra: Completed' };
-        let gapiListIds = { inbox: null, q1: null, q2: null, q3: null, q4: null, notes: null, closed: null };
+        const GAPI_LIST_NAMES = { 'inbox': 'Quadra: Inbox', 'q1': 'Quadra: Do First', 'q2': 'Quadra: Schedule', 'q3': 'Quadra: Delegate', 'notes': 'Quadra: Notes', 'closed': 'Quadra: Completed' };
+        let gapiListIds = { inbox: null, q1: null, q2: null, q3: null, notes: null, closed: null };
         
         for (const quadKey of Object.keys(GAPI_LIST_NAMES)) { 
             const existingList = remoteLists.find(l => l.title === GAPI_LIST_NAMES[quadKey]); 
@@ -4744,7 +4743,7 @@ function executeQuickMove(targetQuadrant) {
 
 // --- DYNAMIC TASK COUNTERS ---
 function updateTaskCounters() {
-    const columns = ['inbox', 'q1', 'q2', 'q3', 'q4', 'notes'];
+    const columns = ['inbox', 'q1', 'q2', 'q3', 'notes'];
     
     columns.forEach(col => {
         const list = document.getElementById(`list-${col}`);
@@ -4818,6 +4817,29 @@ function rolloverPastTasks() {
         showToast(`Rolled over ${movedCount} overdue tasks to Today.`);
     } else {
         showToast("No overdue tasks found.");
+    }
+}
+
+// --- BULK MOVE: LATER TO BACKLOG ---
+function sweepLaterToBacklog() {
+    let movedCount = 0;
+    
+    notes.forEach(note => {
+        // Find active tasks sitting in Q4 (Later)
+        if (!note.deleted && note.status === 'active' && note.quadrant === 'q4') {
+            note.quadrant = 'inbox'; // Move to Backlog
+            note.dirty = true;       // Flag for Drive/Google sync
+            movedCount++;
+        }
+    });
+    
+    if (movedCount > 0) {
+        saveNotes();          // Save changes locally
+        handleSearch();       // Refresh the Action Board instantly
+        updateTaskCounters(); // Update the numbering badges
+        showToast(`Swept ${movedCount} tasks from Later to Backlog.`);
+    } else {
+        showToast("No tasks found in the Later quadrant.");
     }
 }
 

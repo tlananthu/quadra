@@ -37,7 +37,6 @@
         <button class="btn btn-outline" style="width:100%; margin-bottom:10px; justify-content:flex-start; border-color:var(--q1-border); color:var(--q1-text);" onclick="executeQuickMove('q1')">⚡ Do First (Q1)</button>
         <button class="btn btn-outline" style="width:100%; margin-bottom:10px; justify-content:flex-start; border-color:var(--q2-border); color:var(--q2-text);" onclick="executeQuickMove('q2')">📅 Schedule (Q2)</button>
         <button class="btn btn-outline" style="width:100%; margin-bottom:10px; justify-content:flex-start; border-color:var(--q3-border); color:var(--q3-text);" onclick="executeQuickMove('q3')">🤝 Delegate (Q3)</button>
-        <button class="btn btn-outline" style="width:100%; margin-bottom:10px; justify-content:flex-start; border-color:var(--q4-border); color:var(--q4-text);" onclick="executeQuickMove('q4')">☕ Later (Q4)</button>
         <button class="btn btn-outline" style="width:100%; justify-content:flex-start;" onclick="executeQuickMove('inbox')">📥 Backlog</button>
     </div>
     <header>
@@ -51,7 +50,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.18</span>
+                    <span class="version-badge">v5.19</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -177,15 +176,6 @@
                             <button class="icon-btn" onclick="openTaskModal('q3')" title="Add Task" style="color: inherit; background: transparent; border: none; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px;">+</button>
                         </div>
                         <div class="task-list" id="list-q3" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
-                    </div>
-                    
-                    <!-- Later -->
-                    <div id="q4" class="kanban-col later" ondrop="dropQuad(event)" ondragover="allowDropQuad(event)" style="flex: 1; min-width: 280px; display: flex; flex-direction: column; background: #f5f5f5; border-radius: 8px; border: 1px solid #e0e0e0;">
-                        <div class="col-header" style="padding: 12px; font-weight: 700; border-bottom: 1px solid rgba(0,0,0,0.05); color: #424242; display: flex; justify-content: space-between; align-items: center;">
-                            <div style="display: flex; align-items: center;">Later <span class="task-count" id="count-q4">0</span></div>
-                            <button class="icon-btn" onclick="openTaskModal('q4')" title="Add Task" style="color: inherit; background: transparent; border: none; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px;">+</button>
-                        </div>
-                        <div class="task-list" id="list-q4" style="flex-grow: 1; overflow-y: auto; padding: 10px;"></div>
                     </div>
                     
                 </div>
@@ -403,7 +393,6 @@
                                 <option value="q1">Do First (Q1)</option>
                                 <option value="q2">Schedule (Q2)</option>
                                 <option value="q3">Delegate (Q3)</option>
-                                <option value="q4">Later (Q4)</option>
                                 <option value="calendar">Calendar Tray</option>
                                 <option value="notes">Notebook</option>
                                 <option value="closed">Closed</option>
