@@ -1,4 +1,4 @@
-let version = '5.19';
+let version = '5.20';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1446,7 +1446,9 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
         document.getElementById('taskModalTitle').innerText = 'Add Task'; 
         titleInput.innerHTML = '';
         infoInput.innerHTML = '';
-        dueDateInput.value = timelineContext ? timelineContext.date : '';
+
+        const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
+        dueDateInput.value = timelineContext ? timelineContext.date : todayStr;
         
         // SAFE FALLBACK FOR NEW TASKS
         if (quadrantInput) {
@@ -1578,6 +1580,11 @@ function saveTaskModal() {
             startHour: roundToQuarterHour(pendingTimelineContext.startHour),
             duration: 1.0
         };
+    }
+
+    if (targetQuadForNote !== 'notes' && !dueDate) {
+        showToast("❌ A Due Date is mandatory for all tasks.");
+        return;
     }
 
     // --- UPDATED: Extract Target Projects ---
