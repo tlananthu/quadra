@@ -1,4 +1,4 @@
-let version = '5.20';
+let version = '5.21';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2173,15 +2173,11 @@ function renderNotes(searchQuery = '') {
             const hasDate = !!note.dueDate;
             const inSprint = hasDate && note.dueDate >= startStr && note.dueDate <= endStr;
 
-            if (isDueFilterOn) {
-                // DUE ONLY: Must have a date AND fall within the Mon-Fri sprint
-                if (!inSprint) return false;
-            } else {
-                // ALL: Show if undated, OR if dated, it MUST fall within the sprint
-                if (hasDate && !inSprint) return false;
-            }
+            // Enforce sprint limits ONLY if we are not globally searching
+            if (!inSprint && !hasSearch) return false;
+            
         } else if (note.eventId) {
-            return false; // Hide calendar events from kanban entirely
+            return false; // Hide calendar events from kanban
         }
         
         return matchesSearchQuery(note.text, searchQuery);
