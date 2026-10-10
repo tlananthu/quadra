@@ -1,4 +1,4 @@
-let version = '5.21';
+let version = '5.22';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -4772,7 +4772,9 @@ function getMonday(d) {
 function updateSprintDisplay() {
     const start = new Date(currentSprintStart);
     const end = new Date(start);
-    end.setDate(start.getDate() + 4); // Friday
+    
+    // Changed from + 4 (Friday) to + 6 (Sunday)
+    end.setDate(start.getDate() + 6); 
     
     const startStr = start.toLocaleDateString('en-CA').split('T')[0];
     const endStr = end.toLocaleDateString('en-CA').split('T')[0];
