@@ -50,7 +50,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.24</span>
+                    <span class="version-badge">v5.25</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -111,13 +111,13 @@
                     <!-- Sprint Date Scrubber & Controls -->
                     <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; background: #F8FAFC; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-color); max-width: 100%;">
                         <div style="display: flex; align-items: center; gap: 6px;">
-                            <button class="icon-btn" onclick="changeSprintWeek(-1)" title="Previous Week" style="width: 24px; height: 24px; padding: 0; font-size: 14px;">←</button>
+                            <button id="btnSprintPrev" class="icon-btn" onclick="changeSprintWeek(-1)" title="Previous Week" style="width: 24px; height: 24px; padding: 0; font-size: 14px;">←</button>
                             <span id="sprintDateRange" style="font-size: 13px; font-weight: 600; color: var(--text-main); text-align: center; white-space: nowrap;">Loading...</span>
-                            <button class="icon-btn" onclick="changeSprintWeek(1)" title="Next Week" style="width: 24px; height: 24px; padding: 0; font-size: 14px;">→</button>
+                            <button id="btnSprintNext" class="icon-btn" onclick="changeSprintWeek(1)" title="Next Week" style="width: 24px; height: 24px; padding: 0; font-size: 14px;">→</button>
                         </div>
                         
                         <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;">
-                            <button class="btn btn-outline" onclick="goToCurrentSprint()" style="padding: 2px 10px; font-size: 12px; height: 26px; border-radius: 6px; font-weight: 600; border-color: #CBD5E1; color: #475569;">This Week</button>
+                            <button id="btnSprintThisWeek" class="btn btn-outline" onclick="goToCurrentSprint()" style="padding: 2px 10px; font-size: 12px; height: 26px; border-radius: 6px; font-weight: 600; border-color: #CBD5E1; color: #475569;">This Week</button>
                             <button class="btn btn-outline" onclick="rolloverPastTasks()" title="Sweep past-due tasks to Today" style="padding: 2px 10px; font-size: 12px; height: 26px; border-radius: 6px; font-weight: 600; border-color: #EF4444; color: #EF4444;">Sweep</button>
                             
                             <!-- Global Sort Dropdown -->

@@ -1,4 +1,4 @@
-let version = '5.24';
+let version = '5.25';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2149,11 +2149,31 @@ function isProjectVisible(note) {
 
 // --- Delta DOM Update Engine (Pipeline Architecture) ---
 function renderNotes(searchQuery = '') {
-    // 1. Get current Sprint Boundaries
-    const sprintDates = updateSprintDisplay();
+    // 1. Get current Sprint Boundaries (This naturally updates the UI dates by default)
+    const sprintDates = typeof updateSprintDisplay === 'function' ? updateSprintDisplay() : { startStr: '', endStr: '' };
     const startStr = sprintDates.startStr;
     const endStr = sprintDates.endStr;
     
+    // --- NEW: Search UI Overrides ---
+    const hasSearch = searchQuery.trim().length > 0;
+    const dateSpan = document.getElementById('sprintDateRange');
+    const btnPrev = document.getElementById('btnSprintPrev');
+    const btnNext = document.getElementById('btnSprintNext');
+    const btnThis = document.getElementById('btnSprintThisWeek');
+
+    if (hasSearch) {
+        // Search is active: Override date text and disable navigation
+        if (dateSpan) dateSpan.innerText = "All Time";
+        if (btnPrev) { btnPrev.disabled = true; btnPrev.style.opacity = '0.3'; btnPrev.style.cursor = 'not-allowed'; }
+        if (btnNext) { btnNext.disabled = true; btnNext.style.opacity = '0.3'; btnNext.style.cursor = 'not-allowed'; }
+        if (btnThis) { btnThis.disabled = true; btnThis.style.opacity = '0.3'; btnThis.style.cursor = 'not-allowed'; }
+    } else {
+        // Search is cleared: Restore normal navigation
+        if (btnPrev) { btnPrev.disabled = false; btnPrev.style.opacity = '1'; btnPrev.style.cursor = 'pointer'; }
+        if (btnNext) { btnNext.disabled = false; btnNext.style.opacity = '1'; btnNext.style.cursor = 'pointer'; }
+        if (btnThis) { btnThis.disabled = false; btnThis.style.opacity = '1'; btnThis.style.cursor = 'pointer'; }
+    }
+
     const dueToggle = document.getElementById('dueFilterToggle');
     const isDueFilterOn = dueToggle && dueToggle.checked;
 
@@ -2163,12 +2183,11 @@ function renderNotes(searchQuery = '') {
         if (!isProjectVisible(note)) return false;
         
         const isClosed = note.status === 'closed';
-        const hasSearch = searchQuery.trim().length > 0;
 
         // Hide closed tasks to keep the board clean, unless actively searching for them
         if (isClosed && !hasSearch) return false;
         
-        // --- NEW SPRINT FILTER LOGIC ---
+        // --- SPRINT FILTER LOGIC ---
         // Exclude notebook tasks and calendar events from sprint constraints
         if (note.quadrant !== 'notes' && !note.eventId) {
             const hasDate = !!note.dueDate;
