@@ -1,4 +1,4 @@
-let version = '5.23';
+let version = '5.24';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -1531,6 +1531,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const quadrantInput = document.getElementById('taskQuadrant');
     if (quadrantInput) quadrantInput.addEventListener('change', updateModalForQuadrant);
+    if (typeof updateGlobalSortUI === 'function') updateGlobalSortUI();
 
     // Restore Right Pane (Notebook or Timeline)
     const rightState = localStorage.getItem('quadra_rightPane');
@@ -3473,7 +3474,10 @@ function toggleSortMenu(quadrant, event) {
         menu.classList.toggle('show');
         
         // Highlight active sort option
-        let pref = appConfig.sortPrefs[quadrant] || (quadrant === 'notes' ? 'created_desc' : 'due_asc');
+        // NEW: If global menu, check q1's preference instead of 'global'
+        let prefKey = quadrant === 'global' ? 'q1' : quadrant;
+        let pref = appConfig.sortPrefs[prefKey] || (quadrant === 'notes' ? 'created_desc' : 'due_asc');
+        
         Array.from(menu.children).forEach(child => {
             if (child.getAttribute('onclick').includes(pref)) {
                 child.classList.add('active-sort');
@@ -4851,6 +4855,52 @@ function sweepLaterToBacklog() {
         showToast(`Swept ${movedCount} tasks from Later to Backlog.`);
     } else {
         showToast("No tasks found in the Later quadrant.");
+    }
+}
+
+// --- GLOBAL BOARD SORT ---
+function changeGlobalSort(val) {
+    if (!appConfig.sortPrefs) appConfig.sortPrefs = {};
+    
+    // Apply the chosen sort rule to the Backlog and all active Action Board columns simultaneously
+    appConfig.sortPrefs['inbox'] = val;
+    appConfig.sortPrefs['q1'] = val;
+    appConfig.sortPrefs['q2'] = val;
+    appConfig.sortPrefs['q3'] = val;
+    
+    localStorage.setItem('quadra_config', JSON.stringify(appConfig));
+    
+    // 1. Update the visual UI highlight
+    if (typeof updateGlobalSortUI === 'function') updateGlobalSortUI(val);
+    
+    // 2. Hide the menu
+    const menu = document.getElementById('sort-menu-global');
+    if (menu) menu.classList.remove('show');
+    
+    // 3. Re-render the board
+    handleSearch(); 
+    showToast(`Board sorted by ${val === 'due_asc' ? 'Due Date' : 'Newest'}`);
+}
+
+// --- UPDATE SORT VISUALS ---
+function updateGlobalSortUI(activeVal) {
+    // Check passed value or fallback to saved config (defaulting to due_asc)
+    const currentSort = activeVal || (appConfig.sortPrefs && appConfig.sortPrefs['q1']) || 'due_asc';
+    
+    const dueOpt = document.getElementById('sort-global-due');
+    const newOpt = document.getElementById('sort-global-new');
+    
+    if (dueOpt && newOpt) {
+        // Strip the active class from both
+        dueOpt.classList.remove('active-sort');
+        newOpt.classList.remove('active-sort');
+        
+        // Apply the active class to the selected option
+        if (currentSort === 'due_asc') {
+            dueOpt.classList.add('active-sort');
+        } else {
+            newOpt.classList.add('active-sort');
+        }
     }
 }
 

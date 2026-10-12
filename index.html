@@ -50,7 +50,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
                 <h1>Quadra 
-                    <span class="version-badge">v5.23</span>
+                    <span class="version-badge">v5.24</span>
                     <span id="cloudSyncIcon" style="margin-left: 8px; font-size: 14px; font-weight: bold; cursor: help;">☁️</span>
                 </h1>
             </div>
@@ -105,29 +105,34 @@
 
             <!-- 2. CENTER: ACTION KANBAN BOARD -->
             <div class="pipeline-col matrix-col" style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
-                <div class="col-header" style="flex: 0 0 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: #ffffff; overflow: hidden;">
-                    <h2 style="margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center;">⚡ Action Board</h2>
-                    <!-- Sprint Date Scrubber & Toggle -->
-                    <div style="display: flex; align-items: center; gap: 12px; background: #F8FAFC; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div class="col-header" style="flex: 0 0 auto; min-height: 60px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 10px 16px; gap: 12px; box-sizing: border-box; border-bottom: 1px solid var(--border-color); background: #ffffff; overflow: visible; position: relative; z-index: 50;">
+                    <h2 style="margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; white-space: nowrap;">⚡ Action Board</h2>
+                    
+                    <!-- Sprint Date Scrubber & Controls -->
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; background: #F8FAFC; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-color); max-width: 100%;">
                         <div style="display: flex; align-items: center; gap: 6px;">
                             <button class="icon-btn" onclick="changeSprintWeek(-1)" title="Previous Week" style="width: 24px; height: 24px; padding: 0; font-size: 14px;">←</button>
-                            <span id="sprintDateRange" style="font-size: 13px; font-weight: 600; color: var(--text-main); min-width: 140px; text-align: center;">Loading...</span>
+                            <span id="sprintDateRange" style="font-size: 13px; font-weight: 600; color: var(--text-main); text-align: center; white-space: nowrap;">Loading...</span>
                             <button class="icon-btn" onclick="changeSprintWeek(1)" title="Next Week" style="width: 24px; height: 24px; padding: 0; font-size: 14px;">→</button>
                         </div>
                         
-                        <div style="display: flex; gap: 6px;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;">
                             <button class="btn btn-outline" onclick="goToCurrentSprint()" style="padding: 2px 10px; font-size: 12px; height: 26px; border-radius: 6px; font-weight: 600; border-color: #CBD5E1; color: #475569;">This Week</button>
-                            <!-- NEW: 1-Click Rollover Button -->
                             <button class="btn btn-outline" onclick="rolloverPastTasks()" title="Sweep past-due tasks to Today" style="padding: 2px 10px; font-size: 12px; height: 26px; border-radius: 6px; font-weight: 600; border-color: #EF4444; color: #EF4444;">Sweep</button>
+                            
+                            <!-- Global Sort Dropdown -->
+                            <div class="custom-dropdown" style="position: relative;">
+                                <button class="btn btn-outline" onclick="toggleSortMenu('global', event)" style="padding: 2px 10px; font-size: 12px; height: 26px; border-radius: 6px; font-weight: 600; border-color: #CBD5E1; color: #475569; display: flex; align-items: center; gap: 4px;">
+                                    Sort ⇅
+                                </button>
+                                <div id="sort-menu-global" class="dropdown-content" style="display: none; position: absolute; right: 0; top: 100%; background: #fff; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 6px; z-index: 100; min-width: 150px; overflow: hidden; margin-top: 4px;">
+                                    <div id="sort-global-due" class="sort-option" onclick="changeGlobalSort('due_asc')">📅 Due Date</div>
+                                    <div id="sort-global-new" class="sort-option" onclick="changeGlobalSort('created_desc')">⏱️ Newest First</div>
+                                </div>
+                            </div>
                         </div>
-                        
-                        <!--<div style="width: 1px; height: 18px; background: var(--border-color);"></div>
-                        <label class="switch" title="Filter by Due Date within Sprint" style="margin-right: 4px;">
-                            <input type="checkbox" id="dueFilterToggle" onchange="toggleDueFilter()">
-                            <span class="slider round"></span>
-                        </label>-->
                     </div>
-                    <button id="actionBoardMaxBtn" class="icon-btn" onclick="toggleActionBoardMaximize()" title="Maximize Action Board" style="font-size: 16px; color: #64748b; background: transparent; border: none; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">⛶</button>
+                    <button id="actionBoardMaxBtn" class="icon-btn" onclick="toggleActionBoardMaximize()" title="Maximize Action Board" style="font-size: 16px; color: #64748b; background: transparent; border: none; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 6px; flex-shrink: 0;">⛶</button>
                 </div>
                 <div class="action-board" style="display: flex; gap: 15px; overflow-x: auto; flex-grow: 1; padding: 15px;">
                     
@@ -139,7 +144,6 @@
                             <div style="display: flex; align-items: center; gap: 4px;">
                                 <!-- Sort Dropdown -->
                                 <div class="custom-dropdown" style="position: relative;">
-                                    <button class="icon-btn" onclick="toggleSortMenu('inbox', event)" title="Sort Backlog" style="color: inherit; font-size: 16px; border: none; background: transparent; cursor: pointer; padding: 4px;">⇅</button>
                                     <div id="sort-menu-inbox" class="dropdown-content" style="display: none; position: absolute; right: 0; top: 100%; background: #fff; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 6px; z-index: 100; min-width: 150px; overflow: hidden;">
                                         <div class="sort-option" onclick="changeSort('inbox', 'due_asc')" style="padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--border-color);">📅 Due Date</div>
                                         <div class="sort-option" onclick="changeSort('inbox', 'created_desc')" style="padding: 10px 12px; font-size: 13px; cursor: pointer;">⏱️ Newest First</div>
