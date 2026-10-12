@@ -1,4 +1,4 @@
-let version = '5.22';
+let version = '5.23';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2287,10 +2287,16 @@ function reconcileList(containerId, expectedNotes) {
             let overdueInd = (!note.eventId && note.status === 'active' && note.dueDate && note.dueDate < todayStr) 
                 ? `<span style="color: #E11D48; border: 1px solid #FDA4AF; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-right: 6px; text-transform: uppercase;">Overdue</span>` 
                 : '';
+            
+            // NEW: Check if the task is due exactly today
+            let isToday = (!note.eventId && note.status === 'active' && note.dueDate === todayStr);
+            let todayInd = isToday 
+                ? `<span style="color: #047857; background: #D1FAE5; border: 1px solid #6EE7B7; font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-right: 6px; text-transform: uppercase;">Today</span>` 
+                : '';
                 
             // NEW: Inject the Swept visual cue if the task's ID is in our tracker
             let isSwept = typeof sweptTaskIds !== 'undefined' && sweptTaskIds.has(note.id);
-            let sweptInd = isSwept ? `<span style="color: #D97706; background: #FEF3C7; border: 1px solid #FDE68A; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 6px; ">🔄 Moved</span>` : '';
+            let sweptInd = isSwept ? `<span style="color: #D97706; background: #FEF3C7; border: 1px solid #FDE68A; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 6px; text-transform: uppercase;">🔄 Swept</span>` : '';
                 
             let dueDateMeta = note.dueDate 
                 ? `<div style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:500; display:flex; align-items:center;">🗓️ ${note.dueDate.split('T')[0]} ${sweptInd}</div>` 
@@ -2306,7 +2312,7 @@ function reconcileList(containerId, expectedNotes) {
                      onmouseleave="cancelLongPress()"
                      onclick="handleTaskClick(event, '${note.id}')">
                     
-                    <div class="note-text">${overdueInd}${tagParsed}</div>
+                    <div class="note-text">${overdueInd}${todayInd}${tagParsed}</div>
                     ${dueDateMeta}
                 </div>
                 
@@ -2314,7 +2320,7 @@ function reconcileList(containerId, expectedNotes) {
             `;
             
             // NEW: Add the 'swept-task' CSS class to the main wrapper
-            cls = `note ${note.quadrant} ${note.status === 'closed' ? 'closed-note' : ''} ${isSwept ? 'swept-task' : ''}`;
+            cls = `note ${note.quadrant} ${note.status === 'closed' ? 'closed-note' : ''} ${isSwept ? 'swept-task' : ''} ${isToday ? 'today-task' : ''}`;
         }
 
         if (el) {

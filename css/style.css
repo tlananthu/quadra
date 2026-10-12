@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="5.17"]{
+[version="5.23"]{
     display:none;
 }
 
@@ -2492,4 +2492,15 @@ input:checked + .slider:after {
 /* Override the dark border for the specific quadrant while swept */
 .note.swept-task {
     border-left: 4px solid #F59E0B !important;
+}
+
+/* --- TODAY'S TASK HIGHLIGHT --- */
+.note.today-task {
+    border-color: #A7F3D0 !important;
+    border-left: 4px solid #10B981 !important; /* Bold emerald left border */
+}
+
+/* Ensure hover state still looks good */
+.note.today-task:hover {
+    border-color: #6EE7B7 !important;
 }
