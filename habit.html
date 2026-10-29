@@ -14,6 +14,7 @@
             --text: #e0e0e0;
             --text-muted: #888;
             --border: #333;
+            --highlight: rgba(255, 255, 255, 0.08); 
             --radius: 12px;
         }
         
@@ -174,8 +175,8 @@
             background: var(--card-bg);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            padding: 12px 10px;
-            margin-bottom: 5px;
+            padding: 12px 10px 16px 10px; 
+            margin-bottom: 20px;
             transition: border-color 0.3s;
         }
         
@@ -194,18 +195,21 @@
         .habit-grid {
             display: grid;
             grid-template-columns: minmax(90px, 2.5fr) repeat(7, 1fr);
-            gap: 5px 4px;
+            gap: 6px 4px;
             align-items: center;
         }
 
         .grid-day-name {
             text-align: center;
-            font-size: 0.7em;
+            font-size: 0.75em;
             color: var(--text-muted);
             font-weight: bold;
+            padding: 6px 0;
+            border-radius: 6px;
         }
         .grid-day-name.today {
             color: var(--primary-light);
+            background: var(--highlight);
         }
 
         .habit-info {
@@ -227,19 +231,27 @@
             justify-content: center;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            padding: 6px 2px;
+            border-radius: 6px;
+        }
+        .day-col.today {
+            background: var(--highlight);
         }
         
         .day-box {
             width: 100%;
             max-width: 32px;
             aspect-ratio: 1 / 1;
-            border: 1px solid var(--border);
+            border: 2px solid var(--border);
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.15s ease;
             background: var(--bg);
+        }
+        .day-box.today-box:not(.done) {
+            border-color: var(--primary-light); 
         }
         .day-box.done {
             background: var(--primary);
@@ -257,34 +269,109 @@
             grid-column: 1 / -1;
             height: 1px;
             background: var(--border);
-            margin: 2px 0;
+            margin: 4px 0;
         }
 
-        /* REPORTS: Google Fit Style Calendar */
-        .report-calendar-card {
+        /* REPORTS: Leaderboard Medal Tally */
+        .medal-tally-container {
             background: var(--card-bg);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 15px;
-            margin-bottom: 20px;
-            text-align: center;
+            margin-bottom: 25px;
         }
-        .report-calendar-header {
+        .medal-tally-header {
+            text-align: center;
             font-size: 1.1em;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 15px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            color: var(--text);
         }
-        .report-calendar-subheader {
+        .medal-tally-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .medal-row {
+            display: flex;
+            align-items: center;
+            background: var(--bg);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border-left: 4px solid transparent;
+        }
+        .medal-rank {
+            font-size: 1.6em;
+            margin-right: 15px;
+            width: 30px;
+            text-align: center;
+        }
+        .medal-info {
+            flex: 1;
+        }
+        .medal-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .medal-level {
+            font-size: 0.8em;
             color: var(--text-muted);
-            font-size: 0.85em;
-            margin-bottom: 15px;
+            margin-top: 2px;
+        }
+        .medal-xp {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: var(--text);
+        }
+
+        /* REPORTS: Individual Cards */
+        .report-calendar-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 15px 15px 25px 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .report-calendar-header {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
         }
+        .report-calendar-subheader {
+            font-size: 1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        /* Game XP Bar */
+        .xp-bar-container {
+            width: 80%;
+            max-width: 250px;
+            height: 6px;
+            background: var(--bg);
+            border-radius: 3px;
+            margin: 0 auto 20px auto;
+            position: relative;
+            overflow: hidden;
+        }
+        .xp-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease-in-out;
+        }
+
         .report-calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -340,7 +427,7 @@
             <button onclick="switchTab('log')" id="tab-log" class="active" title="Track" aria-label="Track">
                 <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
             </button>
-            <button onclick="switchTab('reports')" id="tab-reports" title="Reports" aria-label="Reports">
+            <button onclick="switchTab('reports')" id="tab-reports" title="Leaderboard" aria-label="Leaderboard">
                 <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
             </button>
             <button onclick="switchTab('setup')" id="tab-setup" title="Setup" aria-label="Setup">
@@ -396,7 +483,7 @@
         <div id="daily-log-container"></div>
     </div>
 
-    <!-- REPORTS TAB -->
+    <!-- REPORTS TAB (Now Leaderboard) -->
     <div id="reports" class="tab-content">
         <div class="week-navigator" style="margin-bottom: 20px;">
             <button onclick="changeReportMonth(-1)">&lt;</button>
@@ -412,9 +499,13 @@
         let state = { members: [], habits: [], logs: {} };
         const STORAGE_KEY = 'family_habit_tracker_data';
         
-        // Color Palette for Members (Soft neon/pastel for dark mode)
+        // Color Palette for Members
         const accentColors = ['#b388ff', '#ffb74d', '#81c784', '#4fc3f7', '#f48fb1', '#fff59d'];
         
+        // Gamification Settings
+        const XP_PER_HABIT = 10;
+        const XP_PER_LEVEL = 100;
+
         // Date Utilities
         const today = new Date();
         const getLocalDateStr = (d) => {
@@ -478,6 +569,18 @@
             saveData();
         }
 
+        function toggleHabitAssignment(habitId, memberName, isAssigned) {
+            const habit = state.habits.find(h => h.id === habitId);
+            if (habit) {
+                if (isAssigned && !habit.assignees.includes(memberName)) {
+                    habit.assignees.push(memberName);
+                } else if (!isAssigned) {
+                    habit.assignees = habit.assignees.filter(m => m !== memberName);
+                }
+                saveData();
+            }
+        }
+
         // Data Management (Import/Export)
         function exportData() {
             const dataStr = localStorage.getItem(STORAGE_KEY) || JSON.stringify(state);
@@ -508,7 +611,7 @@
                 } catch (err) {
                     alert("Error reading file.");
                 }
-                event.target.value = ''; // Reset input
+                event.target.value = ''; 
             };
             reader.readAsText(file);
         }
@@ -566,12 +669,18 @@
 
             const hList = document.getElementById('habits-list');
             hList.innerHTML = state.habits.map(h => `
-                <div class="panel habit-row" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <div style="flex:1;">
-                        <strong style="display:block; margin-bottom: 5px; font-size:0.95em;">${h.name}</strong>
-                        <div>${h.assignees.map(m => `<span class="badge">${m}</span>`).join('')}</div>
+                <div class="panel habit-row" style="display:flex; flex-direction:column; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 8px;">
+                        <strong style="font-size:0.95em;">${h.name}</strong>
+                        <button class="btn btn-danger" style="width:auto; padding:4px 10px; font-size:0.8em;" onclick="removeHabit('${h.id}')">Delete</button>
                     </div>
-                    <button class="btn btn-danger" style="width:auto; padding:6px 12px; font-size:0.9em;" onclick="removeHabit('${h.id}')">Del</button>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        ${state.members.map(m => `
+                            <label class="checkbox-label" style="padding: 4px 8px; font-size: 0.8em; ${h.assignees.includes(m) ? 'border-color: var(--primary); background: var(--highlight);' : ''}">
+                                <input type="checkbox" style="transform: scale(1.1); margin-right: 4px;" ${h.assignees.includes(m) ? 'checked' : ''} onchange="toggleHabitAssignment('${h.id}', '${m}', this.checked)"> ${m}
+                            </label>
+                        `).join('')}
+                    </div>
                 </div>
             `).join('');
         }
@@ -579,7 +688,6 @@
         function renderLog() {
             const container = document.getElementById('daily-log-container');
             
-            // Generate the 7 days of the current week
             const days = [];
             for (let i = 0; i < 7; i++) {
                 const d = new Date(currentWeekStart);
@@ -587,7 +695,6 @@
                 days.push(d);
             }
             
-            // Update Header Label
             document.getElementById('track-week-label').innerText = `${formatMonthDay(days[0])} - ${formatMonthDay(days[6])}`;
 
             if (state.members.length === 0) {
@@ -607,17 +714,12 @@
                     habitsFound = true;
                     const cardAccent = accentColors[memberIndex % accentColors.length];
                     
-                    // Start of the unified grid card with alternate border color
                     html += `<div class="habit-card" style="border: 1px solid ${cardAccent};">`;
-                    
-                    // Centered Member Name Header
                     html += `<div class="member-card-header" style="color: ${cardAccent};">${member}</div>`;
-                    
                     html += `<div class="habit-grid">`;
                     
-                    // Render Day Name Header row only for the first member
                     if (isFirstMemberWithHabits) {
-                        html += `<div></div>`; // Empty cell for habit info column
+                        html += `<div></div>`;
                         days.forEach((day, dayIndex) => {
                             const isToday = getLocalDateStr(day) === todayStr;
                             html += `<div class="grid-day-name ${isToday ? 'today' : ''}">${dayNames[dayIndex]}</div>`;
@@ -625,34 +727,32 @@
                         isFirstMemberWithHabits = false;
                     }
 
-                    // Row 2+: Habits and Checkboxes
                     memberHabits.forEach((h, index) => {
-                        // Grid Left Col: Habit Info
                         html += `
                             <div class="habit-info">
                                 <div class="habit-info-title">${h.name}</div>
                             </div>
                         `;
                         
-                        // Grid Right Cols: Checkboxes
                         days.forEach((day) => {
                             const dateStr = getLocalDateStr(day);
                             const isDone = state.logs[dateStr]?.[member]?.[h.id] || false;
+                            const isToday = dateStr === todayStr;
 
                             html += `
-                                <div class="day-col" onclick="toggleHabitDirect('${dateStr}', '${member}', '${h.id}', ${!isDone})">
-                                    <div class="day-box ${isDone ? 'done' : ''}"></div>
+                                <div class="day-col ${isToday ? 'today' : ''}" onclick="toggleHabitDirect('${dateStr}', '${member}', '${h.id}', ${!isDone})">
+                                    <div class="day-box ${isDone ? 'done' : ''} ${isToday ? 'today-box' : ''}">
+                                        ${!isDone ? `<span style="color: var(--text-muted); font-size: 0.85em; opacity: 0.5;">${day.getDate()}</span>` : ''}
+                                    </div>
                                 </div>
                             `;
                         });
                         
-                        // Separator line if not the last habit
                         if (index < memberHabits.length - 1) {
                             html += `<div class="grid-separator"></div>`;
                         }
                     });
                     
-                    // Close grid and card
                     html += `</div></div>`;
                 }
             });
@@ -664,6 +764,7 @@
             container.innerHTML = html;
         }
 
+        // --- NEW LEADERBOARD RENDER LOGIC ---
         function renderReports() {
             const container = document.getElementById('reports-container');
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -673,7 +774,6 @@
             const monthStr = String(monthIndex + 1).padStart(2, '0');
             const monthPrefix = `${year}-${monthStr}`;
             
-            // Update Header Label
             document.getElementById('report-month-label').innerText = `${monthNames[monthIndex]} ${year}`;
 
             if (state.members.length === 0) {
@@ -681,11 +781,9 @@
                 return;
             }
 
-            let html = '';
             const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-            const firstDay = new Date(year, monthIndex, 1).getDay(); // 0=Sun
-            // Shift to start on Monday (0=Mon, 6=Sun)
-            const firstDayShifted = firstDay === 0 ? 6 : firstDay - 1;
+            const firstDay = new Date(year, monthIndex, 1).getDay(); 
+            const firstDayShifted = firstDay === 0 ? 6 : firstDay - 1; 
 
             const dayNamesHeader = `
                 <div class="report-day-name">Mon</div>
@@ -697,19 +795,16 @@
                 <div class="report-day-name">Sun</div>
             `;
 
+            // Step 1: Calculate XP for everyone first and store in an array
+            let memberStats = [];
+
             state.members.forEach((member, memberIndex) => {
                 const memberHabits = state.habits.filter(h => h.assignees.includes(member));
                 if (memberHabits.length === 0) return;
 
-                const cardAccent = accentColors[memberIndex % accentColors.length];
-
                 let totalCompleted = 0;
-                let totalExpected = memberHabits.length * daysInMonth;
-
-                // Build the grid HTML first to calculate totals accurately
                 let gridHtml = '';
                 
-                // Empty slots before 1st of month
                 for (let i = 0; i < firstDayShifted; i++) {
                     gridHtml += `<div></div>`;
                 }
@@ -730,7 +825,9 @@
 
                     const dayScore = dayExpected === 0 ? 0 : (dayCompleted / dayExpected);
                     const circleSize = dayScore > 0 ? (dayScore * 90) + 10 : 0; 
-                    const textColor = dayScore > 0.6 ? '#121212' : 'var(--text)'; // Dark text if circle is large
+                    const textColor = dayScore > 0.6 ? '#121212' : 'var(--text)'; 
+                    
+                    const cardAccent = accentColors[memberIndex % accentColors.length];
 
                     gridHtml += `
                         <div class="report-day-cell">
@@ -739,26 +836,81 @@
                         </div>
                     `;
                 }
+                
+                const totalXP = totalCompleted * XP_PER_HABIT;
+                const currentLevel = Math.floor(totalXP / XP_PER_LEVEL) + 1;
+                const progressToNextLevel = ((totalXP % XP_PER_LEVEL) / XP_PER_LEVEL) * 100;
 
-                // Render the Member's Calendar Card with accent colors
+                memberStats.push({
+                    name: member,
+                    originalIndex: memberIndex,
+                    xp: totalXP,
+                    level: currentLevel,
+                    progress: progressToNextLevel,
+                    gridHtml: gridHtml
+                });
+            });
+
+            // Step 2: Sort the array by XP (Highest to Lowest)
+            memberStats.sort((a, b) => b.xp - a.xp);
+
+            // Step 3: Render the summary medal tally
+            let html = `
+                <div class="medal-tally-container">
+                    <div class="medal-tally-header">🏆 Monthly Leaderboard</div>
+                    <div class="medal-tally-grid">
+            `;
+
+            memberStats.forEach((stat, rankIndex) => {
+                const cardAccent = accentColors[stat.originalIndex % accentColors.length];
+                let rankIcon = '';
+                if (rankIndex === 0) rankIcon = '🥇';
+                else if (rankIndex === 1) rankIcon = '🥈';
+                else if (rankIndex === 2) rankIcon = '🥉';
+                else rankIcon = `<span style="font-size:0.9em; color:var(--text-muted);">${rankIndex + 1}</span>`;
+
+                html += `
+                    <div class="medal-row" style="border-left-color: ${cardAccent};">
+                        <div class="medal-rank">${rankIcon}</div>
+                        <div class="medal-info">
+                            <div class="medal-name" style="color: ${cardAccent};">${stat.name}</div>
+                            <div class="medal-level">Level ${stat.level}</div>
+                        </div>
+                        <div class="medal-xp">⭐ ${stat.xp}</div>
+                    </div>
+                `;
+            });
+            html += `</div></div>`; // Close the tally container
+
+            // Step 4: Render the individual detailed calendar cards
+            memberStats.forEach((stat, rankIndex) => {
+                const cardAccent = accentColors[stat.originalIndex % accentColors.length];
+                
                 html += `
                     <div class="report-calendar-card" style="border: 1px solid ${cardAccent};">
-                        <div class="report-calendar-header" style="color: ${cardAccent};">${member}</div>
+                        <div class="report-calendar-header" style="color: ${cardAccent};">
+                            ${stat.name}
+                        </div>
+                        
                         <div class="report-calendar-subheader">
-                            <span><span style="color:${cardAccent};">✓</span> ${totalCompleted} pts</span>
-                            <span style="margin:0 5px;">•</span>
-                            <span>${Math.round((totalCompleted/totalExpected)*100)}% overall</span>
+                            <span>⭐ <strong style="color:${cardAccent};">${stat.xp}</strong> XP</span>
+                            <span style="color: var(--border);">|</span>
+                            <span>🏅 Level <strong style="color:white;">${stat.level}</strong></span>
+                        </div>
+                        
+                        <div class="xp-bar-container">
+                            <div class="xp-bar-fill" style="width: ${stat.progress}%; background-color: ${cardAccent};"></div>
                         </div>
                         
                         <div class="report-calendar-grid">
                             ${dayNamesHeader}
-                            ${gridHtml}
+                            ${stat.gridHtml}
                         </div>
                     </div>
                 `;
             });
             
-            if (html === '') {
+            if (memberStats.length === 0) {
                  html = "<p style='color: var(--text-muted);'>No habits assigned. Go to Setup.</p>";
             }
 
