@@ -28,7 +28,7 @@
             color: var(--text);
             max-width: 800px;
             margin: 0 auto;
-            overflow-x: hidden; /* Prevent horizontal scrolling */
+            overflow-x: hidden;
         }
 
         h2, h3 { margin-top: 0; }
@@ -392,6 +392,13 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            border-radius: 50%;
+            transition: transform 0.1s;
+        }
+        .report-day-cell:active {
+            transform: scale(0.9);
         }
         .report-day-number {
             position: relative;
@@ -685,6 +692,20 @@
             renderReports();
         }
 
+        // Feature: Jump to specific week from Calendar click
+        function jumpToWeek(dateString) {
+            const [y, m, d] = dateString.split('-');
+            const selectedDate = new Date(y, m - 1, d);
+            const dayOfWeek = selectedDate.getDay();
+            const diffToMonday = selectedDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            
+            currentWeekStart = new Date(selectedDate);
+            currentWeekStart.setDate(diffToMonday);
+            currentWeekStart.setHours(0,0,0,0);
+            
+            switchTab('log');
+        }
+
         // Render UI
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -693,6 +714,7 @@
             if(document.getElementById('nav-' + tabId)) {
                 document.getElementById('nav-' + tabId).classList.add('active');
             }
+            window.scrollTo({ top: 0, behavior: 'smooth' }); // Optional: smooth scroll back to top when switching
             renderAll();
         }
 
@@ -881,7 +903,7 @@
                     const cardAccent = accentColors[memberIndex % accentColors.length];
 
                     gridHtml += `
-                        <div class="report-day-cell">
+                        <div class="report-day-cell" onclick="jumpToWeek('${dateStr}')">
                             <div class="report-day-circle" style="background-color: ${cardAccent}; width: ${circleSize}%; height: ${circleSize}%;"></div>
                             <span class="report-day-number" style="color: ${textColor};">${i}</span>
                         </div>
