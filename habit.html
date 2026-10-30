@@ -526,8 +526,8 @@
         let currentReportDate = new Date();
         currentReportDate.setDate(1);
         
-        // Tab Array for Gestures (Visual Order: Left to Right)
-        const tabsOrder = ['reports', 'log', 'setup'];
+        // Tab Array for Gestures updated to match UI: Log -> Reports -> Setup
+        const tabsOrder = ['log', 'reports', 'setup'];
 
         function loadData() {
             const data = localStorage.getItem(STORAGE_KEY);
@@ -567,11 +567,11 @@
             // Only trigger tab switch if horizontal swipe is dominant and crosses threshold
             if (Math.abs(diffX) > SWIPE_THRESHOLD && Math.abs(diffX) > Math.abs(diffY)) {
                 if (diffX > 0) {
-                    // Swipe Left (finger goes left) -> Move to Next Tab (Setup)
+                    // Swipe Left (finger goes left) -> Move to Next Tab
                     const nextIndex = (currentIndex + 1) % tabsOrder.length;
                     switchTab(tabsOrder[nextIndex]);
                 } else {
-                    // Swipe Right (finger goes right) -> Move to Prev Tab (Reports)
+                    // Swipe Right (finger goes right) -> Move to Prev Tab
                     const prevIndex = (currentIndex - 1 + tabsOrder.length) % tabsOrder.length;
                     switchTab(tabsOrder[prevIndex]);
                 }
@@ -758,7 +758,6 @@
             const sortedMembers = [...state.members].sort((a, b) => a.localeCompare(b));
 
             sortedMembers.forEach((member) => {
-                // Fetch the original index to keep color consistent
                 const memberIndex = state.members.indexOf(member);
                 const memberHabits = state.habits.filter(h => h.assignees.includes(member));
                 
