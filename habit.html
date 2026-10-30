@@ -50,17 +50,15 @@
             display: flex;
             align-items: center;
             margin: 0;
-            cursor: pointer; /* Clickable to open sidebar on desktop */
         }
         .brand-header span { color: var(--text); }
-        .brand-icon { margin-right: 5px; font-size: 1.1em; }
 
-        /* Navigation (Icons - Desktop Only, hidden on mobile in favor of sidebar) */
-        .desktop-nav { 
-            display: none; 
+        /* Navigation (Icons) */
+        nav { 
+            display: flex; 
             gap: 8px; 
         }
-        .desktop-nav button {
+        nav button {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -73,108 +71,16 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .desktop-nav button svg {
+        nav button svg {
             width: 22px;
             height: 22px;
             fill: currentColor;
         }
-        .desktop-nav button.active { 
+        nav button.active { 
             background: var(--primary); 
             color: white; 
             border-color: var(--primary);
         }
-
-        /* --- SIDEBAR DRAWER STYLES --- */
-        .sidebar-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0,0,0,0.6);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease;
-            z-index: 998;
-        }
-        .sidebar-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: -280px; /* Hidden offscreen */
-            width: 280px;
-            height: 100vh;
-            background: var(--card-bg);
-            border-right: 1px solid var(--border);
-            z-index: 999;
-            transition: transform 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.5);
-        }
-        .sidebar.open {
-            transform: translateX(280px);
-        }
-        
-        .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .sidebar-close {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 1.5em;
-            cursor: pointer;
-            padding: 5px;
-        }
-        
-        .sidebar-menu {
-            display: flex;
-            flex-direction: column;
-            padding: 15px 0;
-            flex: 1;
-        }
-        .sidebar-item {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: var(--text);
-            text-decoration: none;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-size: 1.1em;
-            gap: 15px;
-        }
-        .sidebar-item:hover {
-            background: var(--highlight);
-        }
-        .sidebar-item.active {
-            background: rgba(46, 125, 50, 0.2);
-            color: var(--primary-light);
-            border-left: 4px solid var(--primary);
-        }
-        .sidebar-item svg {
-            width: 24px;
-            height: 24px;
-            fill: currentColor;
-        }
-        
-        .sidebar-footer {
-            padding: 20px;
-            border-top: 1px solid var(--border);
-            color: var(--text-muted);
-            font-size: 0.8em;
-            text-align: center;
-        }
-        /* ----------------------------- */
 
         /* Containers */
         .tab-content { 
@@ -504,23 +410,6 @@
             z-index: 1;
             transition: width 0.3s, height 0.3s;
         }
-        
-        /* Mobile Menu Hamburger */
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: var(--text);
-            cursor: pointer;
-            padding: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .menu-toggle svg {
-            width: 28px;
-            height: 28px;
-            fill: currentColor;
-        }
 
         @media (min-width: 600px) {
             body { padding: 20px; }
@@ -528,89 +417,26 @@
             input[type="text"], input[type="month"] { flex: 1; }
             button.btn { width: auto; }
             .day-box { max-width: 38px; }
-            .menu-toggle { display: none; } /* Hide hamburger on desktop */
-            .desktop-nav { display: flex; } /* Show regular nav on desktop */
-            .brand-header { cursor: default; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar Overlay & Menu -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h2 class="brand-header">🏡 Hab<span>IT</span></h2>
-            <button class="sidebar-close" onclick="closeSidebar()">&times;</button>
-        </div>
-        <div class="sidebar-menu">
-            <div class="sidebar-item active" id="menu-log" onclick="switchTab('log')">
-                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                Track Habits
-            </div>
-            <div class="sidebar-item" id="menu-reports" onclick="switchTab('reports')">
-                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-                Leaderboard
-            </div>
-            <div class="sidebar-item" id="menu-setup" onclick="switchTab('setup')">
-                <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
-                Settings & Setup
-            </div>
-            
-            <div style="padding: 20px; margin-top: auto;">
-                <p style="font-size: 0.85em; color: var(--text-muted); margin: 0 0 10px 0;">Data Management</p>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn" onclick="exportData()" style="flex:1; font-size: 0.9em; padding: 8px;">Export</button>
-                    <button class="btn btn-secondary" onclick="document.getElementById('import-file-menu').click()" style="flex:1; font-size: 0.9em; padding: 8px;">Import</button>
-                    <input type="file" id="import-file-menu" style="display:none;" accept=".json" onchange="importData(event)">
-                </div>
-            </div>
-        </div>
-    </div>
-
     <header class="top-header">
-        <button class="menu-toggle" onclick="openSidebar()" aria-label="Open Menu">
-            <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
-        </button>
-        <h2 class="brand-header" onclick="openSidebar()">🏡 Hab<span>IT</span></h2>
+        <h2 class="brand-header">🏡 Hab<span>IT</span></h2>
         
-        <!-- Desktop Nav remains for wider screens -->
-        <nav class="desktop-nav">
-            <button onclick="switchTab('log')" id="nav-log" class="active" title="Track">
-                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-            </button>
-            <button onclick="switchTab('reports')" id="nav-reports" title="Leaderboard">
+        <nav>
+            <button onclick="switchTab('reports')" id="nav-reports" title="Leaderboard" aria-label="Leaderboard">
                 <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
             </button>
-            <button onclick="switchTab('setup')" id="nav-setup" title="Setup">
+            <button onclick="switchTab('log')" id="nav-log" class="active" title="Track" aria-label="Track">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </button>
+            <button onclick="switchTab('setup')" id="nav-setup" title="Setup" aria-label="Setup">
                 <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
             </button>
         </nav>
     </header>
-
-    <!-- SETUP TAB (Removed duplicate Data Management block, now in Sidebar) -->
-    <div id="setup" class="tab-content">
-        <div class="panel">
-            <h3 style="font-size:1.1em;">Family Members</h3>
-            <div class="flex">
-                <input type="text" id="new-member" placeholder="Enter name (e.g., Anantha)">
-                <button class="btn" onclick="addMember()">Add</button>
-            </div>
-            <div id="members-list" class="assign-cb-wrapper"></div>
-        </div>
-
-        <div class="panel">
-            <h3 style="font-size:1.1em;">Habits</h3>
-            <div class="flex">
-                <input type="text" id="new-habit" placeholder="Habit name (e.g., Reading)">
-            </div>
-            <p style="margin: 5px 0 10px; font-size: 0.85em; color: var(--text-muted);">Assign to:</p>
-            <div id="habit-assign-members" class="assign-cb-wrapper"></div>
-            <button class="btn" onclick="addHabit()" style="margin-top: 15px;">Add Habit</button>
-        </div>
-        
-        <div id="habits-list"></div>
-    </div>
 
     <!-- TRACK HABITS TAB -->
     <div id="log" class="tab-content active">
@@ -634,67 +460,74 @@
             
         <div id="reports-container"></div>
     </div>
+    
+    <!-- SETUP TAB -->
+    <div id="setup" class="tab-content">
+        <div class="panel">
+            <h3 style="font-size:1.1em;">Family Members</h3>
+            <div class="flex">
+                <input type="text" id="new-member" placeholder="Enter name (e.g., Anantha)">
+                <button class="btn" onclick="addMember()">Add</button>
+            </div>
+            <div id="members-list" class="assign-cb-wrapper"></div>
+        </div>
+
+        <div class="panel">
+            <h3 style="font-size:1.1em;">Habits</h3>
+            <div class="flex">
+                <input type="text" id="new-habit" placeholder="Habit name (e.g., Reading)">
+            </div>
+            <p style="margin: 5px 0 10px; font-size: 0.85em; color: var(--text-muted);">Assign to:</p>
+            <div id="habit-assign-members" class="assign-cb-wrapper"></div>
+            <button class="btn" onclick="addHabit()" style="margin-top: 15px;">Add Habit</button>
+        </div>
+        
+        <div id="habits-list"></div>
+
+        <!-- Data Management Section -->
+        <div class="panel">
+            <h3 style="font-size:1.1em;">Data Management</h3>
+            <p style="font-size: 0.85em; color: var(--text-muted); margin: 0 0 10px 0;">Backup your data or import it to another device.</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="exportData()" style="flex:1;">Export Data</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" style="flex:1;">Import Data</button>
+                <input type="file" id="import-file" style="display:none;" accept=".json" onchange="importData(event)">
+            </div>
+        </div>
+    </div>
 
     <script>
-        // --- Sidebar Logic & Touch Gestures ---
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        
-        function openSidebar() {
-            sidebar.classList.add('open');
-            overlay.classList.add('active');
-        }
-        
-        function closeSidebar() {
-            sidebar.classList.remove('open');
-            overlay.classList.remove('active');
-        }
-
-        let touchstartX = 0;
-        let touchendX = 0;
-        const SWIPE_THRESHOLD = 50;
-
-        document.addEventListener('touchstart', e => {
-            touchstartX = e.changedTouches[0].screenX;
-        }, {passive: true});
-
-        document.addEventListener('touchend', e => {
-            touchendX = e.changedTouches[0].screenX;
-            handleSwipe();
-        }, {passive: true});
-
-        function handleSwipe() {
-            // Swipe Right to open (only if starting near left edge)
-            if (touchendX - touchstartX > SWIPE_THRESHOLD && touchstartX < 50) {
-                openSidebar();
-            }
-            // Swipe Left to close
-            if (touchstartX - touchendX > SWIPE_THRESHOLD) {
-                closeSidebar();
-            }
-        }
-
-        // --- Core App Logic ---
+        // State Management
         let state = { members: [], habits: [], logs: {} };
         const STORAGE_KEY = 'family_habit_tracker_data';
+        
+        // Color Palette for Members
         const accentColors = ['#b388ff', '#ffb74d', '#81c784', '#4fc3f7', '#f48fb1', '#fff59d'];
+        
+        // Gamification Settings
         const MAX_DAILY_XP = 100;
         const XP_PER_LEVEL = 500; 
 
+        // Date Utilities
         const today = new Date();
         const getLocalDateStr = (d) => {
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         };
         const formatMonthDay = d => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(d);
         
+        // Track Habits: Week State
         let currentWeekStart = new Date();
         const day = currentWeekStart.getDay();
         const diffToMonday = currentWeekStart.getDate() - day + (day === 0 ? -6 : 1);
         currentWeekStart.setDate(diffToMonday);
         currentWeekStart.setHours(0,0,0,0);
 
+        // Reports: Month State
         let currentReportDate = new Date();
         currentReportDate.setDate(1);
+        
+        // Tab Array for Gestures (Visual Order: Left to Right)
+        const tabsOrder = ['reports', 'log', 'setup'];
 
         function loadData() {
             const data = localStorage.getItem(STORAGE_KEY);
@@ -706,6 +539,46 @@
             renderAll();
         }
 
+        // --- Swipe Gesture Logic ---
+        let touchstartX = 0;
+        let touchstartY = 0;
+        let touchendX = 0;
+        let touchendY = 0;
+        const SWIPE_THRESHOLD = 60;
+
+        document.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+            touchstartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        document.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            touchendY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            const currentTab = document.querySelector('.tab-content.active').id;
+            const currentIndex = tabsOrder.indexOf(currentTab);
+            
+            const diffX = touchstartX - touchendX;
+            const diffY = touchstartY - touchendY;
+            
+            // Only trigger tab switch if horizontal swipe is dominant and crosses threshold
+            if (Math.abs(diffX) > SWIPE_THRESHOLD && Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0) {
+                    // Swipe Left (finger goes left) -> Move to Next Tab (Setup)
+                    const nextIndex = (currentIndex + 1) % tabsOrder.length;
+                    switchTab(tabsOrder[nextIndex]);
+                } else {
+                    // Swipe Right (finger goes right) -> Move to Prev Tab (Reports)
+                    const prevIndex = (currentIndex - 1 + tabsOrder.length) % tabsOrder.length;
+                    switchTab(tabsOrder[prevIndex]);
+                }
+            }
+        }
+
+        // Setup Functions
         function addMember() {
             const input = document.getElementById('new-member');
             const name = input.value.trim();
@@ -752,6 +625,7 @@
             }
         }
 
+        // Data Management (Import/Export)
         function exportData() {
             const dataStr = localStorage.getItem(STORAGE_KEY) || JSON.stringify(state);
             const blob = new Blob([dataStr], { type: "application/json" });
@@ -761,7 +635,6 @@
             a.download = `HabIT_Backup_${getLocalDateStr(new Date())}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            closeSidebar();
         }
 
         function importData(event) {
@@ -783,11 +656,11 @@
                     alert("Error reading file.");
                 }
                 event.target.value = ''; 
-                closeSidebar();
             };
             reader.readAsText(file);
         }
 
+        // Direct Logging for Track Tab
         function toggleHabitDirect(dateStr, member, habitId, isDone) {
             if (!state.logs[dateStr]) state.logs[dateStr] = {};
             if (!state.logs[dateStr][member]) state.logs[dateStr][member] = {};
@@ -812,20 +685,14 @@
             renderReports();
         }
 
+        // Render UI
         function switchTab(tabId) {
-            // Content Tabs
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            
-            // Desktop Nav
-            document.querySelectorAll('.desktop-nav button').forEach(b => b.classList.remove('active'));
-            if(document.getElementById('nav-' + tabId)) document.getElementById('nav-' + tabId).classList.add('active');
-            
-            // Sidebar Nav
-            document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
-            if(document.getElementById('menu-' + tabId)) document.getElementById('menu-' + tabId).classList.add('active');
-
-            closeSidebar();
+            if(document.getElementById('nav-' + tabId)) {
+                document.getElementById('nav-' + tabId).classList.add('active');
+            }
             renderAll();
         }
 
@@ -941,8 +808,9 @@
             }
             
             container.innerHTML = html;
-        } 
+        }
 
+        // --- NEW LEADERBOARD RENDER LOGIC ---
         function renderReports() {
             const container = document.getElementById('reports-container');
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -973,6 +841,7 @@
                 <div class="report-day-name">Sun</div>
             `;
 
+            // Step 1: Calculate Fair XP for everyone first and store in an array
             let memberStats = [];
 
             state.members.forEach((member, memberIndex) => {
@@ -1014,6 +883,7 @@
                     `;
                 }
                 
+                // FAIR SCORING: Normalize XP so every member can earn 100 XP per day maximum.
                 const totalXP = memberHabits.length > 0 ? Math.round((totalCompleted / memberHabits.length) * MAX_DAILY_XP) : 0;
                 const currentLevel = Math.floor(totalXP / XP_PER_LEVEL) + 1;
                 const progressToNextLevel = ((totalXP % XP_PER_LEVEL) / XP_PER_LEVEL) * 100;
@@ -1028,8 +898,10 @@
                 });
             });
 
+            // Step 2: Sort the array by XP (Highest to Lowest)
             memberStats.sort((a, b) => b.xp - a.xp);
 
+            // Step 3: Render the summary medal tally
             let html = `
                 <div class="medal-tally-container">
                     <div class="medal-tally-header">🏆 Monthly Leaderboard</div>
@@ -1055,8 +927,9 @@
                     </div>
                 `;
             });
-            html += `</div></div>`;
+            html += `</div></div>`; // Close the tally container
 
+            // Step 4: Render the individual detailed calendar cards
             memberStats.forEach((stat, rankIndex) => {
                 const cardAccent = accentColors[stat.originalIndex % accentColors.length];
                 
