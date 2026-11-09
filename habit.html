@@ -252,7 +252,7 @@
             transition: all 0.15s ease;
             background: var(--bg);
         }
-        .day-box.today-box:not(.done) {
+        .day-box.today-box:not(.done):not(.bonus-active):not(.perfect-active) {
             border-color: var(--primary-light); 
         }
         .day-box.done {
@@ -264,6 +264,18 @@
             color: white;
             font-size: 1.1em;
             font-weight: bold;
+        }
+
+        /* Styling for the Bonus Boxes */
+        .day-box.bonus-active {
+            background: rgba(255, 215, 0, 0.15); 
+            border-color: #ffd700;
+            color: #ffd700;
+        }
+        .day-box.perfect-active {
+            background: rgba(255, 152, 0, 0.15); 
+            border-color: #ff9800;
+            color: #ff9800;
         }
         
         /* Grid Separator Line */
@@ -505,7 +517,7 @@
 
     <script>
         // State Management
-        let state = { members: [], habits: [], logs: {} };
+        let state = { members: [], habits: [], logs: {}, bonuses: {} };
         const STORAGE_KEY = 'family_habit_tracker_data';
         
         // Color Palette for Members
@@ -538,7 +550,10 @@
 
         function loadData() {
             const data = localStorage.getItem(STORAGE_KEY);
-            if (data) state = JSON.parse(data);
+            if (data) {
+                state = JSON.parse(data);
+                if (!state.bonuses) state.bonuses = {}; // Ensure backwards compatibility
+            }
         }
 
         function saveData() {
@@ -574,11 +589,9 @@
             // Only trigger tab switch if horizontal swipe is dominant and crosses threshold
             if (Math.abs(diffX) > SWIPE_THRESHOLD && Math.abs(diffX) > Math.abs(diffY)) {
                 if (diffX > 0) {
-                    // Swipe Left (finger goes left) -> Move to Next Tab
                     const nextIndex = (currentIndex + 1) % tabsOrder.length;
                     switchTab(tabsOrder[nextIndex]);
                 } else {
-                    // Swipe Right (finger goes right) -> Move to Prev Tab
                     const prevIndex = (currentIndex - 1 + tabsOrder.length) % tabsOrder.length;
                     switchTab(tabsOrder[prevIndex]);
                 }
@@ -654,6 +667,7 @@
                     const importedData = JSON.parse(e.target.result);
                     if (importedData.members && importedData.habits && importedData.logs) {
                         state = importedData;
+                        if (!state.bonuses) state.bonuses = {};
                         saveData();
                         alert("Data imported successfully!");
                     } else {
@@ -682,6 +696,20 @@
             saveData();
         }
 
+        // --- Bonus Award Logic ---
+        function toggleBonus(dateStr, member) {
+            if (!state.bonuses) state.bonuses = {};
+            if (!state.bonuses[dateStr]) state.bonuses[dateStr] = {};
+            
+            if (state.bonuses[dateStr][member]) {
+                delete state.bonuses[dateStr][member]; // Toggle off
+                if (Object.keys(state.bonuses[dateStr]).length === 0) delete state.bonuses[dateStr];
+            } else {
+                state.bonuses[dateStr][member] = 50; // Toggle on for 50 flat XP
+            }
+            saveData();
+        }
+
         function changeTrackWeek(offset) {
             currentWeekStart.setDate(currentWeekStart.getDate() + (offset * 7));
             renderLog();
@@ -692,7 +720,6 @@
             renderReports();
         }
 
-        // Feature: Jump to specific week from Calendar click
         function jumpToWeek(dateString) {
             const [y, m, d] = dateString.split('-');
             const selectedDate = new Date(y, m - 1, d);
@@ -714,7 +741,7 @@
             if(document.getElementById('nav-' + tabId)) {
                 document.getElementById('nav-' + tabId).classList.add('active');
             }
-            window.scrollTo({ top: 0, behavior: 'smooth' }); // Optional: smooth scroll back to top when switching
+            window.scrollTo({ top: 0, behavior: 'smooth' }); 
             renderAll();
         }
 
@@ -776,7 +803,6 @@
             const dayNames = ['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'];
             const todayStr = getLocalDateStr(new Date());
 
-            // Alphabetically sort a copy of members for the Track page
             const sortedMembers = [...state.members].sort((a, b) => a.localeCompare(b));
 
             sortedMembers.forEach((member) => {
@@ -800,6 +826,7 @@
                         isFirstMemberWithHabits = false;
                     }
 
+                    // Render Habits
                     memberHabits.forEach((h, index) => {
                         html += `
                             <div class="habit-info">
@@ -820,10 +847,56 @@
                                 </div>
                             `;
                         });
+                        html += `<div class="grid-separator"></div>`;
+                    });
+
+                    // Render Manual Bonus Row
+                    html += `
+                        <div class="habit-info">
+                            <div class="habit-info-title" style="color: #ffd700;">⭐ Extra Bonus</div>
+                        </div>
+                    `;
+                    days.forEach((day) => {
+                        const dateStr = getLocalDateStr(day);
+                        const hasBonus = (state.bonuses && state.bonuses[dateStr] && state.bonuses[dateStr][member]);
+                        const isToday = dateStr === todayStr;
+
+                        html += `
+                            <div class="day-col ${isToday ? 'today' : ''}" onclick="toggleBonus('${dateStr}', '${member}')">
+                                <div class="day-box ${hasBonus ? 'bonus-active' : ''} ${isToday ? 'today-box' : ''}">
+                                    ${hasBonus ? `<span style="font-weight:bold; font-size:0.8em;">+50</span>` : `<span style="color: var(--text-muted); font-size: 0.9em; opacity: 0.4;">🎁</span>`}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `<div class="grid-separator"></div>`;
+
+                    // Render Auto Perfect Day Row
+                    html += `
+                        <div class="habit-info">
+                            <div class="habit-info-title" style="color: #ff9800;">🔥 Perfect Day</div>
+                        </div>
+                    `;
+                    days.forEach((day) => {
+                        const dateStr = getLocalDateStr(day);
+                        const isToday = dateStr === todayStr;
                         
-                        if (index < memberHabits.length - 1) {
-                            html += `<div class="grid-separator"></div>`;
-                        }
+                        let dayCompleted = 0;
+                        memberHabits.forEach(h => {
+                            if (state.logs[dateStr] && state.logs[dateStr][member] && state.logs[dateStr][member][h.id]) {
+                                dayCompleted++;
+                            }
+                        });
+                        const isPerfect = (dayCompleted === memberHabits.length && memberHabits.length > 0);
+
+                        html += `
+                            <div class="day-col ${isToday ? 'today' : ''}" style="cursor: default;">
+                                <div class="day-box ${isPerfect ? 'perfect-active' : ''} ${isToday ? 'today-box' : ''}">
+                                    ${isPerfect ? `<span style="font-weight:bold; font-size:0.8em;">+50</span>` : `<span style="color: var(--text-muted); font-size: 0.85em; opacity: 0.3;">🔒</span>`}
+                                </div>
+                            </div>
+                        `;
                     });
                     
                     html += `</div></div>`;
@@ -876,6 +949,7 @@
                 if (memberHabits.length === 0) return;
 
                 let totalCompleted = 0;
+                let totalBonusXP = 0;
                 let gridHtml = '';
                 
                 for (let i = 0; i < firstDayShifted; i++) {
@@ -887,6 +961,7 @@
                     let dayCompleted = 0;
                     let dayExpected = memberHabits.length;
 
+                    // Standard Habits
                     if (state.logs[dateStr] && state.logs[dateStr][member]) {
                         memberHabits.forEach(h => {
                             if (state.logs[dateStr][member][h.id]) {
@@ -894,6 +969,16 @@
                                 totalCompleted++;
                             }
                         });
+                    }
+                    
+                    // Auto Perfect Day Bonus
+                    if (dayExpected > 0 && dayCompleted === dayExpected) {
+                        totalBonusXP += 50; 
+                    }
+
+                    // Manual Extra Bonus
+                    if (state.bonuses && state.bonuses[dateStr] && state.bonuses[dateStr][member]) {
+                        totalBonusXP += state.bonuses[dateStr][member];
                     }
 
                     const dayScore = dayExpected === 0 ? 0 : (dayCompleted / dayExpected);
@@ -910,8 +995,10 @@
                     `;
                 }
                 
-                // FAIR SCORING: Normalize XP so every member can earn 100 XP per day maximum.
-                const totalXP = memberHabits.length > 0 ? Math.round((totalCompleted / memberHabits.length) * MAX_DAILY_XP) : 0;
+                // FAIR SCORING: Normalize XP (max 100/day) + Add Bonuses
+                const baseXP = memberHabits.length > 0 ? Math.round((totalCompleted / memberHabits.length) * MAX_DAILY_XP) : 0;
+                const totalXP = baseXP + totalBonusXP;
+                
                 const currentLevel = Math.floor(totalXP / XP_PER_LEVEL) + 1;
                 const progressToNextLevel = ((totalXP % XP_PER_LEVEL) / XP_PER_LEVEL) * 100;
 
@@ -994,6 +1081,6 @@
         // Initialize
         loadData();
         renderAll();
-    </script> 
+    </script>
 </body>
 </html>
