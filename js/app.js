@@ -1,4 +1,4 @@
-let version = '5.26';
+let version = '5.27';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2064,13 +2064,12 @@ function handleSearch() {
     renderNotes(query);
 }
 
-// --- 3. UPDATED: Project Tabs Engine (With Notifications) ---
+// --- 3. UPDATED: Project Tabs Engine (With Numbered Notifications) ---
 function renderProjectTabs() {
     const container = document.getElementById('project-tabs-container');
     if (!container) return;
     container.innerHTML = '';
     
-    // --- NEW: Grab today's date to check for due tasks ---
     const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
     
     // Only render tabs for projects that are not archived
@@ -2102,8 +2101,8 @@ function renderProjectTabs() {
         tab.appendChild(cb);
         tab.appendChild(label);
 
-        // --- NEW: Check for active tasks due today in Q1, Q2, or Q3 ---
-        const hasTasksDueToday = notes.some(note => {
+        // --- NEW: Count active tasks due today in Q1, Q2, or Q3 ---
+        const tasksDueTodayCount = notes.filter(note => {
             if (note.deleted || note.status === 'closed' || note.eventId) return false;
             
             // Only count if it is in an active Kanban quadrant
@@ -2113,13 +2112,14 @@ function renderProjectTabs() {
             // Check if task is assigned to this project (or globally to 'all')
             let pIds = note.projectIds || (note.projectId ? [note.projectId] : ['p_default']);
             return pIds.includes(proj.id) || pIds.includes('all');
-        });
+        }).length;
 
-        // --- NEW: Inject the red dot if tasks are due ---
-        if (hasTasksDueToday) {
+        // --- NEW: Inject the numbered badge if tasks are due ---
+        if (tasksDueTodayCount > 0) {
             const bip = document.createElement('div');
             bip.className = 'project-due-bip';
-            bip.title = 'Tasks due today in this project';
+            bip.title = `${tasksDueTodayCount} task(s) due today in this project`;
+            bip.innerText = tasksDueTodayCount;
             tab.appendChild(bip);
         }
         

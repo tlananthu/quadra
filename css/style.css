@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="5.26"]{
+[version="5.27"]{
     display:none;
 }
 
@@ -2530,17 +2530,29 @@ input:checked + .slider:after {
     background-color: #EFF6FF;
 }
 
-/* --- Project Tab Due Today Bip --- */
+/* --- Project Tab Due Today Numbered Badge --- */
 .project-due-bip {
-    width: 8px;
-    height: 8px;
+    min-width: 16px;
+    height: 16px;
     background-color: #EF4444; /* Tailwind Red 500 */
-    border-radius: 50%;
-    margin-left: -2px; /* Pulls slightly closer to the text */
+    border-radius: 8px; /* Perfectly round edges */
+    margin-left: 4px; /* Pulls away from the text slightly */
     box-shadow: 0 0 0 2px #F1F5F9; /* Cutout effect for inactive tabs */
     flex-shrink: 0;
+    
+    /* Flexbox to center the number perfectly */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Text styling */
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 0 4px;
+    line-height: 1;
 }
 
 .project-tab.active-view .project-due-bip {
-    box-shadow: 0 0 0 2px #FFFFFF; /* Cutout effect for active tabs */
+    box-shadow: 0 0 0 2px #FFFFFF; /* Cutout effect matches active tab background */
 }
