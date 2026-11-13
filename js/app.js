@@ -1,4 +1,4 @@
-let version = '5.25';
+let version = '5.26';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2064,11 +2064,14 @@ function handleSearch() {
     renderNotes(query);
 }
 
-// --- 3. UPDATED: Project Tabs Engine (With Rename/Delete) ---
+// --- 3. UPDATED: Project Tabs Engine (With Notifications) ---
 function renderProjectTabs() {
     const container = document.getElementById('project-tabs-container');
     if (!container) return;
     container.innerHTML = '';
+    
+    // --- NEW: Grab today's date to check for due tasks ---
+    const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
     
     // Only render tabs for projects that are not archived
     appConfig.projects.filter(p => !p.archived).forEach(proj => {
@@ -2098,6 +2101,27 @@ function renderProjectTabs() {
         
         tab.appendChild(cb);
         tab.appendChild(label);
+
+        // --- NEW: Check for active tasks due today in Q1, Q2, or Q3 ---
+        const hasTasksDueToday = notes.some(note => {
+            if (note.deleted || note.status === 'closed' || note.eventId) return false;
+            
+            // Only count if it is in an active Kanban quadrant
+            const inActiveKanban = ['q1', 'q2', 'q3'].includes(note.quadrant);
+            if (!inActiveKanban || note.dueDate !== todayStr) return false;
+            
+            // Check if task is assigned to this project (or globally to 'all')
+            let pIds = note.projectIds || (note.projectId ? [note.projectId] : ['p_default']);
+            return pIds.includes(proj.id) || pIds.includes('all');
+        });
+
+        // --- NEW: Inject the red dot if tasks are due ---
+        if (hasTasksDueToday) {
+            const bip = document.createElement('div');
+            bip.className = 'project-due-bip';
+            bip.title = 'Tasks due today in this project';
+            tab.appendChild(bip);
+        }
         
         tab.onclick = () => {
             appConfig.projects.forEach(p => p.visible = (p.id === proj.id));
@@ -2265,6 +2289,8 @@ function renderNotes(searchQuery = '') {
     updateQuickTags();
     renderTrackerTimeline();
     updateTaskCounters();
+    // --- NEW: Refresh project tabs to keep notification dots synced ---
+    if (typeof renderProjectTabs === 'function') renderProjectTabs();
 }
 
 function reconcileList(containerId, expectedNotes) {

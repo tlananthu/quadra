@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-[version="5.24"]{
+[version="5.26"]{
     display:none;
 }
 
@@ -2528,4 +2528,19 @@ input:checked + .slider:after {
     color: #2563EB;
     font-weight: 600;
     background-color: #EFF6FF;
+}
+
+/* --- Project Tab Due Today Bip --- */
+.project-due-bip {
+    width: 8px;
+    height: 8px;
+    background-color: #EF4444; /* Tailwind Red 500 */
+    border-radius: 50%;
+    margin-left: -2px; /* Pulls slightly closer to the text */
+    box-shadow: 0 0 0 2px #F1F5F9; /* Cutout effect for inactive tabs */
+    flex-shrink: 0;
+}
+
+.project-tab.active-view .project-due-bip {
+    box-shadow: 0 0 0 2px #FFFFFF; /* Cutout effect for active tabs */
 }
