@@ -266,7 +266,7 @@
             font-weight: bold;
         }
 
-        /* Styling for the Bonus Boxes */
+        /* Styling for the Bonus Boxes (Track Tab) */
         .day-box.bonus-active {
             background: rgba(255, 215, 0, 0.15); 
             border-color: #ffd700;
@@ -398,6 +398,8 @@
             font-weight: bold;
             padding-bottom: 6px;
         }
+        
+        /* REPORTS: Calendar Cell & Rare Rarity Borders */
         .report-day-cell {
             aspect-ratio: 1 / 1;
             display: flex;
@@ -408,10 +410,34 @@
             -webkit-tap-highlight-color: transparent;
             border-radius: 50%;
             transition: transform 0.1s;
+            border: 2px solid transparent; /* Keeps layout stable when border activates */
         }
         .report-day-cell:active {
             transform: scale(0.9);
         }
+        
+        /* Silver Foil: Perfect Day */
+        .cell-perfect {
+            border: 2px solid #b0bec5;
+            box-shadow: 0 0 6px rgba(176, 190, 197, 0.8);
+        }
+        /* Gold Foil: Bonus XP */
+        .cell-bonus {
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 6px rgba(255, 215, 0, 0.8);
+        }
+        /* Holo Foil: Ultimate Day (Both) */
+        .cell-ultimate {
+            animation: holo-border 3s linear infinite;
+        }
+        @keyframes holo-border {
+            0% { border: 2px solid #ff0080; box-shadow: 0 0 8px #ff0080; }
+            25% { border: 2px solid #ff8c00; box-shadow: 0 0 8px #ff8c00; }
+            50% { border: 2px solid #40e0d0; box-shadow: 0 0 8px #40e0d0; }
+            75% { border: 2px solid #9932cc; box-shadow: 0 0 8px #9932cc; }
+            100% { border: 2px solid #ff0080; box-shadow: 0 0 8px #ff0080; }
+        }
+
         .report-day-number {
             position: relative;
             z-index: 2;
@@ -910,7 +936,7 @@
             container.innerHTML = html;
         }
 
-        // --- NEW LEADERBOARD RENDER LOGIC ---
+        // --- NEW LEADERBOARD RENDER LOGIC WITH HOLO FOIL RINGS ---
         function renderReports() {
             const container = document.getElementById('reports-container');
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -971,24 +997,36 @@
                         });
                     }
                     
+                    const isPerfect = (dayExpected > 0 && dayCompleted === dayExpected);
+                    const hasBonus = (state.bonuses && state.bonuses[dateStr] && state.bonuses[dateStr][member]);
+
                     // Auto Perfect Day Bonus
-                    if (dayExpected > 0 && dayCompleted === dayExpected) {
+                    if (isPerfect) {
                         totalBonusXP += 50; 
                     }
-
                     // Manual Extra Bonus
-                    if (state.bonuses && state.bonuses[dateStr] && state.bonuses[dateStr][member]) {
+                    if (hasBonus) {
                         totalBonusXP += state.bonuses[dateStr][member];
+                    }
+                    
+                    // Determine Foil Ring Class
+                    let ringClass = '';
+                    if (isPerfect && hasBonus) {
+                        ringClass = 'cell-ultimate';
+                    } else if (hasBonus) {
+                        ringClass = 'cell-bonus';
+                    } else if (isPerfect) {
+                        ringClass = 'cell-perfect';
                     }
 
                     const dayScore = dayExpected === 0 ? 0 : (dayCompleted / dayExpected);
-                    const circleSize = dayScore > 0 ? (dayScore * 90) + 10 : 0; 
+                    const circleSize = dayScore > 0 ? (dayScore * 85) + 10 : 0; 
                     const textColor = dayScore > 0.6 ? '#121212' : 'var(--text)'; 
                     
                     const cardAccent = accentColors[memberIndex % accentColors.length];
 
                     gridHtml += `
-                        <div class="report-day-cell" onclick="jumpToWeek('${dateStr}')">
+                        <div class="report-day-cell ${ringClass}" onclick="jumpToWeek('${dateStr}')">
                             <div class="report-day-circle" style="background-color: ${cardAccent}; width: ${circleSize}%; height: ${circleSize}%;"></div>
                             <span class="report-day-number" style="color: ${textColor};">${i}</span>
                         </div>
@@ -1041,7 +1079,7 @@
                     </div>
                 `;
             });
-            html += `</div></div>`; // Close the tally container
+            html += `</div></div>`; 
 
             // Step 4: Render the individual detailed calendar cards
             memberStats.forEach((stat, rankIndex) => {
