@@ -1,4 +1,4 @@
-let version = '5.27';
+let version = '6.00';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -66,80 +66,78 @@ let driveFileId = null; // Will store the Google Drive file ID
 async function initSQLite(binaryData = null) {
     if (!SQL) {
         SQL = await initSqlJs({
-            // Fetch the WebAssembly file from the CDN
             locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
         });
     }
     
     if (binaryData) {
-        // Load existing database from Google Drive
         db = new SQL.Database(new Uint8Array(binaryData));
         console.log("Loaded existing SQLite database from Google Drive.");
     } else {
-        // Create a fresh database and schema
         db = new SQL.Database();
         db.run(`
             CREATE TABLE IF NOT EXISTS tasks (
-                id TEXT PRIMARY KEY,
-                text TEXT,
-                quadrant TEXT,
-                status TEXT,
-                dueDate TEXT,
-                timeBlocks TEXT,
-                deleted INTEGER DEFAULT 0,
-                projectId TEXT DEFAULT 'p_default'
+                id TEXT PRIMARY KEY, text TEXT, quadrant TEXT, status TEXT,
+                dueDate TEXT, timeBlocks TEXT, deleted INTEGER DEFAULT 0,
+                projectId TEXT DEFAULT 'p_default', scheduledDate TEXT
             );
         `);
-        db.run(`
-            CREATE TABLE IF NOT EXISTS projects (
-                id TEXT PRIMARY KEY,
-                name TEXT,
-                status TEXT
-            );
-        `);
+        db.run(`CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, name TEXT, status TEXT);`);
         try { db.run(`ALTER TABLE tasks ADD COLUMN projectId TEXT DEFAULT 'p_default'`); } catch (e) {}
+        try { db.run(`ALTER TABLE tasks ADD COLUMN scheduledDate TEXT`); } catch (e) {} // SILENT HEALING
         console.log("Created fresh SQLite database in memory.");
     }
 }
 
 function syncNotesToSQLite() {
     if (!db) return;
-
-    // Ensure the table exists
     db.run(`
         CREATE TABLE IF NOT EXISTS tasks (
-            id TEXT PRIMARY KEY,
-            text TEXT,
-            quadrant TEXT,
-            status TEXT,
-            dueDate TEXT,
-            timeBlocks TEXT,
-            deleted INTEGER DEFAULT 0,
-            projectId TEXT DEFAULT 'p_default'
+            id TEXT PRIMARY KEY, text TEXT, quadrant TEXT, status TEXT,
+            dueDate TEXT, timeBlocks TEXT, deleted INTEGER DEFAULT 0,
+            projectId TEXT DEFAULT 'p_default', scheduledDate TEXT
         );
     `);
     try { db.run(`ALTER TABLE tasks ADD COLUMN projectId TEXT DEFAULT 'p_default'`); } catch (e) {}
+    try { db.run(`ALTER TABLE tasks ADD COLUMN scheduledDate TEXT`); } catch (e) {} // SILENT HEALING
 
-    // Prepare a statement to insert or replace task records
     const stmt = db.prepare(`
-        INSERT OR REPLACE INTO tasks (id, text, quadrant, status, dueDate, timeBlocks, deleted, projectId)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        INSERT OR REPLACE INTO tasks (id, text, quadrant, status, dueDate, scheduledDate, timeBlocks, deleted, projectId)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
     `);
 
     notes.forEach(note => {
         stmt.run([
-            note.id.toString(),
-            note.text || '',
-            note.quadrant || 'inbox',
-            note.status || 'active',
-            note.dueDate || null,
-            JSON.stringify(note.timeBlocks || []),
-            note.deleted ? 1 : 0,
+            note.id.toString(), note.text || '', note.quadrant || 'inbox',
+            note.status || 'active', note.dueDate || null, note.scheduledDate || null, // INCLUDES SCHEDULED
+            JSON.stringify(note.timeBlocks || []), note.deleted ? 1 : 0,
             JSON.stringify(note.projectIds || [note.projectId || 'p_default'])
         ]);
     });
-
     stmt.free();
+}
+
+function loadNotesFromSQLite() {
+    if (!db) return;
+    try {
+        const res = db.exec("SELECT id, text, quadrant, status, dueDate, timeBlocks, deleted, projectId, scheduledDate FROM tasks");
+        if (res.length > 0) {
+            notes = res[0].values.map(row => ({
+                id: row[0], text: row[1] || '', quadrant: row[2] || 'inbox',
+                status: row[3] || 'active', dueDate: row[4] || null,
+                timeBlocks: JSON.parse(row[5] || '[]'), deleted: row[6] === 1,
+                projectIds: JSON.parse(row[7] || '["p_default"]'),
+                projectId: row[7] || 'p_default',
+                scheduledDate: row[8] || null, // GRABS SCHEDULED
+                dirty: false, syncFailed: false
+            }));
+            console.log(`✅ Loaded ${notes.length} tasks directly from SQLite!`);
+            saveNotes();
+            handleSearch(); 
+        }
+    } catch (e) {
+        console.error("SQLite Read Error:", e);
+    }
 }
 
 // --- Google Drive AppData Sync ---
@@ -1384,6 +1382,7 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
     const titleInput = document.getElementById('taskTitleInput');
     const infoInput = document.getElementById('taskInfoInput');
     const dueDateInput = document.getElementById('taskDueDate');
+    const dueScheduledDateInput = document.getElementById('taskDueScheduledDate');
     const quadrantInput = document.getElementById('taskQuadrant');
     const completeBtn = document.getElementById('taskModalCompleteBtn');
 
@@ -1440,6 +1439,8 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
             completeBtn.style.borderColor = '#10B981';
         }
 
+        dueDateInput.value = note.dueDate || '';
+        document.getElementById('taskScheduledDate').value = note.scheduledDate || '';
     } else { 
         currentEditingId = null; 
         currentAddingQuadrant = quadrant || 'inbox'; 
@@ -1448,7 +1449,10 @@ function openTaskModal(quadrant = null, noteId = null, event = null, timelineCon
         infoInput.innerHTML = '';
 
         const todayStr = new Date().toLocaleDateString('en-CA').split('T')[0];
-        dueDateInput.value = timelineContext ? timelineContext.date : todayStr;
+        //dueDateInput.value = timelineContext ? timelineContext.date : todayStr;
+        // Due Date is no longer pre-filled or mandatory
+        dueDateInput.value = '';
+        document.getElementById('taskScheduledDate').value = timelineContext ? timelineContext.date : todayStr;
         
         // SAFE FALLBACK FOR NEW TASKS
         if (quadrantInput) {
@@ -1559,6 +1563,7 @@ function saveTaskModal() {
     const titleText = document.getElementById('taskTitleInput').innerHTML; 
     const infoText = document.getElementById('taskInfoInput').innerHTML; 
     const dueDate = document.getElementById('taskDueDate').value;
+    const scheduledDate = document.getElementById('taskScheduledDate').value; // NEW
     
     if ((!titleText || titleText === '<br>') && (!infoText || infoText === '<br>')) return closeTaskModal();
 
@@ -1583,12 +1588,13 @@ function saveTaskModal() {
         };
     }
 
-    if (targetQuadForNote !== 'notes' && !dueDate) {
+    // --- REMOVED THE MANDATORY DUE DATE VALIDATION CHECK ENTIRELY ---
+    /*if (targetQuadForNote !== 'notes' && !dueDate) {
         showToast("❌ A Due Date is mandatory for all tasks.");
         return;
-    }
+    }*/
 
-    // --- UPDATED: Extract Target Projects ---
+    // --- Extract Target Projects ---
     const projectSelect = document.getElementById('taskProject');
     const selectedVal = projectSelect ? projectSelect.value : 'p_default';
     const targetProjects = [selectedVal];
@@ -1597,9 +1603,10 @@ function saveTaskModal() {
         const note = notes.find(n => n.id === currentEditingId); 
         if (note) { 
             note.projectIds = targetProjects;
-            note.projectId = selectedVal; // Backward compatibility
+            note.projectId = selectedVal; 
             note.text = finalPayloadText; 
             note.dueDate = dueDate || null;
+            note.scheduledDate = scheduledDate || null; // NEW
             
             if (selectedQuadrant) note.quadrant = selectedQuadrant;
             
@@ -1625,12 +1632,13 @@ function saveTaskModal() {
             quadrant: targetQuad, 
             status: newStatus, 
             dueDate: dueDate || null,
+            scheduledDate: scheduledDate || null, // NEW
             timeBlocks: newTimeBlock ? [newTimeBlock] : [],
             dirty: true, 
             deleted: false, 
             eventId: null,
             syncFailed: false,
-            projectId: selectedVal, // Backward compatibility
+            projectId: selectedVal, 
             projectIds: targetProjects
         }); 
         saveNotes(); 
@@ -1682,7 +1690,7 @@ function openTimesheetModal() {
         let blocksToProcess = note.timeBlocks || [];
         // Catch legacy or Google imported formats
         if (note.eventId && note.dueTime !== undefined) {
-            blocksToProcess = [{ date: note.dueDate, startHour: note.dueTime, duration: note.dueDuration }];
+            blocksToProcess = [{ date: note.scheduledDate, startHour: note.dueTime, duration: note.dueDuration }];
         }
 
         blocksToProcess.forEach(tb => {
@@ -1931,7 +1939,7 @@ function updateQuickTags() {
         
         if (!isProjectVisible(note)) return; 
         
-        if (isDueFilterOn && !note.dueDate && note.quadrant !== 'notes') return;
+        if (isDueFilterOn && !note.dueDate && !note.scheduledDate && note.quadrant !== 'notes') return;
         
         // Add spaces to line breaks and block elements so tags don't get squashed together
         let tempDiv = document.createElement('div');
@@ -2107,7 +2115,10 @@ function renderProjectTabs() {
             
             // Only count if it is in an active Kanban quadrant
             const inActiveKanban = ['q1', 'q2', 'q3'].includes(note.quadrant);
-            if (!inActiveKanban || note.dueDate !== todayStr) return false;
+            
+            // Use effective date for checking what needs attention today
+            const effDate = note.scheduledDate || note.dueDate;
+            if (!inActiveKanban || effDate !== todayStr) return false;
             
             // Check if task is assigned to this project (or globally to 'all')
             let pIds = note.projectIds || (note.projectId ? [note.projectId] : ['p_default']);
@@ -2212,10 +2223,10 @@ function renderNotes(searchQuery = '') {
         if (isClosed && !hasSearch) return false;
         
         // --- SPRINT FILTER LOGIC ---
-        // Exclude notebook tasks and calendar events from sprint constraints
         if (note.quadrant !== 'notes' && !note.eventId) {
-            const hasDate = !!note.dueDate;
-            const inSprint = hasDate && note.dueDate >= startStr && note.dueDate <= endStr;
+            // NEW: Prioritize scheduled date for timeline filtering, fall back to due date
+            const effectiveDate = note.scheduledDate || note.dueDate;
+            const inSprint = effectiveDate && effectiveDate >= startStr && effectiveDate <= endStr;
 
             // Enforce sprint limits ONLY if we are not globally searching
             if (!inSprint && !hasSearch) return false;
@@ -2262,10 +2273,14 @@ function renderNotes(searchQuery = '') {
                 let valB = parseFloat(b.id) || 0;
                 return sortDir === 'asc' ? valA - valB : valB - valA;
             } else { 
-                if (!a.dueDate && !b.dueDate) return 0;
-                if (!a.dueDate) return 1; 
-                if (!b.dueDate) return -1;
-                return sortDir === 'asc' ? a.dueDate.localeCompare(b.dueDate) : b.dueDate.localeCompare(a.dueDate);
+                // NEW: Sort by effective dates
+                let effA = a.scheduledDate || a.dueDate;
+                let effB = b.scheduledDate || b.dueDate;
+                
+                if (!effA && !effB) return 0;
+                if (!effA) return 1; 
+                if (!effB) return -1;
+                return sortDir === 'asc' ? effA.localeCompare(effB) : effB.localeCompare(effA);
             }
         });
 
@@ -2329,24 +2344,30 @@ function reconcileList(containerId, expectedNotes) {
             let tagParsed = parseTags(cleanTextTitle);
             
             // Includes the visually softened Overdue badge from the previous UI polish
-            // Includes the visually softened Overdue badge from the previous UI polish
+            // OVERDUE strictly measures missed deadlines
             let overdueInd = (!note.eventId && note.status === 'active' && note.dueDate && note.dueDate < todayStr) 
                 ? `<span style="color: #E11D48; border: 1px solid #FDA4AF; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-right: 6px; text-transform: uppercase;">Overdue</span>` 
                 : '';
             
-            // NEW: Check if the task is due exactly today
-            let isToday = (!note.eventId && note.status === 'active' && note.dueDate === todayStr);
+            // TODAY applies if scheduled for today OR if deadline is today
+            let effDate = note.scheduledDate || note.dueDate;
+            let isToday = (!note.eventId && note.status === 'active' && effDate === todayStr);
             let todayInd = isToday 
                 ? `<span style="color: #047857; background: #D1FAE5; border: 1px solid #6EE7B7; font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-right: 6px; text-transform: uppercase;">Today</span>` 
                 : '';
                 
-            // NEW: Inject the Swept visual cue if the task's ID is in our tracker
             let isSwept = typeof sweptTaskIds !== 'undefined' && sweptTaskIds.has(note.id);
             let sweptInd = isSwept ? `<span style="color: #D97706; background: #FEF3C7; border: 1px solid #FDE68A; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 6px; text-transform: uppercase;">🔄 Swept</span>` : '';
                 
-            let dueDateMeta = note.dueDate 
-                ? `<div style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:500; display:flex; align-items:center;">🗓️ ${note.dueDate.split('T')[0]} ${sweptInd}</div>` 
-                : '';
+            // Generate visual tags for both dates
+            let metaParts = [];
+            if (note.scheduledDate) metaParts.push(`<span title="Scheduled">⏳ ${note.scheduledDate.split('T')[0]}</span>`);
+            if (note.dueDate) metaParts.push(`<span title="Deadline">🏁 ${note.dueDate.split('T')[0]}</span>`);
+            
+            let dueDateMeta = '';
+            if (metaParts.length > 0 || isSwept) {
+                dueDateMeta = `<div style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:500; display:flex; align-items:center; gap:8px;">${metaParts.join('')} ${sweptInd}</div>`;
+            }
             
             innerHTML = `
                 <div class="note-content-wrapper" 
@@ -3788,34 +3809,6 @@ function queueTargetEventDeletion(targetEventId) {
     }
 }
 
-// --- SQLite Source of Truth Engine ---
-function loadNotesFromSQLite() {
-    if (!db) return;
-    try {
-        const res = db.exec("SELECT id, text, quadrant, status, dueDate, timeBlocks, deleted, projectId FROM tasks");
-        if (res.length > 0) {
-            notes = res[0].values.map(row => ({
-                id: row[0],
-                text: row[1] || '',
-                quadrant: row[2] || 'inbox',
-                status: row[3] || 'active',
-                dueDate: row[4] || null,
-                timeBlocks: JSON.parse(row[5] || '[]'),
-                deleted: row[6] === 1,
-                projectIds: JSON.parse(row[7] || '["p_default"]'),
-                projectId: row[7] || 'p_default',
-                dirty: false,
-                syncFailed: false
-            }));
-            console.log(`✅ Loaded ${notes.length} tasks directly from SQLite!`);
-            saveNotes();
-            handleSearch(); // Triggers the Delta DOM render
-        }
-    } catch (e) {
-        console.error("SQLite Read Error:", e);
-    }
-}
-
 async function downloadDatabaseFromDrive() {
     if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.drive) {
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -4861,13 +4854,15 @@ function rolloverPastTasks() {
     let movedCount = 0;
     
     notes.forEach(note => {
-        // Find active tasks that have a due date in the past
-        if (note.status === 'active' && note.dueDate && note.dueDate < todayStr && note.quadrant !== 'notes' && !note.eventId) {
-            
-            note.dueDate = todayStr;
-            note.dirty = true;
-            sweptTaskIds.add(note.id); // <-- NEW: Add ID to the volatile memory tracker
-            movedCount++;
+        if (note.status === 'active' && note.quadrant !== 'notes' && !note.eventId) {
+            let effDate = note.scheduledDate || note.dueDate;
+            // Sweep past tasks to Today
+            if (effDate && effDate < todayStr) {
+                note.scheduledDate = todayStr; // Bump the work plan to today, keeping original deadline intact!
+                note.dirty = true;
+                sweptTaskIds.add(note.id);
+                movedCount++;
+            }
         }
     });
     
