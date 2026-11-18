@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>World Clock</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+/* Legacy-safe CSS: no flexbox, no grid, no vw/vh, no CSS variables. */
+html, body {
+  margin: 0; padding: 0; height: 100%; width: 100%;
+  background: #090b0f; overflow: hidden;
+  font-family: "Roboto", "Droid Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  -webkit-user-select: none; user-select: none;
+}
+#stage { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.card {
+  position: absolute; overflow: hidden; text-align: center;
+  -webkit-box-sizing: border-box; box-sizing: border-box;
+  border: 1px solid #1a212b;
+  background: #0f1319;
+}
+.card.day { background: #1c2631; border-color: #2a3848; }
+.card.night { background: #0c1016; }
+.inner { position: absolute; left: 0; right: 0; white-space: nowrap; }
+.nm { color: #9fb0c4; overflow: hidden; }
+.nm .uo { color: #667789; margin-left: 0.5em; }
+.tm { color: #f3ecdc; font-weight: 300; letter-spacing: 0; }
+.tm .main { display: inline-block; vertical-align: middle; }
+.tm .side { display: inline-block; vertical-align: middle; text-align: left; margin-left: 0.08em; }
+.tm .side span { display: block; color: #c9bfa6; }
+.dt { color: #8697ab; overflow: hidden; }
+.rm { color: #d8c79a; overflow: hidden; }
+body.c-green .tm { color: #7dff9a; } body.c-green .tm .side span { color: #4fc46b; }
+body.c-amber .tm { color: #ffb52e; } body.c-amber .tm .side span { color: #c78a1d; }
+body.c-cyan  .tm { color: #6fe6ff; } body.c-cyan  .tm .side span { color: #43a9bd; }
+body.c-red   .tm { color: #ff5a4d; } body.c-red   .tm .side span { color: #b8403a; }
+body.c-white .tm { color: #ffffff; } body.c-white .tm .side span { color: #b5b5b5; }
+#empty { position: absolute; left: 0; right: 0; top: 40%; text-align: center; color: #8697ab; font-size: 20px; display: none; }
+#tools { position: absolute; right: 8px; top: 8px; z-index: 20; white-space: nowrap; }
+.tool {
+  display: inline-block; width: 48px; height: 48px; margin-left: 8px;
+  background: rgba(40, 56, 75, 0.85); border: 1px solid #3b526c; border-radius: 6px;
+  text-align: center; opacity: 0.85; cursor: pointer;
+  -webkit-box-sizing: border-box; box-sizing: border-box;
+}
+.tool svg { margin-top: 9px; }
+#dim { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: #000; opacity: 0; z-index: 10; pointer-events: none; }
+#panel { position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 30; background: #141a22; display: none; overflow: auto; -webkit-overflow-scrolling: touch; color: #dde5ee; font-size: 16px; }
+#pin { max-width: 560px; margin: 0 auto; padding: 14px 16px 60px 16px; }
+#pin h2 { font-size: 20px; font-weight: normal; color: #fff; margin: 22px 0 10px 0; padding-bottom: 6px; border-bottom: 1px solid #2a3544; }
+#pin h2.first { margin-top: 6px; }
+.row { padding: 8px 0; border-bottom: 1px solid #222c39; overflow: hidden; }
+.row input[type=text] { width: 100%; }
+.sub { color: #8697ab; font-size: 13px; margin: 3px 0 6px 0; }
+#pin input[type=text], #pin select, #pin textarea {
+  -webkit-box-sizing: border-box; box-sizing: border-box;
+  font-size: 16px; padding: 9px 8px; margin: 3px 0; background: #0c1016; color: #fff;
+  border: 1px solid #34414f; border-radius: 3px; max-width: 100%;
+}
+#pin textarea { width: 100%; height: 110px; font-size: 12px; font-family: monospace; }
+#pin select { width: 100%; }
+#pin button {
+  font-size: 15px; padding: 10px 14px; margin: 4px 6px 4px 0; background: #26384d; color: #fff;
+  border: 1px solid #3b526c; border-radius: 3px;
+}
+#pin button.warn { background: #4a2a2a; border-color: #6e3b3b; }
+#pin button.big { background: #2f6b4f; border-color: #3f8a66; font-size: 17px; padding: 12px 22px; }
+.opt { padding: 9px 0; }
+.opt label { display: block; padding: 4px 0; }
+.opt input[type=checkbox] { width: 22px; height: 22px; vertical-align: middle; margin-right: 8px; }
+.lbl { color: #8697ab; font-size: 13px; margin-top: 10px; }
+.note { color: #6f8095; font-size: 12px; line-height: 1.45; margin-top: 8px; }
+</style>
+</head>
+<body class="c-ivory">
+<div id="stage"></div>
+<div id="empty">No clocks yet. Tap Settings to add one.</div>
+<div id="dim"></div>
+<div id="tools">
+  <div class="tool" id="fs" title="Full screen">
+    <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 10 V4 H10 M18 4 H24 V10 M24 18 V24 H18 M10 24 H4 V18" fill="none" stroke="#dde5ee" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="tool" id="gear" title="Settings">
+    <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="14" cy="14" r="9.5" fill="none" stroke="#dde5ee" stroke-width="4" stroke-dasharray="2.5 2.47"/>
+      <circle cx="14" cy="14" r="7" fill="none" stroke="#dde5ee" stroke-width="3"/>
+      <circle cx="14" cy="14" r="2.5" fill="#dde5ee"/>
+    </svg>
+  </div>
+</div>
+<div id="panel"><div id="pin"></div></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ------------------------------------------------------------
+     Data
+     ------------------------------------------------------------ */
+  var KEY = "worldclock.v1";
+  var MAX_CLOCKS = 12;
+  var DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  var RULES = {
+    none: "No daylight saving",
+    us: "US / Canada DST",
+    eu: "Europe DST",
+    au: "Australia (south-east) DST",
+    nz: "New Zealand DST"
+  };
+
+  /* name, standard offset in minutes, DST rule */
+  var PRESETS = [
+    ["Bengaluru / Kolkata", 330, "none"],
+    ["Mumbai / Delhi", 330, "none"],
+    ["Colombo", 330, "none"],
+    ["Kathmandu", 345, "none"],
+    ["Dhaka", 360, "none"],
+    ["Karachi", 300, "none"],
+    ["Kabul", 270, "none"],
+    ["Dubai", 240, "none"],
+    ["Tehran", 210, "none"],
+    ["Riyadh / Doha", 180, "none"],
+    ["Moscow", 180, "none"],
+    ["Istanbul", 180, "none"],
+    ["Nairobi", 180, "none"],
+    ["Johannesburg", 120, "none"],
+    ["Lagos", 60, "none"],
+    ["Athens", 120, "eu"],
+    ["Helsinki", 120, "eu"],
+    ["Berlin", 60, "eu"],
+    ["Paris", 60, "eu"],
+    ["Rome", 60, "eu"],
+    ["Madrid", 60, "eu"],
+    ["Amsterdam", 60, "eu"],
+    ["Zurich", 60, "eu"],
+    ["Stockholm", 60, "eu"],
+    ["London", 0, "eu"],
+    ["Dublin", 0, "eu"],
+    ["Lisbon", 0, "eu"],
+    ["UTC", 0, "none"],
+    ["Reykjavik", 0, "none"],
+    ["Bangkok", 420, "none"],
+    ["Jakarta", 420, "none"],
+    ["Singapore", 480, "none"],
+    ["Hong Kong", 480, "none"],
+    ["Beijing / Shanghai", 480, "none"],
+    ["Taipei", 480, "none"],
+    ["Manila", 480, "none"],
+    ["Perth", 480, "none"],
+    ["Seoul", 540, "none"],
+    ["Tokyo", 540, "none"],
+    ["Adelaide", 570, "au"],
+    ["Brisbane", 600, "none"],
+    ["Sydney", 600, "au"],
+    ["Melbourne", 600, "au"],
+    ["Auckland", 720, "nz"],
+    ["Honolulu", -600, "none"],
+    ["Anchorage", -540, "us"],
+    ["Los Angeles", -480, "us"],
+    ["San Francisco", -480, "us"],
+    ["Seattle", -480, "us"],
+    ["Vancouver", -480, "us"],
+    ["Denver", -420, "us"],
+    ["Phoenix", -420, "none"],
+    ["Chicago", -360, "us"],
+    ["Dallas", -360, "us"],
+    ["Mexico City", -360, "none"],
+    ["New York", -300, "us"],
+    ["Toronto", -300, "us"],
+    ["Washington DC", -300, "us"],
+    ["Bogota", -300, "none"],
+    ["Lima", -300, "none"],
+    ["Halifax", -240, "us"],
+    ["Sao Paulo", -180, "none"],
+    ["Buenos Aires", -180, "none"]
+  ];
+
+  function defaultConfig() {
+    return {
+      v: 1,
+      clocks: [
+        { n: "Bengaluru", o: 330, r: "none", l: 0 },
+        { n: "London", o: 0, r: "eu", l: 0 },
+        { n: "New York", o: -300, r: "us", l: 0 },
+        { n: "Tokyo", o: 540, r: "none", l: 0 }
+      ],
+      h24: true,
+      sec: true,
+      date: true,
+      off: true,
+      color: "ivory",
+      dim: 100
+    };
+  }
+
+  /* ------------------------------------------------------------
+     Storage (localStorage with in-memory fallback)
+     ------------------------------------------------------------ */
+  var cfg = null;
+
+  function sanitize(c) {
+    var d = defaultConfig();
+    if (!c || typeof c !== "object") { return d; }
+    var out = {
+      v: 1,
+      clocks: [],
+      h24: c.h24 === undefined ? d.h24 : !!c.h24,
+      sec: c.sec === undefined ? d.sec : !!c.sec,
+      date: c.date === undefined ? d.date : !!c.date,
+      off: c.off === undefined ? d.off : !!c.off,
+      color: typeof c.color === "string" ? c.color : d.color,
+      dim: typeof c.dim === "number" ? c.dim : d.dim
+    };
+    if (out.dim < 10 || out.dim > 100) { out.dim = 100; }
+    if (c.clocks && c.clocks.length !== undefined) {
+      for (var i = 0; i < c.clocks.length && out.clocks.length < MAX_CLOCKS; i++) {
+        var k = c.clocks[i];
+        if (!k || typeof k !== "object") { continue; }
+        var o = parseInt(k.o, 10);
+        if (isNaN(o) || o < -720 || o > 840) { o = 0; }
+        var r = RULES.hasOwnProperty(k.r) ? k.r : "none";
+        out.clocks.push({
+          n: String(k.n === undefined ? "Clock" : k.n).substring(0, 40),
+          o: o, r: r, l: k.l ? 1 : 0,
+          m: String(k.m === undefined || k.m === null ? "" : k.m).substring(0, 60)
+        });
+      }
+    } else {
+      out.clocks = d.clocks;
+    }
+    return out;
+  }
+
+  function load() {
+    var raw = null;
+    try { raw = window.localStorage.getItem(KEY); } catch (e) { raw = null; }
+    if (raw) {
+      try { return sanitize(JSON.parse(raw)); } catch (e2) { /* fall through */ }
+    }
+    return defaultConfig();
+  }
+
+  function save() {
+    try { window.localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) { /* ignore */ }
+  }
+
+  /* ------------------------------------------------------------
+     Time zone maths (no Intl, no external data)
+     ------------------------------------------------------------ */
+  function nthSunday(y, m, n) {
+    var dow = new Date(Date.UTC(y, m, 1)).getUTCDay();
+    var first = 1 + ((7 - dow) % 7);
+    return first + 7 * (n - 1);
+  }
+  function lastSunday(y, m) {
+    var last = new Date(Date.UTC(y, m + 1, 0));
+    return last.getUTCDate() - last.getUTCDay();
+  }
+
+  /* Offset in minutes from UTC for a clock at a given UTC time (ms). */
+  function offsetAt(c, ms) {
+    if (c.l) { return -(new Date(ms).getTimezoneOffset()); }
+    var std = c.o, ms60 = 60000;
+    if (c.r === "none") { return std; }
+    var y = new Date(ms + std * ms60).getUTCFullYear();
+    var start, end, dst;
+    if (c.r === "us") {
+      start = Date.UTC(y, 2, nthSunday(y, 2, 2), 2, 0) - std * ms60;
+      end = Date.UTC(y, 10, nthSunday(y, 10, 1), 2, 0) - (std + 60) * ms60;
+      dst = ms >= start && ms < end;
+    } else if (c.r === "eu") {
+      start = Date.UTC(y, 2, lastSunday(y, 2), 1, 0);
+      end = Date.UTC(y, 9, lastSunday(y, 9), 1, 0);
+      dst = ms >= start && ms < end;
+    } else if (c.r === "au") {
+      start = Date.UTC(y, 9, nthSunday(y, 9, 1), 2, 0) - std * ms60;
+      end = Date.UTC(y, 3, nthSunday(y, 3, 1), 3, 0) - (std + 60) * ms60;
+      dst = ms >= start || ms < end;
+    } else if (c.r === "nz") {
+      start = Date.UTC(y, 8, lastSunday(y, 8), 2, 0) - std * ms60;
+      end = Date.UTC(y, 3, nthSunday(y, 3, 1), 3, 0) - (std + 60) * ms60;
+      dst = ms >= start || ms < end;
+    } else {
+      dst = false;
+    }
+    return std + (dst ? 60 : 0);
+  }
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+  function fmtOff(min) {
+    var sign = min < 0 ? "-" : "+";
+    var a = Math.abs(min);
+    var h = Math.floor(a / 60), m = a % 60;
+    return "UTC" + sign + pad(h) + ":" + pad(m);
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  /* ------------------------------------------------------------
+     Rendering
+     ------------------------------------------------------------ */
+  var stage = document.getElementById("stage");
+  var emptyMsg = document.getElementById("empty");
+  var dimEl = document.getElementById("dim");
+  var panel = document.getElementById("panel");
+  var pin = document.getElementById("pin");
+  var gear = document.getElementById("gear");
+  var cards = [];
+  var lastSec = -1;
+
+  function applyTheme() {
+    document.body.className = "c-" + cfg.color;
+    dimEl.style.opacity = String((100 - cfg.dim) / 100);
+  }
+
+  function render() {
+    stage.innerHTML = "";
+    cards = [];
+    for (var i = 0; i < cfg.clocks.length; i++) {
+      var el = document.createElement("div");
+      el.className = "card night";
+      el.innerHTML =
+        '<div class="inner">' +
+        '<div class="nm"></div>' +
+        '<div class="rm"></div>' +
+        '<div class="tm"><span class="main"></span><span class="side"><span class="s"></span><span class="ap"></span></span></div>' +
+        '<div class="dt"></div>' +
+        '</div>';
+      stage.appendChild(el);
+      var inner = el.firstChild;
+      cards.push({
+        el: el,
+        inner: inner,
+        nm: inner.childNodes[0],
+        rm: inner.childNodes[1],
+        tm: inner.childNodes[2],
+        main: inner.childNodes[2].childNodes[0],
+        side: inner.childNodes[2].childNodes[1],
+        sEl: inner.childNodes[2].childNodes[1].childNodes[0],
+        apEl: inner.childNodes[2].childNodes[1].childNodes[1],
+        dt: inner.childNodes[3]
+      });
+    }
+    emptyMsg.style.display = cards.length ? "none" : "block";
+    applyTheme();
+    update(new Date().getTime());
+    layout();
+  }
+
+  function viewSize() {
+    var w = window.innerWidth || document.documentElement.clientWidth || 800;
+    var h = window.innerHeight || document.documentElement.clientHeight || 480;
+    return { w: w, h: h };
+  }
+
+  function layout() {
+    var n = cards.length;
+    if (!n) { return; }
+    var vs = viewSize();
+    var W = vs.w, H = vs.h;
+    var showSide = cfg.sec || !cfg.h24;
+    var wf = 2.95 + (showSide ? 0.78 : 0);
+    var hasRemark = false;
+    for (var q = 0; q < n; q++) { if (cfg.clocks[q].m) { hasRemark = true; break; } }
+    var hf = 1.85 + (hasRemark ? 0.4 : 0);
+    var best = { cols: 1, rows: n, F: 0 };
+    var cols, rows, F;
+    for (cols = 1; cols <= n; cols++) {
+      rows = Math.ceil(n / cols);
+      F = Math.min((W / cols) * 0.9 / wf, (H / rows) * 0.9 / hf);
+      if (F > best.F) { best.cols = cols; best.rows = rows; best.F = F; }
+    }
+    cols = best.cols; rows = best.rows; F = Math.min(best.F, 420);
+    var cw = W / cols, ch = H / rows;
+
+    for (var i = 0; i < n; i++) {
+      var c = cards[i];
+      var r = Math.floor(i / cols);
+      var col = i % cols;
+      var inLast = (r === rows - 1) ? (n - (rows - 1) * cols) : cols;
+      var xoff = (r === rows - 1) ? (cols - inLast) * cw / 2 : 0;
+      var left = Math.round(col * cw + xoff);
+      var top = Math.round(r * ch);
+      c.el.style.left = left + "px";
+      c.el.style.top = top + "px";
+      c.el.style.width = Math.round(cw) + "px";
+      c.el.style.height = Math.round(ch) + "px";
+
+      var nameLen = (cfg.clocks[i].n.length || 1) + (cfg.off ? 11 : 0);
+      var nf = Math.min(0.26 * F, cw * 0.94 / (nameLen * 0.56));
+      var df = Math.min(0.24 * F, cw * 0.94 / (24 * 0.54));
+      c.nm.style.fontSize = nf + "px";
+      c.nm.style.lineHeight = (0.42 * F) + "px";
+      c.nm.style.height = (0.42 * F) + "px";
+      var rl = (cfg.clocks[i].m || "").length || 1;
+      var rf = Math.min(0.24 * F, cw * 0.94 / (rl * 0.56));
+      c.rm.style.display = hasRemark ? "block" : "none";
+      c.rm.style.fontSize = rf + "px";
+      c.rm.style.lineHeight = (0.4 * F) + "px";
+      c.rm.style.height = (0.4 * F) + "px";
+      c.tm.style.fontSize = F + "px";
+      c.tm.style.lineHeight = (1.05 * F) + "px";
+      c.tm.style.height = (1.05 * F) + "px";
+      c.side.style.fontSize = (0.3 * F) + "px";
+      c.side.style.lineHeight = (0.42 * F) + "px";
+      c.dt.style.fontSize = df + "px";
+      c.dt.style.lineHeight = (0.38 * F) + "px";
+      c.dt.style.height = (0.38 * F) + "px";
+      c.inner.style.top = Math.max(0, Math.round((ch - hf * F) / 2)) + "px";
+    }
+  }
+
+  function update(ms) {
+    var ld = new Date(ms);
+    var localDay = Date.UTC(ld.getFullYear(), ld.getMonth(), ld.getDate()) / 86400000;
+    for (var i = 0; i < cards.length; i++) {
+      var c = cards[i], k = cfg.clocks[i];
+      var off = offsetAt(k, ms);
+      var t = new Date(ms + off * 60000);
+      var H = t.getUTCHours(), M = t.getUTCMinutes(), S = t.getUTCSeconds();
+      var hh, ap = "";
+      if (cfg.h24) { hh = pad(H); }
+      else { ap = H >= 12 ? "PM" : "AM"; hh = String(H % 12 === 0 ? 12 : H % 12); }
+      c.main.firstChild ? (c.main.firstChild.nodeValue = hh + ":" + pad(M)) : c.main.appendChild(document.createTextNode(hh + ":" + pad(M)));
+      c.sEl.innerHTML = cfg.sec ? pad(S) : "";
+      c.sEl.style.display = cfg.sec ? "block" : "none";
+      c.apEl.innerHTML = ap;
+      c.apEl.style.display = ap ? "block" : "none";
+      c.side.style.display = (cfg.sec || ap) ? "inline-block" : "none";
+
+      var nameHtml = esc(k.n);
+      if (cfg.off) { nameHtml += '<span class="uo">' + fmtOff(off) + "</span>"; }
+      if (c.lastName !== nameHtml) { c.nm.innerHTML = nameHtml; c.lastName = nameHtml; }
+      var rmHtml = esc(k.m || "");
+      if (c.lastRm !== rmHtml) { c.rm.innerHTML = rmHtml; c.lastRm = rmHtml; }
+
+      if (cfg.date) {
+        var tzDay = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()) / 86400000;
+        var diff = Math.round(tzDay - localDay);
+        var rel = diff === 0 ? "Today" : (diff === 1 ? "Tomorrow" : (diff === -1 ? "Yesterday" : ""));
+        c.dt.innerHTML = DAYS[t.getUTCDay()] + " " + t.getUTCDate() + " " + MONTHS[t.getUTCMonth()] + (rel ? " &middot; " + rel : "");
+        c.dt.style.display = "block";
+      } else {
+        c.dt.style.display = "none";
+      }
+
+      var cls = (H >= 6 && H < 18) ? "card day" : "card night";
+      if (c.el.className !== cls) { c.el.className = cls; }
+    }
+  }
+
+  function tick() {
+    var now = new Date().getTime();
+    var s = Math.floor(now / 1000);
+    if (s === lastSec) { return; }
+    lastSec = s;
+    update(now);
+  }
+
+  /* ------------------------------------------------------------
+     Settings panel
+     ------------------------------------------------------------ */
+  function offsetOptions(sel) {
+    var h = "";
+    for (var m = -720; m <= 840; m += 15) {
+      h += '<option value="' + m + '"' + (m === sel ? " selected" : "") + ">" + fmtOff(m) + "</option>";
+    }
+    return h;
+  }
+
+  function buildPanel() {
+    var keep = panel.scrollTop;
+    var h = "";
+    var i;
+
+    h += '<h2 class="first">Clocks</h2>';
+    if (!cfg.clocks.length) { h += '<div class="sub">No clocks yet.</div>'; }
+    for (i = 0; i < cfg.clocks.length; i++) {
+      var k = cfg.clocks[i];
+      var sub = k.l ? "Uses this device's own time zone" : fmtOff(k.o) + " standard &middot; " + RULES[k.r];
+      h += '<div class="row">' +
+        '<input type="text" class="rn" data-i="' + i + '" maxlength="40" value="' + esc(k.n) + '">' +
+        '<input type="text" class="rr" data-i="' + i + '" maxlength="60" placeholder="Remark / team name (optional)" value="' + esc(k.m || "") + '">' +
+        '<div class="sub">' + sub + "</div>" +
+        '<button data-act="up" data-i="' + i + '">Up</button>' +
+        '<button data-act="down" data-i="' + i + '">Down</button>' +
+        '<button class="warn" data-act="del" data-i="' + i + '">Remove</button>' +
+        "</div>";
+    }
+
+    h += "<h2>Add a clock</h2>";
+    h += '<div class="lbl">From the list</div><select id="preset"><option value="L">This device (local time)</option>';
+    for (i = 0; i < PRESETS.length; i++) {
+      h += '<option value="' + i + '">' + esc(PRESETS[i][0]) + " (" + fmtOff(PRESETS[i][1]) + ")</option>";
+    }
+    h += '</select>' +
+      '<input type="text" id="premark" maxlength="60" placeholder="Remark / team name (optional)">' +
+      '<button data-act="addpreset">Add</button>';
+
+    h += '<div class="lbl">Or define your own</div>' +
+      '<input type="text" id="cname" maxlength="40" placeholder="Name, e.g. Head office">' +
+      '<input type="text" id="cremark" maxlength="60" placeholder="Remark / team name (optional)">' +
+      '<select id="coff">' + offsetOptions(0) + "</select>" +
+      '<select id="crule">';
+    for (var r in RULES) { if (RULES.hasOwnProperty(r)) { h += '<option value="' + r + '">' + RULES[r] + "</option>"; } }
+    h += '</select><button data-act="addcustom">Add custom clock</button>';
+    h += '<div class="note">The offset is the zone\'s standard (winter) offset. Daylight saving rules are built in and apply automatically. If a country changes its rules, set the offset by hand and pick "No daylight saving".</div>';
+
+    h += "<h2>Display</h2><div class=\"opt\">" +
+      '<label><input type="checkbox" id="o24"' + (cfg.h24 ? " checked" : "") + "> 24-hour time</label>" +
+      '<label><input type="checkbox" id="osec"' + (cfg.sec ? " checked" : "") + "> Show seconds</label>" +
+      '<label><input type="checkbox" id="odate"' + (cfg.date ? " checked" : "") + "> Show date and Today / Tomorrow</label>" +
+      '<label><input type="checkbox" id="ooff"' + (cfg.off ? " checked" : "") + "> Show UTC offset</label>" +
+      "</div>";
+    h += '<div class="lbl">Digit colour</div><select id="ocolor">';
+    var cols = [["ivory", "Ivory"], ["white", "White"], ["green", "Green"], ["amber", "Amber"], ["cyan", "Cyan"], ["red", "Red"]];
+    for (i = 0; i < cols.length; i++) {
+      h += '<option value="' + cols[i][0] + '"' + (cfg.color === cols[i][0] ? " selected" : "") + ">" + cols[i][1] + "</option>";
+    }
+    h += '</select><div class="lbl">Brightness (for night use)</div><select id="odim">';
+    var dims = [100, 75, 50, 30, 15];
+    for (i = 0; i < dims.length; i++) {
+      h += '<option value="' + dims[i] + '"' + (cfg.dim === dims[i] ? " selected" : "") + ">" + dims[i] + "%</option>";
+    }
+    h += "</select>";
+
+    h += "<h2>Backup</h2>" +
+      '<div class="note" style="margin-top:0">Settings live in this browser on this device. Copy the text below to keep a backup, or paste a saved backup and tap Import.</div>' +
+      '<textarea id="bk" spellcheck="false"></textarea>' +
+      '<button data-act="export">Show backup</button>' +
+      '<button data-act="import">Import</button>' +
+      '<button class="warn" data-act="reset">Reset to defaults</button>';
+
+    h += '<div style="margin-top:26px"><button class="big" data-act="close">Done</button></div>';
+
+    pin.innerHTML = h;
+    panel.scrollTop = keep;
+  }
+
+  function openPanel() { buildPanel(); panel.style.display = "block"; panel.scrollTop = 0; }
+  function closePanel() { panel.style.display = "none"; layout(); }
+
+  function moveClock(i, d) {
+    var j = i + d;
+    if (j < 0 || j >= cfg.clocks.length) { return; }
+    var t = cfg.clocks[i]; cfg.clocks[i] = cfg.clocks[j]; cfg.clocks[j] = t;
+  }
+
+  function pushClock(c) {
+    if (cfg.clocks.length >= MAX_CLOCKS) { alert("Maximum " + MAX_CLOCKS + " clocks."); return false; }
+    cfg.clocks.push(c);
+    return true;
+  }
+
+  function changed() { save(); render(); }
+
+  panel.onclick = function (e) {
+    var t = e.target || e.srcElement;
+    var act = t && t.getAttribute ? t.getAttribute("data-act") : null;
+    if (!act) { return; }
+    var i = parseInt(t.getAttribute("data-i"), 10);
+
+    if (act === "close") { closePanel(); return; }
+    if (act === "up") { moveClock(i, -1); changed(); buildPanel(); return; }
+    if (act === "down") { moveClock(i, 1); changed(); buildPanel(); return; }
+    if (act === "del") { cfg.clocks.splice(i, 1); changed(); buildPanel(); return; }
+
+    if (act === "addpreset") {
+      var v = document.getElementById("preset").value;
+      var ok;
+      var pm = document.getElementById("premark").value.replace(/^\s+|\s+$/g, "").substring(0, 60);
+      if (v === "L") { ok = pushClock({ n: "Local", o: 0, r: "none", l: 1, m: pm }); }
+      else { var p = PRESETS[parseInt(v, 10)]; ok = pushClock({ n: p[0], o: p[1], r: p[2], l: 0, m: pm }); }
+      if (ok) { changed(); buildPanel(); }
+      return;
+    }
+    if (act === "addcustom") {
+      var nm = document.getElementById("cname").value.replace(/^\s+|\s+$/g, "") || "Custom";
+      var o = parseInt(document.getElementById("coff").value, 10);
+      var r = document.getElementById("crule").value;
+      var cm = document.getElementById("cremark").value.replace(/^\s+|\s+$/g, "").substring(0, 60);
+      if (pushClock({ n: nm.substring(0, 40), o: o, r: r, l: 0, m: cm })) { changed(); buildPanel(); }
+      return;
+    }
+    if (act === "export") {
+      document.getElementById("bk").value = JSON.stringify(cfg);
+      return;
+    }
+    if (act === "import") {
+      var txt = document.getElementById("bk").value;
+      try {
+        var parsed = JSON.parse(txt);
+        if (!parsed || !parsed.clocks) { throw new Error("bad"); }
+        cfg = sanitize(parsed);
+        changed(); buildPanel();
+      } catch (err) {
+        alert("That backup text could not be read.");
+      }
+      return;
+    }
+    if (act === "reset") {
+      if (confirm("Reset all clocks and display settings?")) {
+        cfg = defaultConfig(); changed(); buildPanel();
+      }
+      return;
+    }
+  };
+
+  panel.onchange = function (e) {
+    var t = e.target || e.srcElement;
+    if (!t) { return; }
+    var id = t.id, cls = t.className;
+    if (cls === "rn") {
+      var i = parseInt(t.getAttribute("data-i"), 10);
+      var val = t.value.replace(/^\s+|\s+$/g, "");
+      cfg.clocks[i].n = (val || "Clock").substring(0, 40);
+      changed();
+      return;
+    }
+    if (cls === "rr") {
+      var ri = parseInt(t.getAttribute("data-i"), 10);
+      cfg.clocks[ri].m = t.value.replace(/^\s+|\s+$/g, "").substring(0, 60);
+      changed();
+      return;
+    }
+    if (id === "o24") { cfg.h24 = t.checked; }
+    else if (id === "osec") { cfg.sec = t.checked; }
+    else if (id === "odate") { cfg.date = t.checked; }
+    else if (id === "ooff") { cfg.off = t.checked; }
+    else if (id === "ocolor") { cfg.color = t.value; }
+    else if (id === "odim") { cfg.dim = parseInt(t.value, 10); }
+    else { return; }
+    changed();
+  };
+
+  gear.onclick = openPanel;
+
+  /* Full screen toggle (vendor-prefixed for old Chrome) */
+  function isFs() {
+    var d = document;
+    return !!(d.fullscreenElement || d.webkitFullscreenElement || d.mozFullScreenElement || d.msFullscreenElement);
+  }
+  function toggleFs() {
+    var d = document, el = d.documentElement;
+    if (isFs()) {
+      var ex = d.exitFullscreen || d.webkitExitFullscreen || d.webkitCancelFullScreen || d.mozCancelFullScreen || d.msExitFullscreen;
+      if (ex) { try { ex.call(d); } catch (e1) { /* ignore */ } }
+      return;
+    }
+    var rq = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (rq) {
+      try { rq.call(el); } catch (e2) { /* ignore */ }
+    } else {
+      alert("This browser cannot go full screen from a button.\n\nUse the browser menu, choose Add to Home screen, and open the page from that icon instead.");
+    }
+  }
+  document.getElementById("fs").onclick = toggleFs;
+  var fsEvents = ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"];
+  for (var fi = 0; fi < fsEvents.length; fi++) {
+    document.addEventListener(fsEvents[fi], function () { setTimeout(layout, 150); setTimeout(layout, 600); }, false);
+  }
+
+  /* ------------------------------------------------------------
+     Start
+     ------------------------------------------------------------ */
+  cfg = load();
+  render();
+  setInterval(tick, 200);
+
+  var resizeTimer = null;
+  function onResize() {
+    if (resizeTimer) { clearTimeout(resizeTimer); }
+    resizeTimer = setTimeout(layout, 120);
+  }
+  window.onresize = onResize;
+  window.onorientationchange = onResize;
+  /* Some old browsers settle their size a moment after load. */
+  setTimeout(layout, 300);
+  setTimeout(layout, 1200);
+})();
+</script>
+</body>
+</html>
