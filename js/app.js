@@ -1,4 +1,4 @@
-let version = '6.00';
+let version = '6.01';
 let appConfig = JSON.parse(localStorage.getItem('quadra_config')) || {};
 let isDocMode = false;
 let tokenHeartbeatId = null;
@@ -2222,14 +2222,16 @@ function renderNotes(searchQuery = '') {
         // Hide closed tasks to keep the board clean, unless actively searching for them
         if (isClosed && !hasSearch) return false;
         
-        // --- SPRINT FILTER LOGIC ---
+        // --- SPRINT & BACKLOG FILTER LOGIC ---
         if (note.quadrant !== 'notes' && !note.eventId) {
-            // NEW: Prioritize scheduled date for timeline filtering, fall back to due date
             const effectiveDate = note.scheduledDate || note.dueDate;
+            const hasNoDate = !note.dueDate && !note.scheduledDate;
+            const isEarlier = (note.scheduledDate && note.scheduledDate < startStr) || 
+                              (note.dueDate && note.dueDate < startStr);
             const inSprint = effectiveDate && effectiveDate >= startStr && effectiveDate <= endStr;
 
-            // Enforce sprint limits ONLY if we are not globally searching
-            if (!inSprint && !hasSearch) return false;
+            // Allow if in current sprint, undated, earlier than sprint, or actively searching
+            if (!inSprint && !hasNoDate && !isEarlier && !hasSearch) return false;
             
         } else if (note.eventId) {
             return false; // Hide calendar events from kanban
@@ -2238,14 +2240,26 @@ function renderNotes(searchQuery = '') {
         return matchesSearchQuery(note.text, searchQuery);
     });
 
-    // 2. Group into the 6 Pipeline Bins
+    // 2b. Group into the Pipeline Bins
     let bins = { q1: [], q2: [], q3: [], inbox: [], notes: [] };
 
     filteredNotes.forEach(note => {
         if (note.eventId) return; // Calendar events render exclusively on the timeline
         
-        // If it's closed but matches a search, dump it in the inbox so the user can see it
-        let targetQuad = note.status === 'closed' ? 'inbox' : (note.quadrant || 'inbox');
+        let targetQuad = note.quadrant || 'inbox';
+
+        if (note.status === 'closed') {
+            targetQuad = 'inbox';
+        } else if (targetQuad !== 'notes') {
+            const hasNoDate = !note.dueDate && !note.scheduledDate;
+            const isEarlier = (note.scheduledDate && note.scheduledDate < startStr) || 
+                              (note.dueDate && note.dueDate < startStr);
+
+            // Route undated or past-sprint tasks into Backlog
+            if (hasNoDate || isEarlier) {
+                targetQuad = 'inbox';
+            }
+        }
         
         if (bins[targetQuad]) bins[targetQuad].push(note);
         else bins.inbox.push(note); 
