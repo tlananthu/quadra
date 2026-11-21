@@ -1150,6 +1150,52 @@
   }
 
   
+  
+  /* Saved Task Filter Presets */
+  .saved-filters-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+  }
+  .saved-filters-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .preset-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-chip:hover {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary);
+  }
+  .preset-chip.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+  }
+
   /* Floating Quick-Add Task Button */
   .fab-quick-add {
     position: fixed;
@@ -1220,7 +1266,7 @@
     <div class="brand">
       <div class="brand-icon">C</div>
       <span>Cadence</span>
-      <span class="badge b-cat" style="font-size:0.68rem;padding:2px 7px;" title="App Version">v1.0</span>
+      <span class="badge b-cat" id="cadenceVersionBadge" style="font-size:0.68rem;padding:2px 7px;" title="App Version">v1.1</span>
     </div>
     <button class="btn btn-xs btn-ghost" id="themeBtn" onclick="toggleTheme()" title="Switch between Light and Dark mode">🌙</button>
   </div>
@@ -1257,7 +1303,7 @@
 
   <div class="sidebar-footer">
     <div class="storage-notice">
-      <strong>Cadence v1.0 • Local Storage:</strong> Your data lives <strong>only in this browser</strong>. Export a backup file regularly to save or move it.
+      <strong id="cadenceFooterVersion">Cadence v1.1 • Local Storage:</strong> Your data lives <strong>only in this browser</strong>. Export a backup file regularly to save or move it.
     </div>
     <div class="sidebar-actions">
       <button class="btn btn-sm" onclick="exportBackup()" title="Download a JSON backup of all your projects, tasks, notes, and time">⬇️ Export</button>
@@ -1356,6 +1402,8 @@ let state = {
   timeEntries: [],
   calendarEvents: [], // imported .ics events
   assignees: [], // { id, name, email, team, leftOrg }
+  savedTaskFilters: [], // { id, name, description, filters }
+  defaultTaskFilter: null, // { filters }
   settings: {
     jiraBaseUrl: '',
     supportTool: 'Zendesk', // Zendesk | Freshdesk | Jira Service Management | Other
@@ -1385,7 +1433,8 @@ let state = {
     noteSearch: '',
     reportRange: 'week', // week | month | custom | all
     reportStart: '',
-    reportEnd: ''
+    reportEnd: '',
+    activeTaskPresetId: ''
   }
 };
 
@@ -1426,8 +1475,10 @@ async function loadState() {
       state.assignees = idbData.assignees || [];
       syncAssigneesFromTasks();
       state.settings = Object.assign({ jiraBaseUrl: '', supportTool: 'Zendesk', supportBaseUrl: '', slackWebhookUrl: '', slackNotifyCreated: true, slackNotifyCompleted: true, slackNotifyOverdue: true, proxyUrl: '', calendarIcsUrl: '', jiraEmail: '', jiraApiToken: '', jiraDefaultProjectKey: '', jiraIssueType: 'Task', jiraAutoSyncWorklogs: false, categories: null }, idbData.settings || {});
+      state.savedTaskFilters = idbData.savedTaskFilters || [];
+      state.defaultTaskFilter = idbData.defaultTaskFilter || null;
       state.activeTimer = idbData.activeTimer || null;
-      applyDefaultProjectFilterIfNeeded();
+      applyDefaultTaskFilterOnLoad();
       return;
     }
   } catch (e) {
@@ -1449,8 +1500,10 @@ async function loadState() {
       state.assignees = parsed.assignees || [];
       syncAssigneesFromTasks();
       state.settings = Object.assign({ jiraBaseUrl: '', supportTool: 'Zendesk', supportBaseUrl: '', slackWebhookUrl: '', slackNotifyCreated: true, slackNotifyCompleted: true, slackNotifyOverdue: true, proxyUrl: '', calendarIcsUrl: '', jiraEmail: '', jiraApiToken: '', jiraDefaultProjectKey: '', jiraIssueType: 'Task', jiraAutoSyncWorklogs: false, categories: null }, parsed.settings || {});
+      state.savedTaskFilters = parsed.savedTaskFilters || [];
+      state.defaultTaskFilter = parsed.defaultTaskFilter || null;
       state.activeTimer = parsed.activeTimer || null;
-      applyDefaultProjectFilterIfNeeded();
+      applyDefaultTaskFilterOnLoad();
       saveState(); // migrate into IndexedDB
       return;
     }
@@ -1584,6 +1637,8 @@ function saveState() {
     timeEntries: state.timeEntries,
     calendarEvents: state.calendarEvents,
     assignees: state.assignees,
+    savedTaskFilters: state.savedTaskFilters,
+    defaultTaskFilter: state.defaultTaskFilter,
     settings: state.settings,
     activeTimer: state.activeTimer
   };
@@ -1910,6 +1965,8 @@ function exportBackup() {
     timeEntries: state.timeEntries,
     calendarEvents: state.calendarEvents,
     assignees: state.assignees,
+    savedTaskFilters: state.savedTaskFilters,
+    defaultTaskFilter: state.defaultTaskFilter,
     settings: state.settings
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1938,10 +1995,14 @@ function importBackup(event) {
       state.notes = parsed.notes || [];
       state.timeEntries = parsed.timeEntries || [];
       state.calendarEvents = parsed.calendarEvents || [];
+      state.assignees = parsed.assignees || [];
+      syncAssigneesFromTasks();
+      state.savedTaskFilters = parsed.savedTaskFilters || [];
+      state.defaultTaskFilter = parsed.defaultTaskFilter || null;
       state.settings = Object.assign({ jiraBaseUrl: '', supportTool: 'Zendesk', supportBaseUrl: '', slackWebhookUrl: '', slackNotifyCreated: true, slackNotifyCompleted: true, slackNotifyOverdue: true, proxyUrl: '', calendarIcsUrl: '', jiraEmail: '', jiraApiToken: '', jiraDefaultProjectKey: '', jiraIssueType: 'Task', jiraAutoSyncWorklogs: false, categories: null }, parsed.settings || {});
       state.activeTimer = null;
       state.ui.taskFilters.defaultApplied = false;
-      applyDefaultProjectFilterIfNeeded();
+      applyDefaultTaskFilterOnLoad();
       saveState();
       updateTimerUI();
       render();
@@ -1962,6 +2023,8 @@ function confirmResetData() {
   state.timeEntries = [];
   state.calendarEvents = [];
   state.assignees = [];
+  state.savedTaskFilters = [];
+  state.defaultTaskFilter = null;
   state.activeTimer = null;
   saveState();
   updateTimerUI();
@@ -2483,6 +2546,178 @@ function getAllTeams() {
   return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
 
+
+function captureTaskFilterSnapshot() {
+  const f = state.ui.taskFilters || {};
+  return {
+    search: f.search || '',
+    projectId: f.projectId || '',
+    stageId: f.stageId || '',
+    category: f.category || '',
+    status: f.status !== undefined ? f.status : '__open__',
+    priority: f.priority || '',
+    due: f.due || '',
+    assignees: Array.isArray(f.assignees) ? [...f.assignees] : [],
+    team: f.team || '',
+    planned: f.planned || ''
+  };
+}
+
+function applyDefaultTaskFilterOnLoad() {
+  const f = state.ui.taskFilters;
+  if (f.defaultApplied) return;
+  if (state.defaultTaskFilter && state.defaultTaskFilter.filters) {
+    Object.assign(f, JSON.parse(JSON.stringify(state.defaultTaskFilter.filters)));
+    f.defaultApplied = true;
+    return;
+  }
+  applyDefaultProjectFilterIfNeeded();
+}
+
+function saveCurrentFiltersAsDefault() {
+  const snap = captureTaskFilterSnapshot();
+  state.defaultTaskFilter = {
+    savedAt: new Date().toISOString(),
+    filters: snap
+  };
+  saveState();
+  render();
+  showToast('⭐ Current task filters saved as default');
+}
+
+function clearSavedDefaultTaskFilter() {
+  if (!state.defaultTaskFilter) return;
+  state.defaultTaskFilter = null;
+  saveState();
+  render();
+  showToast('Saved default filter cleared');
+}
+
+function openSaveFilterPresetModal(presetId = null) {
+  const existing = presetId ? (state.savedTaskFilters || []).find(p => p.id === presetId) : null;
+  const snap = existing ? existing.filters : captureTaskFilterSnapshot();
+  const summaryParts = [];
+  if (snap.projectId) {
+    const pr = getProject(snap.projectId);
+    summaryParts.push(`Project: ${pr ? pr.name : snap.projectId}`);
+  }
+  if (snap.stageId) summaryParts.push('Stage filtered');
+  if (snap.category) summaryParts.push(`Category: ${snap.category}`);
+  if (snap.status && snap.status !== '__open__') summaryParts.push(`Status: ${snap.status}`);
+  else if (snap.status === '__open__') summaryParts.push('Open statuses');
+  if (snap.team) summaryParts.push(`Team: ${snap.team === '__unassigned__' ? 'No Team' : snap.team}`);
+  if (snap.planned) summaryParts.push(`Type: ${snap.planned}`);
+  if (snap.assignees && snap.assignees.length) summaryParts.push(`Assignees: ${snap.assignees.join(', ')}`);
+  if (snap.priority) summaryParts.push(`Priority: ${snap.priority}`);
+  if (snap.due) summaryParts.push(`Due: ${snap.due}`);
+  if (snap.search) summaryParts.push(`Search: "${snap.search}"`);
+
+  openModal(`
+    <div class="modal-header">
+      <h3>${existing ? 'Edit Saved Filter' : 'Save Filter with Description'}</h3>
+      <button class="btn btn-xs btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <p class="field-hint" style="margin-bottom:12px;">
+      Active filter snapshot: <strong>${esc(summaryParts.length ? summaryParts.join(' • ') : 'All / Default criteria')}</strong>
+    </p>
+    <form onsubmit="saveFilterPresetForm(event, '${existing ? existing.id : ''}')">
+      <div class="form-group">
+        <label>Filter Label / Name *</label>
+        <input type="text" id="fpName" required value="${esc(existing?.name || '')}" placeholder="e.g. Urgent Client Bugs" />
+      </div>
+      <div class="form-group">
+        <label>Description *</label>
+        <textarea id="fpDesc" required placeholder="Describe what tasks this filter shows (e.g. High-priority open Jira tasks for Platform team)">${esc(existing?.description || '')}</textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Filter</button>
+      </div>
+    </form>
+  `);
+}
+
+function saveFilterPresetForm(e, presetId) {
+  e.preventDefault();
+  const name = (document.getElementById('fpName')?.value || '').trim();
+  const description = (document.getElementById('fpDesc')?.value || '').trim();
+  if (!name || !description) return;
+  if (!Array.isArray(state.savedTaskFilters)) state.savedTaskFilters = [];
+
+  if (presetId) {
+    const found = state.savedTaskFilters.find(x => x.id === presetId);
+    if (found) {
+      found.name = name;
+      found.description = description;
+      showToast('Saved filter updated');
+    }
+  } else {
+    const created = {
+      id: uid('flt'),
+      name,
+      description,
+      filters: captureTaskFilterSnapshot()
+    };
+    state.savedTaskFilters.push(created);
+    state.ui.activeTaskPresetId = created.id;
+    showToast(`Saved filter "${name}"`);
+  }
+  saveState();
+  closeModal();
+  render();
+}
+
+function applySavedTaskPreset(presetId) {
+  const preset = (state.savedTaskFilters || []).find(x => x.id === presetId);
+  if (!preset || !preset.filters) return;
+  const f = state.ui.taskFilters;
+  Object.assign(f, JSON.parse(JSON.stringify(preset.filters)));
+  f.defaultApplied = true;
+  state.ui.activeTaskPresetId = preset.id;
+  render();
+  showToast(`Applied "${preset.name}"`);
+}
+
+function deleteSavedTaskPreset(presetId) {
+  state.savedTaskFilters = (state.savedTaskFilters || []).filter(x => x.id !== presetId);
+  if (state.ui.activeTaskPresetId === presetId) state.ui.activeTaskPresetId = '';
+  saveState();
+  render();
+  showToast('Saved filter removed');
+}
+
+function renderSavedTaskFiltersBar() {
+  const presets = state.savedTaskFilters || [];
+  const activeId = state.ui.activeTaskPresetId || '';
+  const hasDefault = Boolean(state.defaultTaskFilter && state.defaultTaskFilter.filters);
+
+  const chipsHtml = presets.map(p => {
+    const isAct = activeId === p.id;
+    return `
+      <span class="preset-chip ${isAct ? 'active' : ''}" onclick="applySavedTaskPreset('${p.id}')" title="${esc(p.description)}">
+        <span>🔖 ${esc(p.name)}</span>
+        <span style="font-size:0.72rem;opacity:0.85;font-weight:500;">— ${esc(p.description)}</span>
+        <button type="button" class="btn btn-xs btn-ghost" style="padding:0 3px;color:inherit;" onclick="event.stopPropagation();openSaveFilterPresetModal('${p.id}')" title="Edit label or description">✎</button>
+        <button type="button" class="btn btn-xs btn-ghost" style="padding:0 3px;color:inherit;" onclick="event.stopPropagation();deleteSavedTaskPreset('${p.id}')" title="Delete saved filter">✕</button>
+      </span>
+    `;
+  }).join('');
+
+  return `
+    <div class="saved-filters-bar">
+      <div class="saved-filters-chips">
+        <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em;">Saved Filters:</span>
+        ${chipsHtml || '<span style="font-size:0.78rem;color:var(--text-muted);">No described filters saved yet.</span>'}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <button type="button" class="btn btn-xs" onclick="saveCurrentFiltersAsDefault()" title="Save current filter selections as the default when opening Tasks">⭐ Save as Default</button>
+        ${hasDefault ? `<button type="button" class="btn btn-xs btn-ghost" style="color:var(--danger)" onclick="clearSavedDefaultTaskFilter()" title="Remove saved default filter override">Clear Default</button>` : ''}
+        <button type="button" class="btn btn-xs btn-primary" onclick="openSaveFilterPresetModal()" title="Save current filters with a name and description">+ Save with Description</button>
+      </div>
+    </div>
+  `;
+}
+
 function getSelectedAssignees() {
   const arr = state.ui.taskFilters.assignees;
   return Array.isArray(arr) ? arr : [];
@@ -2778,6 +3013,8 @@ function renderTasks(el) {
       <button class="btn btn-sm btn-ghost" onclick="clearTaskFilters()">Reset</button>
     </div>
 
+    ${renderSavedTaskFiltersBar()}
+
     ${renderAssigneeProgressStrip()}
 
     <div id="taskResultsContainer">${state.ui.taskViewMode === 'list' ? renderTaskList(tasks) : renderKanban(tasks)}</div>
@@ -2793,6 +3030,7 @@ function refreshTaskResults() {
 
 function clearTaskFilters() {
   state.ui.taskFilters = { search: '', projectId: '', stageId: '', category: '', status: '__open__', priority: '', due: '', assignees: [], team: '', planned: '', defaultApplied: true };
+  state.ui.activeTaskPresetId = '';
   render();
 }
 
@@ -7207,7 +7445,22 @@ function saveSettingsForm(e, silent = false) {
 }
 
 // ===================== INIT =====================
+
+const CADENCE_VERSION = 'v1.1';
+function getCadenceVersion() {
+  return CADENCE_VERSION;
+}
+
+function syncVersionLabels() {
+  const ver = getCadenceVersion();
+  const badge = document.getElementById('cadenceVersionBadge');
+  if (badge) badge.textContent = ver;
+  const footerVer = document.getElementById('cadenceFooterVersion');
+  if (footerVer) footerVer.textContent = `Cadence ${ver} • Local Storage:`;
+}
+
 (async function initApp() {
+  syncVersionLabels();
   initTheme();
   await loadState();
   updateTodayBadge();
