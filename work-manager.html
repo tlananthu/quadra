@@ -1149,6 +1149,58 @@
     border-radius: 999px;
   }
 
+  
+  /* Floating Quick-Add Task Button */
+  .fab-quick-add {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 80;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 18px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.15s, background 0.15s;
+  }
+  .fab-quick-add:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+  }
+  .subtask-row.assignee-match {
+    background: var(--primary-soft);
+    border: 1px solid rgba(79, 70, 229, 0.35);
+  }
+  .colleague-card-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .colleague-card-check input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    accent-color: var(--primary);
+  }
+  .clickable-team-badge {
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .clickable-team-badge:hover {
+    opacity: 0.85;
+    text-decoration: underline;
+  }
+  @media print {
+    .fab-quick-add { display: none !important; }
+  }
+
   /* Print styles for Reports */
   @media print {
     .sidebar, .topbar, .no-print, .sidebar-overlay, .toast, .modal-backdrop { display: none !important; }
@@ -1243,6 +1295,7 @@
   <div class="modal" id="modalBox"></div>
 </div>
 
+<button class="fab-quick-add no-print" onclick="openQuickAddTaskModal()" title="Quick Add Task (concise popup) — Shortcut: N">⚡ Quick Add Task</button>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1328,7 +1381,7 @@ let state = {
     calendarDragTarget: 'planned', // planned | due
     taskViewMode: 'list', // list | kanban
     showArchivedProjects: false,
-    taskFilters: { search: '', projectId: '', stageId: '', category: '', status: '__open__', priority: '', due: '', assignee: '', team: '' },
+    taskFilters: { search: '', projectId: '', stageId: '', category: '', status: '__open__', priority: '', due: '', assignees: [], team: '', planned: '', defaultApplied: false },
     noteSearch: '',
     reportRange: 'week', // week | month | custom | all
     reportStart: '',
@@ -1374,6 +1427,7 @@ async function loadState() {
       syncAssigneesFromTasks();
       state.settings = Object.assign({ jiraBaseUrl: '', supportTool: 'Zendesk', supportBaseUrl: '', slackWebhookUrl: '', slackNotifyCreated: true, slackNotifyCompleted: true, slackNotifyOverdue: true, proxyUrl: '', calendarIcsUrl: '', jiraEmail: '', jiraApiToken: '', jiraDefaultProjectKey: '', jiraIssueType: 'Task', jiraAutoSyncWorklogs: false, categories: null }, idbData.settings || {});
       state.activeTimer = idbData.activeTimer || null;
+      applyDefaultProjectFilterIfNeeded();
       return;
     }
   } catch (e) {
@@ -1396,6 +1450,7 @@ async function loadState() {
       syncAssigneesFromTasks();
       state.settings = Object.assign({ jiraBaseUrl: '', supportTool: 'Zendesk', supportBaseUrl: '', slackWebhookUrl: '', slackNotifyCreated: true, slackNotifyCompleted: true, slackNotifyOverdue: true, proxyUrl: '', calendarIcsUrl: '', jiraEmail: '', jiraApiToken: '', jiraDefaultProjectKey: '', jiraIssueType: 'Task', jiraAutoSyncWorklogs: false, categories: null }, parsed.settings || {});
       state.activeTimer = parsed.activeTimer || null;
+      applyDefaultProjectFilterIfNeeded();
       saveState(); // migrate into IndexedDB
       return;
     }
@@ -1586,6 +1641,31 @@ function sanitizeNoteHtml(html) {
 }
 
 function getProject(id) { return state.projects.find(p => p.id === id); }
+
+function getDefaultProject() {
+  return state.projects.find(p => p.isDefault && !p.archived)
+    || state.projects.find(p => p.isDefault)
+    || state.projects.find(p => !p.archived)
+    || state.projects[0]
+    || null;
+}
+
+function applyDefaultProjectFilterIfNeeded() {
+  const f = state.ui.taskFilters;
+  if (!f.defaultApplied) {
+    const def = state.projects.find(p => p.isDefault && !p.archived) || state.projects.find(p => p.isDefault);
+    if (def) f.projectId = def.id;
+    f.defaultApplied = true;
+  }
+}
+
+function isTaskPlanned(task) {
+  if (!task) return false;
+  if (task.plannedStatus === 'planned') return true;
+  if (task.plannedStatus === 'nonplanned') return false;
+  return Boolean((task.plannedDate && task.plannedDate.trim()) || (task.plannedStartTime && task.plannedStartTime.trim()) || Number(task.estimatedHours || 0) > 0);
+}
+
 function getTask(id) { return state.tasks.find(t => t.id === id); }
 function getStage(project, stageId) {
   if (!project || !stageId) return null;
@@ -1860,6 +1940,8 @@ function importBackup(event) {
       state.calendarEvents = parsed.calendarEvents || [];
       state.settings = Object.assign({ jiraBaseUrl: '', supportTool: 'Zendesk', supportBaseUrl: '', slackWebhookUrl: '', slackNotifyCreated: true, slackNotifyCompleted: true, slackNotifyOverdue: true, proxyUrl: '', calendarIcsUrl: '', jiraEmail: '', jiraApiToken: '', jiraDefaultProjectKey: '', jiraIssueType: 'Task', jiraAutoSyncWorklogs: false, categories: null }, parsed.settings || {});
       state.activeTimer = null;
+      state.ui.taskFilters.defaultApplied = false;
+      applyDefaultProjectFilterIfNeeded();
       saveState();
       updateTimerUI();
       render();
@@ -1962,16 +2044,7 @@ function renderToday(el) {
   el.innerHTML = `
     <p class="helper-banner">Your daily command center: focus on overdue items, tasks due today, active work, and your planned vs. actual hours.</p>
 
-    <form class="quick-add-bar" onsubmit="handleQuickAddTask(event)">
-      <input type="text" id="quickAddTitle" placeholder="⚡ Quick-add a task due today... (press Enter)" required />
-      <select id="quickAddProject" title="Choose project">
-        ${state.projects.filter(p => !p.archived).map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('') || '<option value="">Create a project first</option>'}
-      </select>
-      <select id="quickAddCat" title="Category" style="max-width:140px;">
-        ${getCategories().map(c => `<option>${c}</option>`).join('')}
-      </select>
-      <button type="submit" class="btn btn-primary btn-sm">+ Add</button>
-    </form>
+
 
     <div class="grid-4" style="margin-bottom:18px;">
       <div class="kpi-card">
@@ -2122,6 +2195,7 @@ function renderProjects(el) {
                   ${p.client ? `<div style="font-size:0.8rem;color:var(--text-muted)">Client: ${esc(p.client)}</div>` : ''}
                 </div>
                 <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                  ${p.isDefault ? `<span class="badge b-cat" title="Filtered by default on the Tasks page and preselected in Quick Add">⭐ Default</span>` : ''}
                   <span class="badge ${p.billable ? 'b-billable' : 'b-nonbillable'}">
                     ${p.billable ? `💲 Billable${p.hourlyRate ? ` ($${p.hourlyRate}/hr)` : ''}` : 'Non-billable'}
                   </span>
@@ -2145,6 +2219,7 @@ function renderProjects(el) {
               <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:10px;font-size:0.82rem;color:var(--text-muted);flex-wrap:wrap;gap:8px;">
                 <span>✅ ${doneCount}/${projTasks.length} tasks done • ⏱ ${(totalSec/3600).toFixed(1)}h logged</span>
                 <div style="display:flex;gap:6px;">
+                  ${!p.isDefault ? `<button class="btn btn-xs" onclick="setDefaultProject('${p.id}')" title="Make this the default project">⭐ Set Default</button>` : ''}
                   <button class="btn btn-xs" onclick="openProjectModal('${p.id}')">Edit</button>
                   <button class="btn btn-xs" onclick="toggleArchiveProject('${p.id}')">${p.archived ? 'Unarchive' : 'Archive'}</button>
                   <button class="btn btn-xs btn-ghost" style="color:var(--danger)" onclick="deleteProject('${p.id}')">Delete</button>
@@ -2184,6 +2259,12 @@ function openProjectModal(projectId = null) {
       <div class="form-group">
         <label>Description</label>
         <textarea id="pDesc" placeholder="What is this project about?">${esc(p?.description || '')}</textarea>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:500;cursor:pointer;">
+          <input type="checkbox" id="pIsDefault" ${p?.isDefault ? 'checked' : ''} />
+          Make this the <strong>Default Project</strong> (automatically selected when opening Tasks and creating new tasks)
+        </label>
       </div>
       <div class="form-row-3">
         <div class="form-group">
@@ -2284,6 +2365,10 @@ function saveProjectForm(e, projectId) {
     return;
   }
   const billable = document.getElementById('pBillable').value === 'true';
+  const isDefault = Boolean(document.getElementById('pIsDefault')?.checked);
+  if (isDefault) {
+    state.projects.forEach(pr => { pr.isDefault = false; });
+  }
   const payload = {
     name: document.getElementById('pName').value.trim(),
     client: document.getElementById('pClient').value.trim(),
@@ -2292,6 +2377,7 @@ function saveProjectForm(e, projectId) {
     repoLink: (document.getElementById('pRepoLink')?.value || '').trim(),
     description: document.getElementById('pDesc').value.trim(),
     status: document.getElementById('pStatus').value,
+    isDefault,
     billable,
     hourlyRate: billable ? Number(document.getElementById('pRate').value || 0) : 0,
     stages: cleanStages
@@ -2300,14 +2386,28 @@ function saveProjectForm(e, projectId) {
   if (projectId) {
     const p = getProject(projectId);
     Object.assign(p, payload);
+    if (isDefault) state.ui.taskFilters.projectId = p.id;
     showToast('Project updated');
   } else {
-    state.projects.push({ id: uid('proj'), archived: false, ...payload });
+    const newProj = { id: uid('proj'), archived: false, ...payload };
+    state.projects.push(newProj);
+    if (isDefault) state.ui.taskFilters.projectId = newProj.id;
     showToast('Project created');
   }
   saveState();
   closeModal();
   render();
+}
+
+
+function setDefaultProject(projectId) {
+  state.projects.forEach(p => { p.isDefault = (p.id === projectId); });
+  state.ui.taskFilters.projectId = projectId;
+  state.ui.taskFilters.stageId = '';
+  saveState();
+  render();
+  const p = getProject(projectId);
+  showToast(`⭐ "${p ? p.name : 'Project'}" set as default`);
 }
 
 function toggleArchiveProject(id) {
@@ -2383,17 +2483,64 @@ function getAllTeams() {
   return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
 
+function getSelectedAssignees() {
+  const arr = state.ui.taskFilters.assignees;
+  return Array.isArray(arr) ? arr : [];
+}
+
+function toggleAssigneeSelection(val) {
+  if (!Array.isArray(state.ui.taskFilters.assignees)) state.ui.taskFilters.assignees = [];
+  const idx = state.ui.taskFilters.assignees.findIndex(x => x.toLowerCase() === val.toLowerCase());
+  if (idx >= 0) {
+    state.ui.taskFilters.assignees.splice(idx, 1);
+  } else {
+    state.ui.taskFilters.assignees.push(val);
+  }
+  render();
+}
+
+function filterByTeamName(teamName) {
+  state.ui.taskFilters.team = (state.ui.taskFilters.team === teamName) ? '' : teamName;
+  render();
+}
+
+function matchesAssigneeToken(rawName, token) {
+  const clean = (rawName || '').trim();
+  if (token === '__me__') return !clean;
+  if (token === '__delegated__') return Boolean(clean);
+  return clean.toLowerCase() === token.toLowerCase();
+}
+
+function getEarliestTaskSortDate(t) {
+  const dates = [];
+  if (t.dueDate) dates.push(t.dueDate);
+  if (t.plannedDate) dates.push(t.plannedDate);
+  (t.subtasks || []).forEach(s => {
+    if (s.status !== 'Done') {
+      if (s.dueDate) dates.push(s.dueDate);
+      if (s.plannedDate) dates.push(s.plannedDate);
+    }
+  });
+  if (dates.length === 0) return '9999-12-31';
+  dates.sort();
+  return dates[0];
+}
+
 function getFilteredTasks() {
   const f = state.ui.taskFilters;
   const today = todayStr();
   const weekEnd = addDaysStr(7);
-  return state.tasks.filter(t => {
+  const selectedAssignees = getSelectedAssignees();
+
+  const filtered = state.tasks.filter(t => {
     if (f.projectId && t.projectId !== f.projectId) return false;
     if (f.stageId && t.stageId !== f.stageId) return false;
     if (f.category && t.category !== f.category) return false;
     if (f.status === '__open__' && t.status === 'Done') return false;
     if (f.status && f.status !== '__open__' && t.status !== f.status) return false;
     if (f.priority && t.priority !== f.priority) return false;
+    if (f.planned === 'planned' && !isTaskPlanned(t)) return false;
+    if (f.planned === 'nonplanned' && isTaskPlanned(t)) return false;
     if (f.team) {
       const matchesTeam = (rawName) => {
         const clean = (rawName || '').trim();
@@ -2407,18 +2554,13 @@ function getFilteredTasks() {
       const subMatches = (t.subtasks || []).some(s => matchesTeam(s.assignee));
       if (!taskMatches && !subMatches) return false;
     }
-    if (f.assignee) {
-      const tAss = (t.assignee || '').trim();
-      const subHas = (name) => (t.subtasks || []).some(s => (s.assignee || '').trim().toLowerCase() === name.toLowerCase());
-      if (f.assignee === '__me__') {
-        const hasMeSub = (t.subtasks || []).some(s => !(s.assignee || '').trim());
-        if (tAss && !hasMeSub) return false;
-      } else if (f.assignee === '__delegated__') {
-        const anySubDelegated = (t.subtasks || []).some(s => (s.assignee || '').trim());
-        if (!tAss && !anySubDelegated) return false;
-      } else {
-        if (tAss.toLowerCase() !== f.assignee.toLowerCase() && !subHas(f.assignee)) return false;
-      }
+    if (selectedAssignees.length > 0) {
+      const matchesAnySelected = selectedAssignees.some(token => {
+        const taskMatch = matchesAssigneeToken(t.assignee, token);
+        const subMatch = (t.subtasks || []).some(s => matchesAssigneeToken(s.assignee, token));
+        return taskMatch || subMatch;
+      });
+      if (!matchesAnySelected) return false;
     }
     if (f.due === 'overdue' && !(t.dueDate && t.dueDate < today && t.status !== 'Done')) return false;
     if (f.due === 'today' && t.dueDate !== today) return false;
@@ -2430,6 +2572,14 @@ function getFilteredTasks() {
       if (!hay.includes(q)) return false;
     }
     return true;
+  });
+
+  // Sort by earliest due or planned date ascending (tasks without dates placed last)
+  return filtered.sort((a, b) => {
+    const da = getEarliestTaskSortDate(a);
+    const db = getEarliestTaskSortDate(b);
+    if (da !== db) return da.localeCompare(db);
+    return (a.title || '').localeCompare(b.title || '');
   });
 }
 
@@ -2460,17 +2610,21 @@ function computeAssigneeStats(matchFn, today) {
 
 function buildAssigneeTileHtml({ idVal, labelText, icon, teamText, leftOrg, stats, isSelected, onClickExpr, titleText }) {
   const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
+  const safeTeam = esc(teamText || '').replace(/'/g, "\\'");
   return `
     <div class="colleague-card ${isSelected ? 'active' : ''}"
       style="${leftOrg ? 'opacity:0.75;border-style:dashed;' : ''}"
       onclick="${onClickExpr}"
       title="${esc(titleText)}">
       <div class="colleague-card-top">
-        <span>${icon} ${esc(labelText)}</span>
+        <span class="colleague-card-check">
+          <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation();${onClickExpr}" title="Select/deselect ${esc(labelText)}" />
+          <span>${icon} ${esc(labelText)}</span>
+        </span>
         <span style="font-size:0.76rem;color:var(--primary);">${pct}%</span>
       </div>
       ${(teamText || leftOrg) ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">
-        ${teamText ? `<span class="badge b-cat" style="font-size:0.68rem;">🏷️ ${esc(teamText)}</span>` : ''}
+        ${teamText ? `<span class="badge b-cat clickable-team-badge" style="font-size:0.68rem;" onclick="event.stopPropagation();filterByTeamName('${safeTeam}')" title="Click to filter tasks & subtasks for team ${esc(teamText)}">🏷️ ${esc(teamText)}</span>` : ''}
         ${leftOrg ? `<span class="badge b-blocked" style="font-size:0.68rem;">Left org</span>` : ''}
       </div>` : ''}
       <div class="progress-track" style="max-width:100%;height:6px;">
@@ -2489,8 +2643,9 @@ function buildAssigneeTileHtml({ idVal, labelText, icon, teamText, leftOrg, stat
 function renderAssigneeProgressStrip() {
   syncAssigneesFromTasks();
   const today = todayStr();
-  const activeFilter = state.ui.taskFilters.assignee || '';
+  const selectedList = getSelectedAssignees();
   const teamFilter = state.ui.taskFilters.team || '';
+  const isSelectedFn = (val) => selectedList.some(x => x.toLowerCase() === val.toLowerCase());
 
   const meStats = computeAssigneeStats(name => !name, today);
   const showMe = !teamFilter || teamFilter === '__unassigned__';
@@ -2501,9 +2656,9 @@ function renderAssigneeProgressStrip() {
     teamText: '',
     leftOrg: false,
     stats: meStats,
-    isSelected: activeFilter === '__me__',
-    onClickExpr: "state.ui.taskFilters.assignee=(state.ui.taskFilters.assignee==='__me__'?'':'__me__');render()",
-    titleText: 'Click to filter tasks/subtasks assigned to Me'
+    isSelected: isSelectedFn('__me__'),
+    onClickExpr: "toggleAssigneeSelection('__me__')",
+    titleText: 'Toggle filter for tasks/subtasks assigned to Me'
   }) : '';
 
   const sortedAssignees = [...state.assignees].sort((a, b) => {
@@ -2518,14 +2673,13 @@ function renderAssigneeProgressStrip() {
         if (teamFilter === '__unassigned__' && tName) return false;
         if (teamFilter !== '__unassigned__' && tName !== teamFilter) return false;
       }
-      // Show active members always; show members who left org only if they still have tasks or are selected
       const stats = computeAssigneeStats(n => n.toLowerCase() === a.name.toLowerCase(), today);
-      if (a.leftOrg && stats.total === 0 && activeFilter.toLowerCase() !== a.name.toLowerCase()) return false;
+      if (a.leftOrg && stats.total === 0 && !isSelectedFn(a.name)) return false;
       return true;
     })
     .map(a => {
       const stats = computeAssigneeStats(n => n.toLowerCase() === a.name.toLowerCase(), today);
-      const isSelected = activeFilter.toLowerCase() === a.name.toLowerCase();
+      const isSelected = isSelectedFn(a.name);
       const safeName = esc(a.name).replace(/'/g, "\\'");
       return buildAssigneeTileHtml({
         idVal: a.name,
@@ -2535,15 +2689,17 @@ function renderAssigneeProgressStrip() {
         leftOrg: !!a.leftOrg,
         stats,
         isSelected,
-        onClickExpr: `state.ui.taskFilters.assignee=(state.ui.taskFilters.assignee==='${safeName}'?'':'${safeName}');render()`,
-        titleText: `Click to filter tasks/subtasks assigned to ${a.name}${a.team ? ' (' + a.team + ')' : ''}${a.leftOrg ? ' — Left organisation' : ''}`
+        onClickExpr: `toggleAssigneeSelection('${safeName}')`,
+        titleText: `Toggle filter for tasks/subtasks assigned to ${a.name}${a.team ? ' (' + a.team + ')' : ''}${a.leftOrg ? ' — Left organisation' : ''}`
       });
     }).join('');
 
   return `
-    <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em;">👥 Assignee Progress (click a tile to filter)</span>
-      ${activeFilter ? `<button class="btn btn-xs btn-ghost" onclick="state.ui.taskFilters.assignee='';render()">Show all</button>` : ''}
+    <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+      <span style="font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em;">
+        👥 Assignees (check one or more to filter • click team tag for team tasks)
+      </span>
+      ${(selectedList.length > 0 || teamFilter) ? `<button class="btn btn-xs btn-ghost" onclick="state.ui.taskFilters.assignees=[];state.ui.taskFilters.team='';render()">Clear assignee/team filter</button>` : ''}
     </div>
     <div class="colleague-strip">${meTile}${personTiles}</div>
   `;
@@ -2570,7 +2726,7 @@ function renderTasks(el) {
       <input type="text" id="taskSearchInput" placeholder="🔍 Search tasks..." value="${esc(f.search)}" oninput="state.ui.taskFilters.search=this.value;refreshTaskResults()" />
       <select onchange="state.ui.taskFilters.projectId=this.value;state.ui.taskFilters.stageId='';render()">
         <option value="">All Projects</option>
-        ${state.projects.map(p => `<option value="${p.id}" ${f.projectId === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}
+        ${state.projects.map(p => `<option value="${p.id}" ${f.projectId === p.id ? 'selected' : ''}>${p.isDefault ? '⭐ ' : ''}${esc(p.name)}</option>`).join('')}
       </select>
       ${selectedProj ? `
         <select onchange="state.ui.taskFilters.stageId=this.value;render()">
@@ -2592,14 +2748,20 @@ function renderTasks(el) {
         <option value="__unassigned__" ${f.team === '__unassigned__' ? 'selected' : ''}>No Team Assigned</option>
         ${getAllTeams().map(tm => `<option value="${esc(tm)}" ${f.team === tm ? 'selected' : ''}>🏷️ ${esc(tm)}</option>`).join('')}
       </select>
-      <select onchange="state.ui.taskFilters.assignee=this.value;render()">
-        <option value="" ${!f.assignee ? 'selected' : ''}>All Assignees</option>
-        <option value="__me__" ${f.assignee === '__me__' ? 'selected' : ''}>Assigned to Me</option>
-        <option value="__delegated__" ${f.assignee === '__delegated__' ? 'selected' : ''}>All Assignees (Others)</option>
+      <select onchange="state.ui.taskFilters.planned=this.value;render()">
+        <option value="" ${!f.planned ? 'selected' : ''}>Planned & Non-planned</option>
+        <option value="planned" ${f.planned === 'planned' ? 'selected' : ''}>🗓️ Planned Only</option>
+        <option value="nonplanned" ${f.planned === 'nonplanned' ? 'selected' : ''}>📋 Non-planned Only</option>
+      </select>
+      <select onchange="state.ui.taskFilters.assignees=this.value?[this.value]:[];render()">
+        <option value="" ${getSelectedAssignees().length === 0 ? 'selected' : ''}>${getSelectedAssignees().length > 1 ? `Multiple (${getSelectedAssignees().length} selected)` : 'All Assignees'}</option>
+        <option value="__me__" ${getSelectedAssignees().length === 1 && getSelectedAssignees()[0] === '__me__' ? 'selected' : ''}>Assigned to Me</option>
+        <option value="__delegated__" ${getSelectedAssignees().length === 1 && getSelectedAssignees()[0] === '__delegated__' ? 'selected' : ''}>All Assignees (Others)</option>
         ${getAllAssignees(true).map(c => {
           const meta = getAssigneeMeta(c);
           const suffix = meta?.leftOrg ? ' (Left org)' : (meta?.team ? ` • ${meta.team}` : '');
-          return `<option value="${esc(c)}" ${f.assignee === c ? 'selected' : ''}>👤 ${esc(c + suffix)}</option>`;
+          const sel = getSelectedAssignees().length === 1 && getSelectedAssignees()[0].toLowerCase() === c.toLowerCase();
+          return `<option value="${esc(c)}" ${sel ? 'selected' : ''}>👤 ${esc(c + suffix)}</option>`;
         }).join('')}
       </select>
       <select onchange="state.ui.taskFilters.priority=this.value;render()">
@@ -2630,7 +2792,7 @@ function refreshTaskResults() {
 }
 
 function clearTaskFilters() {
-  state.ui.taskFilters = { search: '', projectId: '', stageId: '', category: '', status: '__open__', priority: '', due: '', assignee: '', team: '' };
+  state.ui.taskFilters = { search: '', projectId: '', stageId: '', category: '', status: '__open__', priority: '', due: '', assignees: [], team: '', planned: '', defaultApplied: true };
   render();
 }
 
@@ -2638,16 +2800,43 @@ function renderTaskList(tasks) {
   if (tasks.length === 0) {
     return `<div class="card empty-state">No tasks match your filters. Click <strong>+ New Task</strong> to add one.</div>`;
   }
+  const selectedAssignees = getSelectedAssignees();
+  const teamFilter = state.ui.taskFilters.team || '';
+  const hasAssigneeOrTeamFilter = selectedAssignees.length > 0 || Boolean(teamFilter);
+
+  const doesSubMatchFilter = (s) => {
+    if (!hasAssigneeOrTeamFilter) return false;
+    let ok = true;
+    if (selectedAssignees.length > 0) {
+      ok = ok && selectedAssignees.some(tok => matchesAssigneeToken(s.assignee, tok));
+    }
+    if (teamFilter) {
+      const clean = (s.assignee || '').trim();
+      if (!clean) ok = ok && (teamFilter === '__unassigned__');
+      else {
+        const tm = (getAssigneeMeta(clean)?.team || '').trim();
+        ok = ok && (teamFilter === '__unassigned__' ? !tm : tm === teamFilter);
+      }
+    }
+    return ok;
+  };
+
   return tasks.map(t => {
     const proj = getProject(t.projectId);
     const stage = getStage(proj, t.stageId);
     const blocker = isTaskBlockedByUnfinished(t);
     const billable = isTaskBillable(t);
-    const subs = t.subtasks || [];
-    const doneSubs = subs.filter(s => s.status === 'Done').length;
-    const pct = subs.length ? Math.round((doneSubs / subs.length) * 100) : 0;
+    const plannedFlag = isTaskPlanned(t);
+    const allSubs = t.subtasks || [];
+    const matchingSubs = hasAssigneeOrTeamFilter ? allSubs.filter(doesSubMatchFilter) : [];
+    const subs = (hasAssigneeOrTeamFilter && matchingSubs.length > 0) ? matchingSubs : allSubs;
+    const doneSubs = allSubs.filter(s => s.status === 'Done').length;
+    const pct = allSubs.length ? Math.round((doneSubs / allSubs.length) * 100) : 0;
     const running = isTimerRunningFor(t.id, null);
     const actualSec = getActualSecondsForTask(t.id, true);
+    const tAssigneeMeta = t.assignee ? getAssigneeMeta(t.assignee) : null;
+    const tTeam = (tAssigneeMeta?.team || '').trim();
+    const safeTTeam = esc(tTeam).replace(/'/g, "\'");
 
     return `
       <div class="task-item">
@@ -2659,7 +2848,9 @@ function renderTaskList(tasks) {
               <span class="badge ${statusBadgeClass(t.status)}">${esc(t.status)}</span>
               <span class="badge ${priorityBadgeClass(t.priority)}">${esc(t.priority)}</span>
               <span class="badge b-cat">${esc(t.category)}</span>
-              ${t.assignee ? `<span class="badge b-assignee" title="Assigned to colleague: ${esc(t.assignee)}">👤 ${esc(t.assignee)}</span>` : ''}
+              <span class="badge ${plannedFlag ? 'b-progress' : 'b-todo'}" title="${plannedFlag ? 'Planned task' : 'Non-planned task'}">${plannedFlag ? '🗓️ Planned' : '📋 Non-planned'}</span>
+              ${t.assignee ? `<span class="badge b-assignee" title="Assigned to: ${esc(t.assignee)}">👤 ${esc(t.assignee)}</span>` : ''}
+              ${tTeam ? `<span class="badge b-cat clickable-team-badge" onclick="filterByTeamName('${safeTTeam}')" title="Click to show tasks & subtasks for team ${esc(tTeam)}">🏷️ ${esc(tTeam)}</span>` : ''}
               <span class="badge ${billable ? 'b-billable' : 'b-nonbillable'}">${billable ? '💲 Billable' : 'Non-billable'}</span>
               ${t.recurrence && t.recurrence !== 'none' ? `<span class="badge b-todo" title="Automatically creates next occurrence when marked Done">🔁 ${esc(t.recurrence)}</span>` : ''}
               ${blocker ? `<span class="badge b-warn" title="This task is blocked until '${esc(blocker.title)}' is marked Done">⚠️ Blocked by: ${esc(blocker.title)}</span>` : ''}
@@ -2695,18 +2886,23 @@ function renderTaskList(tasks) {
 
         ${subs.length > 0 ? `
           <div class="subtasks-box">
+            ${(hasAssigneeOrTeamFilter && matchingSubs.length > 0 && matchingSubs.length < allSubs.length) ? `<div style="font-size:0.75rem;color:var(--primary);font-weight:600;margin-bottom:6px;">Showing ${matchingSubs.length} matching subtask(s) of ${allSubs.length}</div>` : ''}
             ${subs.map(sub => {
               const subRunning = isTimerRunningFor(t.id, sub.id);
               const subAct = (getActualSecondsForSubtask(t.id, sub.id) / 3600).toFixed(2);
+              const isMatchedSub = doesSubMatchFilter(sub);
+              const sTeam = sub.assignee ? (getAssigneeMeta(sub.assignee)?.team || '').trim() : '';
+              const safeSTeam = esc(sTeam).replace(/'/g, "\'");
               return `
-                <div class="subtask-row">
+                <div class="subtask-row ${isMatchedSub ? 'assignee-match' : ''}">
                   <div class="subtask-left">
                     <input type="checkbox" ${sub.status === 'Done' ? 'checked' : ''} onchange="toggleSubtaskDone('${t.id}','${sub.id}')" />
                     <span class="${sub.status === 'Done' ? 'task-title done' : ''}" style="font-weight:600;font-size:0.84rem;">${esc(sub.title)}</span>
                     ${sub.description ? `<span class="rte-rendered" style="font-size:0.78rem;color:var(--text-muted);">${sanitizeNoteHtml(sub.description)}</span>` : ''}
                     <span class="badge ${statusBadgeClass(sub.status)}">${esc(sub.status)}</span>
                     <span class="badge b-cat">${esc(sub.category || t.category)}</span>
-                    ${sub.assignee ? `<span class="badge b-assignee" title="Assigned to colleague: ${esc(sub.assignee)}">👤 ${esc(sub.assignee)}</span>` : ''}
+                    ${sub.assignee ? `<span class="badge b-assignee" title="Assigned to: ${esc(sub.assignee)}">👤 ${esc(sub.assignee)}</span>` : ''}
+                    ${sTeam ? `<span class="badge b-cat clickable-team-badge" onclick="filterByTeamName('${safeSTeam}')" title="Click to show tasks & subtasks for team ${esc(sTeam)}">🏷️ ${esc(sTeam)}</span>` : ''}
                     ${sub.dueDate ? `<span style="font-size:0.76rem;color:var(--text-muted)">Due ${esc(sub.dueDate)}</span>` : ''}
                     ${sub.plannedDate ? `<span style="font-size:0.76rem;color:var(--text-muted)">Planned ${esc(sub.plannedDate)} ${esc(sub.plannedStartTime || '')}</span>` : ''}
                     <span style="font-size:0.76rem;color:var(--text-muted)">Est ${Number(sub.estimatedHours||0)}h / Act ${subAct}h</span>
@@ -2830,7 +3026,11 @@ function toggleTaskOptionalFields(show) {
   if (show) updateTaskCategoryHint();
 }
 
-function openTaskModal(taskId = null) {
+function openQuickAddTaskModal() {
+  openTaskModal(null, { quickMode: true });
+}
+
+function openTaskModal(taskId = null, opts = {}) {
   if (state.projects.length === 0) {
     alert('Please create a Project first! Every task must belong to a project.');
     switchView('projects');
@@ -2839,14 +3039,16 @@ function openTaskModal(taskId = null) {
   }
   const t = taskId ? getTask(taskId) : null;
   const activeProjects = state.projects.filter(p => !p.archived || (t && t.projectId === p.id));
-  const defaultProjId = t ? t.projectId : (activeProjects[0]?.id || state.projects[0].id);
+  const defProj = getDefaultProject();
+  const defaultProjId = t ? t.projectId : (defProj?.id || activeProjects[0]?.id || state.projects[0].id);
+  const currentPlanned = t ? (isTaskPlanned(t) ? 'planned' : 'nonplanned') : 'nonplanned';
 
   // Always start in concise mode upon opening; user can click "Show Extra Fields" to expand
   const hasExtraValues = false;
 
   openModal(`
     <div class="modal-header">
-      <h3>${t ? 'Edit Task' : 'New Task'}</h3>
+      <h3>${t ? 'Edit Task' : (opts.quickMode ? '⚡ Quick Add Task' : 'New Task')}</h3>
       <button class="btn btn-xs btn-ghost" onclick="closeModal()">✕</button>
     </div>
     <form onsubmit="saveTaskForm(event, '${t ? t.id : ''}')">
@@ -2863,7 +3065,7 @@ function openTaskModal(taskId = null) {
         </div>
       </div>
 
-      <div class="form-row">
+      <div class="form-row-3">
         <div class="form-group">
           <label>Assignee (optional)</label>
           <input type="text" id="tAssignee" list="colleaguesDatalist" value="${esc(t?.assignee || '')}" placeholder="Leave blank for Me, or type name" />
@@ -2877,6 +3079,13 @@ function openTaskModal(taskId = null) {
         <div class="form-group">
           <label>Stage (optional)</label>
           <select id="tStage"></select>
+        </div>
+        <div class="form-group">
+          <label>Planning Type</label>
+          <select id="tPlannedStatus">
+            <option value="nonplanned" ${currentPlanned === 'nonplanned' ? 'selected' : ''}>📋 Non-planned</option>
+            <option value="planned" ${currentPlanned === 'planned' ? 'selected' : ''}>🗓️ Planned</option>
+          </select>
         </div>
       </div>
 
@@ -3086,6 +3295,12 @@ function saveTaskForm(e, taskId) {
     plannedDate: document.getElementById('tPlannedDate').value,
     plannedStartTime: document.getElementById('tPlannedTime').value,
     estimatedHours: Number(document.getElementById('tEstHours').value || 0),
+    plannedStatus: (function() {
+      const selVal = document.getElementById('tPlannedStatus')?.value || 'nonplanned';
+      const pDate = document.getElementById('tPlannedDate')?.value || '';
+      if (pDate && selVal === 'nonplanned' && !taskId) return 'planned';
+      return selVal;
+    })(),
     learningProgress: Number(document.getElementById('tLearningProgress')?.value || 0),
     recurrence: document.getElementById('tRecurrence').value || 'none'
   };
@@ -3580,8 +3795,8 @@ function saveAssigneeForm(e, assigneeId) {
           if ((s.assignee || '').trim().toLowerCase() === oldName.toLowerCase()) s.assignee = newName;
         });
       });
-      if ((state.ui.taskFilters.assignee || '').toLowerCase() === oldName.toLowerCase()) {
-        state.ui.taskFilters.assignee = newName;
+      if (Array.isArray(state.ui.taskFilters.assignees)) {
+        state.ui.taskFilters.assignees = state.ui.taskFilters.assignees.map(x => x.toLowerCase() === oldName.toLowerCase() ? newName : x);
       }
     }
     existing.name = newName;
@@ -3624,8 +3839,8 @@ function deleteAssigneeRecord(assigneeId) {
     });
   }
   state.assignees = state.assignees.filter(x => x.id !== assigneeId);
-  if ((state.ui.taskFilters.assignee || '').toLowerCase() === a.name.toLowerCase()) {
-    state.ui.taskFilters.assignee = '';
+  if (Array.isArray(state.ui.taskFilters.assignees)) {
+    state.ui.taskFilters.assignees = state.ui.taskFilters.assignees.filter(x => x.toLowerCase() !== a.name.toLowerCase());
   }
   saveState();
   render();
@@ -6137,7 +6352,7 @@ document.addEventListener('keydown', (e) => {
   if (isTyping || e.ctrlKey || e.metaKey || e.altKey) return;
 
   const k = e.key.toLowerCase();
-  if (k === 'n') { e.preventDefault(); openTaskModal(); }
+  if (k === 'n') { e.preventDefault(); openQuickAddTaskModal(); }
   else if (k === 'p') { e.preventDefault(); openProjectModal(); }
   else if (k === 'd') { e.preventDefault(); toggleTheme(); }
   else if (e.key === '?') { e.preventDefault(); openShortcutsModal(); }
