@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>WorkFlow — Personal Work Manager</title>
+<title>Cadence — Personal Work Manager</title>
 <style>
   :root {
     --bg: #f4f6f9;
@@ -1166,8 +1166,9 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
     <div class="brand">
-      <div class="brand-icon">W</div>
-      <span>WorkFlow</span>
+      <div class="brand-icon">C</div>
+      <span>Cadence</span>
+      <span class="badge b-cat" style="font-size:0.68rem;padding:2px 7px;" title="App Version">v1.0</span>
     </div>
     <button class="btn btn-xs btn-ghost" id="themeBtn" onclick="toggleTheme()" title="Switch between Light and Dark mode">🌙</button>
   </div>
@@ -1204,7 +1205,7 @@
 
   <div class="sidebar-footer">
     <div class="storage-notice">
-      <strong>Local Storage:</strong> Your data lives <strong>only in this browser</strong>. Export a backup file regularly to save or move it.
+      <strong>Cadence v1.0 • Local Storage:</strong> Your data lives <strong>only in this browser</strong>. Export a backup file regularly to save or move it.
     </div>
     <div class="sidebar-actions">
       <button class="btn btn-sm" onclick="exportBackup()" title="Download a JSON backup of all your projects, tasks, notes, and time">⬇️ Export</button>
@@ -1495,7 +1496,7 @@ function seedStarterData() {
   state.notes = [
     {
       id: uid('note'),
-      title: 'Welcome to WorkFlow',
+      title: 'Welcome to Cadence',
       body: '<h3>Quick Tips</h3><ul><li>Use <b>Today</b> to focus on what is overdue, due today, or in progress.</li><li>Click <b>Start</b> on any task or subtask to track your time.</li><li>Use <b>Export</b> in the bottom-left sidebar to save a backup file.</li></ul>',
       projectId: p1Id,
       taskId: t1Id,
@@ -1711,7 +1712,7 @@ function switchView(view) {
     reports: 'Reports',
     settings: 'Settings & Integrations'
   };
-  document.getElementById('pageTitle').textContent = titles[view] || 'WorkFlow';
+  document.getElementById('pageTitle').textContent = titles[view] || 'Cadence';
   toggleSidebar(false);
   render();
 }
@@ -1821,7 +1822,7 @@ setInterval(() => {
 function exportBackup() {
   const data = {
     exportedAt: new Date().toISOString(),
-    app: 'WorkFlow Personal Work Manager',
+    app: 'Cadence Personal Work Manager',
     version: 1,
     projects: state.projects,
     tasks: state.tasks,
@@ -1834,7 +1835,7 @@ function exportBackup() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `workflow-backup-${todayStr()}.json`;
+  a.download = `cadence-backup-${todayStr()}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
   showToast('Backup file downloaded');
@@ -1848,7 +1849,7 @@ function importBackup(event) {
     try {
       const parsed = JSON.parse(e.target.result);
       if (!Array.isArray(parsed.projects) || !Array.isArray(parsed.tasks)) {
-        alert('This file does not look like a valid WorkFlow backup.');
+        alert('This file does not look like a valid Cadence backup.');
         return;
       }
       if (!confirm('Importing this backup will replace your current data in this browser. Continue?')) return;
@@ -2926,6 +2927,7 @@ function openTaskModal(taskId = null) {
           <select id="tRecurrence">
             <option value="none" ${(t?.recurrence || 'none') === 'none' ? 'selected' : ''}>Does not repeat</option>
             <option value="daily" ${t?.recurrence === 'daily' ? 'selected' : ''}>Daily (every day)</option>
+            <option value="weekdays" ${t?.recurrence === 'weekdays' ? 'selected' : ''}>Weekdays (Mon–Fri)</option>
             <option value="weekly" ${t?.recurrence === 'weekly' ? 'selected' : ''}>Weekly (every 7 days)</option>
             <option value="monthly" ${t?.recurrence === 'monthly' ? 'selected' : ''}>Monthly (same day next month)</option>
           </select>
@@ -5176,7 +5178,7 @@ function exportCalendarICS() {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//WorkFlow Personal Work Manager//EN',
+    'PRODID:-//Cadence Personal Work Manager//EN',
     'CALSCALE:GREGORIAN'
   ];
 
@@ -5223,7 +5225,7 @@ function exportCalendarICS() {
   const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `workflow-calendar-${todayStr()}.ics`;
+  a.download = `cadence-calendar-${todayStr()}.ics`;
   a.click();
   URL.revokeObjectURL(a.href);
   showToast('Calendar .ics file downloaded');
@@ -5917,6 +5919,11 @@ function shiftDateByRecurrence(dateStr, recurrence) {
   const [y, m, d] = dateStr.split('-').map(Number);
   const dt = new Date(y, m - 1, d);
   if (recurrence === 'daily') dt.setDate(dt.getDate() + 1);
+  else if (recurrence === 'weekdays') {
+    do {
+      dt.setDate(dt.getDate() + 1);
+    } while (dt.getDay() === 0 || dt.getDay() === 6);
+  }
   else if (recurrence === 'weekly') dt.setDate(dt.getDate() + 7);
   else if (recurrence === 'monthly') dt.setMonth(dt.getMonth() + 1);
   return formatLocalDate(dt);
@@ -6036,7 +6043,7 @@ async function toggleReminders() {
   localStorage.setItem(REMINDER_KEY, 'true');
   updateReminderButtonUI();
   if (perm === 'granted') {
-    new Notification('WorkFlow Reminders Active', { body: 'You will be reminded about due and upcoming planned tasks while this tab is open.' });
+    new Notification('Cadence Reminders Active', { body: 'You will be reminded about due and upcoming planned tasks while this tab is open.' });
     showToast('Browser reminders enabled');
   } else {
     showToast('Reminders on (using in-app alerts since browser notifications are blocked)');
@@ -6542,7 +6549,7 @@ async function testSlackWebhookFromSettings() {
     statusEl.textContent = 'Sending test message to Slack…';
   }
   try {
-    const res = await sendSlackWebhookPayload('👋 *Hello from WorkFlow!* Your Slack Incoming Webhook is connected and working.');
+    const res = await sendSlackWebhookPayload('👋 *Hello from Cadence!* Your Slack Incoming Webhook is connected and working.');
     if (statusEl) {
       statusEl.style.color = 'var(--success)';
       statusEl.textContent = `✅ ${res.message}`;
@@ -6652,7 +6659,7 @@ async function createJiraIssueFromItem(taskId, subtaskId = null) {
   const projectKey = (state.settings?.jiraDefaultProjectKey || '').trim().toUpperCase();
   const issueType = (state.settings?.jiraIssueType || 'Task').trim() || 'Task';
   const summary = sub ? `${t.title}: ${sub.title}` : item.title;
-  const description = item.description || t.description || `Created from WorkFlow (${getProject(t.projectId)?.name || 'Task'})`;
+  const description = item.description || t.description || `Created from Cadence (${getProject(t.projectId)?.name || 'Task'})`;
 
   try {
     const data = await callJiraProxy('jira_create_issue', {
@@ -6806,7 +6813,7 @@ function renderSettings(el) {
         <div class="form-group">
           <label>Google Apps Script Proxy URL</label>
           <input type="url" id="setProxyUrl" value="${esc(s.proxyUrl || '')}" placeholder="https://script.google.com/macros/s/.../exec" />
-          <div class="field-hint">Paste your deployed Google Apps Script Web App URL so WorkFlow can fetch your Google Calendar / Outlook feed without browser CORS errors.</div>
+          <div class="field-hint">Paste your deployed Google Apps Script Web App URL so Cadence can fetch your Google Calendar / Outlook feed without browser CORS errors.</div>
         </div>
 
         <div class="form-group">
@@ -6836,7 +6843,7 @@ function renderSettings(el) {
         <div class="form-group">
           <label>Base Jira URL</label>
           <input type="url" id="setJiraUrl" value="${esc(s.jiraBaseUrl || '')}" placeholder="e.g. https://yourcompany.atlassian.net" />
-          <div class="field-hint">When a Jira task or subtask has a ticket key like <strong>ABC-123</strong>, WorkFlow builds <code>https://yourcompany.atlassian.net/browse/ABC-123</code> automatically.</div>
+          <div class="field-hint">When a Jira task or subtask has a ticket key like <strong>ABC-123</strong>, Cadence builds <code>https://yourcompany.atlassian.net/browse/ABC-123</code> automatically.</div>
         </div>
 
         <div class="form-row">
