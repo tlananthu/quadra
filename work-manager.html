@@ -1182,6 +1182,9 @@
     <button class="nav-item" data-view="tasks" onclick="switchView('tasks')">
       <span>✅</span> Tasks
     </button>
+    <button class="nav-item" data-view="assignees" onclick="switchView('assignees')">
+      <span>👥</span> Assignees
+    </button>
     <button class="nav-item" data-view="calendar" onclick="switchView('calendar')">
       <span>📅</span> Calendar
     </button>
@@ -1298,6 +1301,7 @@ let state = {
   notes: [],
   timeEntries: [],
   calendarEvents: [], // imported .ics events
+  assignees: [], // { id, name, email, team, leftOrg }
   settings: {
     jiraBaseUrl: '',
     supportTool: 'Zendesk', // Zendesk | Freshdesk | Jira Service Management | Other
@@ -1323,7 +1327,7 @@ let state = {
     calendarDragTarget: 'planned', // planned | due
     taskViewMode: 'list', // list | kanban
     showArchivedProjects: false,
-    taskFilters: { search: '', projectId: '', stageId: '', category: '', status: '__open__', priority: '', due: '', assignee: '' },
+    taskFilters: { search: '', projectId: '', stageId: '', category: '', status: '__open__', priority: '', due: '', assignee: '', team: '' },
     noteSearch: '',
     reportRange: 'week', // week | month | custom | all
     reportStart: '',
@@ -1365,6 +1369,8 @@ async function loadState() {
       state.notes = idbData.notes || [];
       state.timeEntries = idbData.timeEntries || [];
       state.calendarEvents = idbData.calendarEvents || [];
+      state.assignees = idbData.assignees || [];
+      syncAssigneesFromTasks();
       state.settings = Object.assign({ jiraBaseUrl: '', supportTool: 'Zendesk', supportBaseUrl: '', slackWebhookUrl: '', slackNotifyCreated: true, slackNotifyCompleted: true, slackNotifyOverdue: true, proxyUrl: '', calendarIcsUrl: '', jiraEmail: '', jiraApiToken: '', jiraDefaultProjectKey: '', jiraIssueType: 'Task', jiraAutoSyncWorklogs: false, categories: null }, idbData.settings || {});
       state.activeTimer = idbData.activeTimer || null;
       return;
@@ -1383,6 +1389,10 @@ async function loadState() {
       state.notes = parsed.notes || [];
       state.timeEntries = parsed.timeEntries || [];
       state.calendarEvents = parsed.calendarEvents || [];
+      state.assignees = parsed.assignees || [];
+      syncAssigneesFromTasks();
+      state.assignees = parsed.assignees || [];
+      syncAssigneesFromTasks();
       state.settings = Object.assign({ jiraBaseUrl: '', supportTool: 'Zendesk', supportBaseUrl: '', slackWebhookUrl: '', slackNotifyCreated: true, slackNotifyCompleted: true, slackNotifyOverdue: true, proxyUrl: '', calendarIcsUrl: '', jiraEmail: '', jiraApiToken: '', jiraDefaultProjectKey: '', jiraIssueType: 'Task', jiraAutoSyncWorklogs: false, categories: null }, parsed.settings || {});
       state.activeTimer = parsed.activeTimer || null;
       saveState(); // migrate into IndexedDB
@@ -1517,6 +1527,7 @@ function saveState() {
     notes: state.notes,
     timeEntries: state.timeEntries,
     calendarEvents: state.calendarEvents,
+    assignees: state.assignees,
     settings: state.settings,
     activeTimer: state.activeTimer
   };
@@ -1693,6 +1704,7 @@ function switchView(view) {
     today: 'Today',
     projects: 'Projects',
     tasks: 'Tasks',
+    assignees: 'Assignees & Teams',
     calendar: 'Calendar',
     notes: 'Notes',
     time: 'Time Tracker',
@@ -1734,18 +1746,25 @@ function startTimer(taskId, subtaskId = null) {
   showToast('Timer started');
 }
 
+function roundUpTo15MinBlock(elapsedSec) {
+  const FIFTEEN_MIN_SEC = 15 * 60;
+  const safeElapsed = Math.max(1, Math.floor(elapsedSec || 0));
+  return Math.ceil(safeElapsed / FIFTEEN_MIN_SEC) * FIFTEEN_MIN_SEC;
+}
+
 function stopActiveTimer(silent = false) {
   if (!state.activeTimer) return;
   const { taskId, subtaskId, startedAt } = state.activeTimer;
-  const elapsedSec = Math.max(1, Math.floor((Date.now() - startedAt) / 1000));
+  const rawElapsedSec = Math.max(1, Math.floor((Date.now() - startedAt) / 1000));
+  const roundedSec = roundUpTo15MinBlock(rawElapsedSec);
   const task = getTask(taskId);
   let category = task ? task.category : 'Administrative';
-  let note = 'Tracked via timer';
+  let note = `Tracked via timer (${formatDuration(rawElapsedSec)} actual → ${formatDuration(roundedSec)})`;
   if (task && subtaskId) {
     const sub = (task.subtasks || []).find(s => s.id === subtaskId);
     if (sub) {
       category = sub.category || category;
-      note = `Subtask: ${sub.title}`;
+      note = `Subtask: ${sub.title} (${formatDuration(rawElapsedSec)} actual → ${formatDuration(roundedSec)})`;
     }
   }
   if (task) {
@@ -1757,7 +1776,7 @@ function stopActiveTimer(silent = false) {
       category,
       billable: isTaskBillable(task),
       date: todayStr(),
-      durationSeconds: elapsedSec,
+      durationSeconds: roundedSec,
       note
     });
   }
@@ -1766,7 +1785,7 @@ function stopActiveTimer(silent = false) {
   updateTimerUI();
   if (!silent) {
     render();
-    showToast(`Logged ${formatDuration(elapsedSec)}`);
+    showToast(`Logged ${formatDuration(roundedSec)} (rounded up from ${formatDuration(rawElapsedSec)})`);
   }
 }
 
@@ -1809,6 +1828,7 @@ function exportBackup() {
     notes: state.notes,
     timeEntries: state.timeEntries,
     calendarEvents: state.calendarEvents,
+    assignees: state.assignees,
     settings: state.settings
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1858,6 +1878,7 @@ function confirmResetData() {
   state.notes = [];
   state.timeEntries = [];
   state.calendarEvents = [];
+  state.assignees = [];
   state.activeTimer = null;
   saveState();
   updateTimerUI();
@@ -1881,6 +1902,7 @@ function render() {
     case 'today': renderToday(el); break;
     case 'projects': renderProjects(el); break;
     case 'tasks': renderTasks(el); break;
+    case 'assignees': renderAssignees(el); break;
     case 'calendar': renderCalendar(el); break;
     case 'notes': renderNotes(el); break;
     case 'time': renderTimeTracker(el); break;
@@ -2307,13 +2329,55 @@ function deleteProject(id) {
 }
 
 // ===================== 3. TASKS VIEW (LIST & KANBAN) =====================
-function getAllAssignees() {
-  const set = new Set();
+function syncAssigneesFromTasks() {
+  if (!Array.isArray(state.assignees)) state.assignees = [];
+  const knownLower = new Set(state.assignees.map(a => (a.name || '').trim().toLowerCase()).filter(Boolean));
+  const addIfNew = (rawName) => {
+    const clean = (rawName || '').trim();
+    if (!clean) return;
+    const key = clean.toLowerCase();
+    if (!knownLower.has(key)) {
+      knownLower.add(key);
+      state.assignees.push({ id: uid('asg'), name: clean, email: '', team: '', leftOrg: false });
+    }
+  };
   state.tasks.forEach(t => {
-    if (t.assignee && t.assignee.trim()) set.add(t.assignee.trim());
-    (t.subtasks || []).forEach(s => {
-      if (s.assignee && s.assignee.trim()) set.add(s.assignee.trim());
-    });
+    addIfNew(t.assignee);
+    (t.subtasks || []).forEach(s => addIfNew(s.assignee));
+  });
+}
+
+function ensureAssigneeRecord(rawName) {
+  const clean = (rawName || '').trim();
+  if (!clean) return null;
+  if (!Array.isArray(state.assignees)) state.assignees = [];
+  let found = state.assignees.find(a => (a.name || '').trim().toLowerCase() === clean.toLowerCase());
+  if (!found) {
+    found = { id: uid('asg'), name: clean, email: '', team: '', leftOrg: false };
+    state.assignees.push(found);
+  }
+  return found;
+}
+
+function getAssigneeMeta(rawName) {
+  const clean = (rawName || '').trim();
+  if (!clean || !Array.isArray(state.assignees)) return null;
+  return state.assignees.find(a => (a.name || '').trim().toLowerCase() === clean.toLowerCase()) || null;
+}
+
+function getAllAssignees(includeLeft = true) {
+  syncAssigneesFromTasks();
+  return state.assignees
+    .filter(a => includeLeft ? true : !a.leftOrg)
+    .map(a => a.name)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function getAllTeams() {
+  syncAssigneesFromTasks();
+  const set = new Set();
+  state.assignees.forEach(a => {
+    if (a.team && a.team.trim()) set.add(a.team.trim());
   });
   return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
@@ -2329,9 +2393,22 @@ function getFilteredTasks() {
     if (f.status === '__open__' && t.status === 'Done') return false;
     if (f.status && f.status !== '__open__' && t.status !== f.status) return false;
     if (f.priority && t.priority !== f.priority) return false;
+    if (f.team) {
+      const matchesTeam = (rawName) => {
+        const clean = (rawName || '').trim();
+        if (!clean) return f.team === '__unassigned__';
+        const meta = getAssigneeMeta(clean);
+        const teamName = (meta?.team || '').trim();
+        if (f.team === '__unassigned__') return !teamName;
+        return teamName === f.team;
+      };
+      const taskMatches = matchesTeam(t.assignee);
+      const subMatches = (t.subtasks || []).some(s => matchesTeam(s.assignee));
+      if (!taskMatches && !subMatches) return false;
+    }
     if (f.assignee) {
       const tAss = (t.assignee || '').trim();
-      const subHas = (name) => (t.subtasks || []).some(s => (s.assignee || '').trim() === name);
+      const subHas = (name) => (t.subtasks || []).some(s => (s.assignee || '').trim().toLowerCase() === name.toLowerCase());
       if (f.assignee === '__me__') {
         const hasMeSub = (t.subtasks || []).some(s => !(s.assignee || '').trim());
         if (tAss && !hasMeSub) return false;
@@ -2339,7 +2416,7 @@ function getFilteredTasks() {
         const anySubDelegated = (t.subtasks || []).some(s => (s.assignee || '').trim());
         if (!tAss && !anySubDelegated) return false;
       } else {
-        if (tAss !== f.assignee && !subHas(f.assignee)) return false;
+        if (tAss.toLowerCase() !== f.assignee.toLowerCase() && !subHas(f.assignee)) return false;
       }
     }
     if (f.due === 'overdue' && !(t.dueDate && t.dueDate < today && t.status !== 'Done')) return false;
@@ -2380,16 +2457,21 @@ function computeAssigneeStats(matchFn, today) {
   return { total, done, open: total - done, overdue, blocked };
 }
 
-function buildAssigneeTileHtml({ idVal, labelText, icon, stats, isSelected, onClickExpr, titleText }) {
+function buildAssigneeTileHtml({ idVal, labelText, icon, teamText, leftOrg, stats, isSelected, onClickExpr, titleText }) {
   const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
   return `
     <div class="colleague-card ${isSelected ? 'active' : ''}"
+      style="${leftOrg ? 'opacity:0.75;border-style:dashed;' : ''}"
       onclick="${onClickExpr}"
       title="${esc(titleText)}">
       <div class="colleague-card-top">
         <span>${icon} ${esc(labelText)}</span>
         <span style="font-size:0.76rem;color:var(--primary);">${pct}%</span>
       </div>
+      ${(teamText || leftOrg) ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">
+        ${teamText ? `<span class="badge b-cat" style="font-size:0.68rem;">🏷️ ${esc(teamText)}</span>` : ''}
+        ${leftOrg ? `<span class="badge b-blocked" style="font-size:0.68rem;">Left org</span>` : ''}
+      </div>` : ''}
       <div class="progress-track" style="max-width:100%;height:6px;">
         <div class="progress-fill" style="width:${pct}%"></div>
       </div>
@@ -2404,35 +2486,58 @@ function buildAssigneeTileHtml({ idVal, labelText, icon, stats, isSelected, onCl
 }
 
 function renderAssigneeProgressStrip() {
-  const assignees = getAllAssignees();
+  syncAssigneesFromTasks();
   const today = todayStr();
   const activeFilter = state.ui.taskFilters.assignee || '';
+  const teamFilter = state.ui.taskFilters.team || '';
 
   const meStats = computeAssigneeStats(name => !name, today);
-  const meTile = buildAssigneeTileHtml({
+  const showMe = !teamFilter || teamFilter === '__unassigned__';
+  const meTile = showMe ? buildAssigneeTileHtml({
     idVal: '__me__',
     labelText: 'Me',
     icon: '🙋',
+    teamText: '',
+    leftOrg: false,
     stats: meStats,
     isSelected: activeFilter === '__me__',
     onClickExpr: "state.ui.taskFilters.assignee=(state.ui.taskFilters.assignee==='__me__'?'':'__me__');render()",
     titleText: 'Click to filter tasks/subtasks assigned to Me'
+  }) : '';
+
+  const sortedAssignees = [...state.assignees].sort((a, b) => {
+    if (!!a.leftOrg !== !!b.leftOrg) return a.leftOrg ? 1 : -1;
+    return a.name.localeCompare(b.name);
   });
 
-  const personTiles = assignees.map(name => {
-    const stats = computeAssigneeStats(n => n === name, today);
-    const isSelected = activeFilter === name;
-    const safeName = esc(name).replace(/'/g, "\\'");
-    return buildAssigneeTileHtml({
-      idVal: name,
-      labelText: name,
-      icon: '👤',
-      stats,
-      isSelected,
-      onClickExpr: `state.ui.taskFilters.assignee=(state.ui.taskFilters.assignee==='${safeName}'?'':'${safeName}');render()`,
-      titleText: `Click to filter tasks/subtasks assigned to ${name}`
-    });
-  }).join('');
+  const personTiles = sortedAssignees
+    .filter(a => {
+      if (teamFilter) {
+        const tName = (a.team || '').trim();
+        if (teamFilter === '__unassigned__' && tName) return false;
+        if (teamFilter !== '__unassigned__' && tName !== teamFilter) return false;
+      }
+      // Show active members always; show members who left org only if they still have tasks or are selected
+      const stats = computeAssigneeStats(n => n.toLowerCase() === a.name.toLowerCase(), today);
+      if (a.leftOrg && stats.total === 0 && activeFilter.toLowerCase() !== a.name.toLowerCase()) return false;
+      return true;
+    })
+    .map(a => {
+      const stats = computeAssigneeStats(n => n.toLowerCase() === a.name.toLowerCase(), today);
+      const isSelected = activeFilter.toLowerCase() === a.name.toLowerCase();
+      const safeName = esc(a.name).replace(/'/g, "\\'");
+      return buildAssigneeTileHtml({
+        idVal: a.name,
+        labelText: a.name,
+        icon: a.leftOrg ? '🚪' : '👤',
+        teamText: a.team || '',
+        leftOrg: !!a.leftOrg,
+        stats,
+        isSelected,
+        onClickExpr: `state.ui.taskFilters.assignee=(state.ui.taskFilters.assignee==='${safeName}'?'':'${safeName}');render()`,
+        titleText: `Click to filter tasks/subtasks assigned to ${a.name}${a.team ? ' (' + a.team + ')' : ''}${a.leftOrg ? ' — Left organisation' : ''}`
+      });
+    }).join('');
 
   return `
     <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
@@ -2481,11 +2586,20 @@ function renderTasks(el) {
         <option value="" ${f.status === '' ? 'selected' : ''}>All Statuses</option>
         ${STATUSES.map(s => `<option value="${s}" ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}
       </select>
+      <select onchange="state.ui.taskFilters.team=this.value;render()">
+        <option value="" ${!f.team ? 'selected' : ''}>All Teams</option>
+        <option value="__unassigned__" ${f.team === '__unassigned__' ? 'selected' : ''}>No Team Assigned</option>
+        ${getAllTeams().map(tm => `<option value="${esc(tm)}" ${f.team === tm ? 'selected' : ''}>🏷️ ${esc(tm)}</option>`).join('')}
+      </select>
       <select onchange="state.ui.taskFilters.assignee=this.value;render()">
         <option value="" ${!f.assignee ? 'selected' : ''}>All Assignees</option>
         <option value="__me__" ${f.assignee === '__me__' ? 'selected' : ''}>Assigned to Me</option>
         <option value="__delegated__" ${f.assignee === '__delegated__' ? 'selected' : ''}>All Assignees (Others)</option>
-        ${getAllAssignees().map(c => `<option value="${esc(c)}" ${f.assignee === c ? 'selected' : ''}>👤 ${esc(c)}</option>`).join('')}
+        ${getAllAssignees(true).map(c => {
+          const meta = getAssigneeMeta(c);
+          const suffix = meta?.leftOrg ? ' (Left org)' : (meta?.team ? ` • ${meta.team}` : '');
+          return `<option value="${esc(c)}" ${f.assignee === c ? 'selected' : ''}>👤 ${esc(c + suffix)}</option>`;
+        }).join('')}
       </select>
       <select onchange="state.ui.taskFilters.priority=this.value;render()">
         <option value="">All Priorities</option>
@@ -2515,7 +2629,7 @@ function refreshTaskResults() {
 }
 
 function clearTaskFilters() {
-  state.ui.taskFilters = { search: '', projectId: '', stageId: '', category: '', status: '__open__', priority: '', due: '', assignee: '' };
+  state.ui.taskFilters = { search: '', projectId: '', stageId: '', category: '', status: '__open__', priority: '', due: '', assignee: '', team: '' };
   render();
 }
 
@@ -2753,7 +2867,10 @@ function openTaskModal(taskId = null) {
           <label>Assignee (optional)</label>
           <input type="text" id="tAssignee" list="colleaguesDatalist" value="${esc(t?.assignee || '')}" placeholder="Leave blank for Me, or type name" />
           <datalist id="colleaguesDatalist">
-            ${getAllAssignees().map(c => `<option value="${esc(c)}"></option>`).join('')}
+            ${getAllAssignees(false).map(c => {
+              const meta = getAssigneeMeta(c);
+              return `<option value="${esc(c)}">${meta?.team ? esc(meta.team) : ''}</option>`;
+            }).join('')}
           </datalist>
         </div>
         <div class="form-group">
@@ -2985,6 +3102,7 @@ function saveTaskForm(e, taskId) {
     maybeAutoNotifySlack(created, null, 'created');
     showToast('Task created');
   }
+  if (payload.assignee) ensureAssigneeRecord(payload.assignee);
   saveState();
   closeModal();
   render();
@@ -3042,7 +3160,10 @@ function openSubtaskModal(taskId, subId = null) {
           <label>Assignee (optional)</label>
           <input type="text" id="stAssignee" list="colleaguesDatalistSub" value="${esc(s?.assignee || '')}" placeholder="Leave blank for Me, or type name" />
           <datalist id="colleaguesDatalistSub">
-            ${getAllAssignees().map(c => `<option value="${esc(c)}"></option>`).join('')}
+            ${getAllAssignees(false).map(c => {
+              const meta = getAssigneeMeta(c);
+              return `<option value="${esc(c)}">${meta?.team ? esc(meta.team) : ''}</option>`;
+            }).join('')}
           </datalist>
         </div>
       </div>
@@ -3173,6 +3294,7 @@ function saveSubtaskForm(e, taskId, subId) {
     maybeAutoNotifySlack(t, createdSub, 'created');
     showToast('Subtask added');
   }
+  if (payload.assignee) ensureAssigneeRecord(payload.assignee);
   saveState();
   closeModal();
   render();
@@ -3295,6 +3417,217 @@ function executeMoveSubtask(e, taskId, subId) {
   render();
   const proj = getProject(targetProjectId);
   showToast(`Moved to ${proj ? proj.name : 'project'}`);
+}
+
+// ===================== 3B. ASSIGNEES MANAGEMENT VIEW =====================
+function renderAssignees(el) {
+  syncAssigneesFromTasks();
+  const today = todayStr();
+  const list = [...state.assignees].sort((a, b) => {
+    if (!!a.leftOrg !== !!b.leftOrg) return a.leftOrg ? 1 : -1;
+    return a.name.localeCompare(b.name);
+  });
+  const activeCount = list.filter(a => !a.leftOrg).length;
+  const leftCount = list.filter(a => a.leftOrg).length;
+  const teams = getAllTeams();
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <p class="helper-banner" style="margin:0;">Manage team members, email IDs, and teams. Renaming an assignee automatically updates all their tasks and subtasks.</p>
+      <button class="btn btn-primary" onclick="openAssigneeModal()">+ New Assignee</button>
+    </div>
+
+    <div class="grid-3" style="margin-bottom:18px;">
+      <div class="kpi-card">
+        <div class="kpi-label">Active Members</div>
+        <div class="kpi-value">${activeCount}</div>
+        <div class="kpi-sub">Available in task dropdowns</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Teams</div>
+        <div class="kpi-value" style="color:var(--primary)">${teams.length}</div>
+        <div class="kpi-sub">${teams.length ? esc(teams.join(', ')) : 'No teams assigned yet'}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Left Organisation</div>
+        <div class="kpi-value" style="color:${leftCount ? 'var(--danger)' : 'var(--text)'}">${leftCount}</div>
+        <div class="kpi-sub">Hidden from new task dropdowns</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">👥 Directory (${list.length})</div>
+      </div>
+      ${list.length === 0 ? `<div class="empty-state">No assignees yet. Click <strong>+ New Assignee</strong> above or type a name when creating any task or subtask.</div>` : `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Team</th>
+                <th>Email ID</th>
+                <th>Status</th>
+                <th>Tasks / Subtasks</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${list.map(a => {
+                const st = computeAssigneeStats(n => n.toLowerCase() === a.name.toLowerCase(), today);
+                return `
+                  <tr style="${a.leftOrg ? 'opacity:0.72;' : ''}">
+                    <td><strong>${a.leftOrg ? '🚪' : '👤'} ${esc(a.name)}</strong></td>
+                    <td>${a.team ? `<span class="badge b-cat">🏷️ ${esc(a.team)}</span>` : '<span style="color:var(--text-muted);font-size:0.8rem;">—</span>'}</td>
+                    <td>${a.email ? `<a href="mailto:${esc(a.email)}" style="color:var(--primary);text-decoration:none;">${esc(a.email)}</a>` : '<span style="color:var(--text-muted);font-size:0.8rem;">—</span>'}</td>
+                    <td>
+                      ${a.leftOrg
+                        ? `<span class="badge b-blocked">Left Organisation</span>`
+                        : `<span class="badge b-done">Active</span>`}
+                    </td>
+                    <td style="font-size:0.82rem;">
+                      <strong>${st.open}</strong> open • <strong>${st.done}</strong>/${st.total} done
+                      ${st.overdue ? ` • <span style="color:var(--danger);font-weight:700;">${st.overdue} overdue</span>` : ''}
+                    </td>
+                    <td style="white-space:nowrap;">
+                      <button class="btn btn-xs" onclick="openAssigneeModal('${a.id}')">Edit</button>
+                      <button class="btn btn-xs" onclick="toggleAssigneeLeftOrg('${a.id}')" title="${a.leftOrg ? 'Restore as active member' : 'Mark member as having left the organisation'}">
+                        ${a.leftOrg ? '↩️ Re-activate' : '🚪 Mark Left'}
+                      </button>
+                      <button class="btn btn-xs btn-ghost" style="color:var(--danger)" onclick="deleteAssigneeRecord('${a.id}')" title="Remove from directory">Delete</button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function openAssigneeModal(assigneeId = null) {
+  const a = assigneeId ? state.assignees.find(x => x.id === assigneeId) : null;
+  const teams = getAllTeams();
+  openModal(`
+    <div class="modal-header">
+      <h3>${a ? 'Edit Assignee' : 'New Assignee'}</h3>
+      <button class="btn btn-xs btn-ghost" onclick="closeModal()">✕</button>
+    </div>
+    <form onsubmit="saveAssigneeForm(event, '${a ? a.id : ''}')">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" id="asgName" required value="${esc(a?.name || '')}" placeholder="e.g. Priya Sharma" />
+          ${a ? `<div class="field-hint">Changing the name will automatically update all tasks & subtasks assigned to <strong>${esc(a.name)}</strong>.</div>` : ''}
+        </div>
+        <div class="form-group">
+          <label>Team Name (optional)</label>
+          <input type="text" id="asgTeam" list="teamsDatalist" value="${esc(a?.team || '')}" placeholder="e.g. Platform, QA, Admissions" />
+          <datalist id="teamsDatalist">
+            ${teams.map(tm => `<option value="${esc(tm)}"></option>`).join('')}
+          </datalist>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Email ID (optional)</label>
+        <input type="text" id="asgEmail" value="${esc(a?.email || '')}" placeholder="e.g. priya.sharma@company.com" />
+      </div>
+
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:500;cursor:pointer;">
+          <input type="checkbox" id="asgLeftOrg" ${a?.leftOrg ? 'checked' : ''} />
+          Member has <strong>left the organisation</strong> (hides from new task assignee dropdown, preserves historical tasks & reports)
+        </label>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Assignee</button>
+      </div>
+    </form>
+  `);
+}
+
+function saveAssigneeForm(e, assigneeId) {
+  e.preventDefault();
+  const newName = (document.getElementById('asgName')?.value || '').trim();
+  const team = (document.getElementById('asgTeam')?.value || '').trim();
+  const email = (document.getElementById('asgEmail')?.value || '').trim();
+  const leftOrg = Boolean(document.getElementById('asgLeftOrg')?.checked);
+
+  if (!newName) return;
+
+  const duplicate = state.assignees.find(x => x.id !== assigneeId && (x.name || '').trim().toLowerCase() === newName.toLowerCase());
+  if (duplicate) {
+    alert(`An assignee named "${duplicate.name}" already exists.`);
+    return;
+  }
+
+  if (assigneeId) {
+    const existing = state.assignees.find(x => x.id === assigneeId);
+    if (!existing) return;
+    const oldName = (existing.name || '').trim();
+    if (oldName && oldName !== newName) {
+      // Cascade rename across all tasks, subtasks, and active filters
+      state.tasks.forEach(t => {
+        if ((t.assignee || '').trim().toLowerCase() === oldName.toLowerCase()) t.assignee = newName;
+        (t.subtasks || []).forEach(s => {
+          if ((s.assignee || '').trim().toLowerCase() === oldName.toLowerCase()) s.assignee = newName;
+        });
+      });
+      if ((state.ui.taskFilters.assignee || '').toLowerCase() === oldName.toLowerCase()) {
+        state.ui.taskFilters.assignee = newName;
+      }
+    }
+    existing.name = newName;
+    existing.team = team;
+    existing.email = email;
+    existing.leftOrg = leftOrg;
+    showToast('Assignee updated');
+  } else {
+    state.assignees.push({ id: uid('asg'), name: newName, team, email, leftOrg });
+    showToast('Assignee added');
+  }
+  saveState();
+  closeModal();
+  render();
+}
+
+function toggleAssigneeLeftOrg(assigneeId) {
+  const a = state.assignees.find(x => x.id === assigneeId);
+  if (!a) return;
+  a.leftOrg = !a.leftOrg;
+  saveState();
+  render();
+  showToast(a.leftOrg ? `${a.name} marked as left organisation` : `${a.name} restored as active`);
+}
+
+function deleteAssigneeRecord(assigneeId) {
+  const a = state.assignees.find(x => x.id === assigneeId);
+  if (!a) return;
+  const st = computeAssigneeStats(n => n.toLowerCase() === a.name.toLowerCase(), todayStr());
+  const msg = st.total > 0
+    ? `Remove "${a.name}" from the directory and unassign their ${st.total} task(s)/subtask(s) back to Me?`
+    : `Remove "${a.name}" from the directory?`;
+  if (!confirm(msg)) return;
+  if (st.total > 0) {
+    state.tasks.forEach(t => {
+      if ((t.assignee || '').trim().toLowerCase() === a.name.toLowerCase()) t.assignee = '';
+      (t.subtasks || []).forEach(s => {
+        if ((s.assignee || '').trim().toLowerCase() === a.name.toLowerCase()) s.assignee = '';
+      });
+    });
+  }
+  state.assignees = state.assignees.filter(x => x.id !== assigneeId);
+  if ((state.ui.taskFilters.assignee || '').toLowerCase() === a.name.toLowerCase()) {
+    state.ui.taskFilters.assignee = '';
+  }
+  saveState();
+  render();
+  showToast('Assignee removed');
 }
 
 // ===================== 4. NOTES VIEW =====================
@@ -4013,11 +4346,12 @@ function renderReports(el) {
       </div>
       ${(function() {
         const tToday = todayStr();
-        const people = ['Me', ...getAllAssignees()];
+        const people = ['Me', ...getAllAssignees(true)];
         const rows = people.map(person => {
-          const st = computeAssigneeStats(name => person === 'Me' ? !name : name === person, tToday);
+          const meta = person === 'Me' ? null : getAssigneeMeta(person);
+          const st = computeAssigneeStats(name => person === 'Me' ? !name : name.toLowerCase() === person.toLowerCase(), tToday);
           const pct = st.total ? Math.round((st.done / st.total) * 100) : 0;
-          return { person, ...st, pct };
+          return { person, team: meta?.team || '', leftOrg: !!meta?.leftOrg, ...st, pct };
         });
         return `
           <div class="table-wrap">
@@ -4025,6 +4359,7 @@ function renderReports(el) {
               <thead>
                 <tr>
                   <th>Assignee</th>
+                  <th>Team</th>
                   <th>Open</th>
                   <th>Done</th>
                   <th>Total</th>
@@ -4035,7 +4370,8 @@ function renderReports(el) {
               <tbody>
                 ${rows.map(r => `
                   <tr>
-                    <td><strong>${esc(r.person)}</strong></td>
+                    <td><strong>${esc(r.person)}</strong> ${r.leftOrg ? '<span class="badge b-blocked">Left org</span>' : ''}</td>
+                    <td>${r.team ? esc(r.team) : '—'}</td>
                     <td>${r.open}</td>
                     <td>${r.done}</td>
                     <td>${r.total}</td>
@@ -5771,7 +6107,7 @@ function openShortcutsModal() {
       <div class="shortcut-row"><span>Create a new task</span><kbd>N</kbd></div>
       <div class="shortcut-row"><span>Create a new project</span><kbd>P</kbd></div>
       <div class="shortcut-row"><span>Focus search box</span><kbd>/</kbd></div>
-      <div class="shortcut-row"><span>Switch views (Today → Settings)</span><span><kbd>1</kbd> – <kbd>8</kbd></span></div>
+      <div class="shortcut-row"><span>Switch views (Today → Settings)</span><span><kbd>1</kbd> – <kbd>9</kbd></span></div>
       <div class="shortcut-row"><span>Toggle Light / Dark mode</span><kbd>D</kbd></div>
       <div class="shortcut-row"><span>Open this shortcuts help</span><kbd>?</kbd></div>
       <div class="shortcut-row"><span>Close any popup window</span><kbd>Esc</kbd></div>
@@ -5806,8 +6142,8 @@ document.addEventListener('keydown', (e) => {
       if (inp) inp.focus();
     }, 50);
   }
-  else if (['1','2','3','4','5','6','7','8'].includes(k)) {
-    const views = ['today', 'projects', 'tasks', 'calendar', 'notes', 'time', 'reports', 'settings'];
+  else if (['1','2','3','4','5','6','7','8','9'].includes(k)) {
+    const views = ['today', 'projects', 'tasks', 'assignees', 'calendar', 'notes', 'time', 'reports', 'settings'];
     switchView(views[Number(k) - 1]);
   }
 });
