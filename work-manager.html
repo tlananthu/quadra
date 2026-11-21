@@ -1151,6 +1151,256 @@
 
   
   
+  
+  /* Tasks View UX Overhaul: Implementation Command Center */
+  .tasks-cmd-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  .tasks-cmd-left, .tasks-cmd-right {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tasks-cmd-search {
+    min-width: 210px;
+    max-width: 280px;
+    padding: 6px 10px !important;
+    font-size: 0.84rem !important;
+  }
+  .tasks-cmd-select {
+    width: auto !important;
+    min-width: 140px;
+    max-width: 210px;
+    padding: 6px 9px !important;
+    font-size: 0.82rem !important;
+  }
+  .active-filter-pills {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .af-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    border: 1px solid rgba(79, 70, 229, 0.25);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .af-pill button {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+  }
+  .tasks-drawer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+  }
+  .tasks-drawer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 8px;
+  }
+  .tasks-drawer-grid label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .tasks-drawer-grid select {
+    padding: 6px 8px;
+    font-size: 0.82rem;
+  }
+
+  /* Compact Implementation Pulse Strip (4 high-signal KPIs) */
+  .impl-pulse-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .pulse-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 9px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .pulse-tile:hover {
+    border-color: var(--primary);
+  }
+  .pulse-tile.active {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+  }
+  .pulse-tile-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .pulse-tile-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+  .pulse-tile-num {
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  /* Compact Horizontal Assignee Ribbon (replaces tall grid) */
+  .assignee-ribbon-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 7px 10px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+  }
+  .assignee-ribbon-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+  }
+  .assignee-ribbon {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .assignee-pill-tile {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 0.79rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .assignee-pill-tile:hover {
+    border-color: var(--primary);
+  }
+  .assignee-pill-tile.active {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    box-shadow: 0 0 0 1px var(--primary);
+  }
+  .assignee-pill-tile input[type="checkbox"] {
+    width: 13px;
+    height: 13px;
+    margin: 0;
+    accent-color: var(--primary);
+    cursor: pointer;
+  }
+  .assignee-pill-metrics {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+  .ap-badge-warn {
+    background: var(--danger-soft);
+    color: var(--danger);
+    padding: 1px 5px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+  .ap-badge-blk {
+    background: var(--warning-soft);
+    color: var(--warning);
+    padding: 1px 5px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+
+  /* Slim Saved Views Popover */
+  .views-popover-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .views-popover {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    width: 340px;
+    max-width: 92vw;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    padding: 12px;
+    z-index: 60;
+  }
+  .views-popover-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    margin-bottom: 4px;
+  }
+  .views-popover-item:hover {
+    background: var(--surface-2);
+    border-color: var(--border);
+  }
+  .views-popover-item.active {
+    background: var(--primary-soft);
+    border-color: rgba(79, 70, 229, 0.3);
+  }
+
+  @media (max-width: 900px) {
+    .impl-pulse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
   /* Saved Task Filter Presets */
   .saved-filters-bar {
     display: flex;
@@ -1266,7 +1516,7 @@
     <div class="brand">
       <div class="brand-icon">C</div>
       <span>Cadence</span>
-      <span class="badge b-cat" id="cadenceVersionBadge" style="font-size:0.68rem;padding:2px 7px;" title="App Version">v1.1</span>
+      <span class="badge b-cat" id="cadenceVersionBadge" style="font-size:0.68rem;padding:2px 7px;" title="App Version">v1.2</span>
     </div>
     <button class="btn btn-xs btn-ghost" id="themeBtn" onclick="toggleTheme()" title="Switch between Light and Dark mode">🌙</button>
   </div>
@@ -1303,7 +1553,7 @@
 
   <div class="sidebar-footer">
     <div class="storage-notice">
-      <strong id="cadenceFooterVersion">Cadence v1.1 • Local Storage:</strong> Your data lives <strong>only in this browser</strong>. Export a backup file regularly to save or move it.
+      <strong id="cadenceFooterVersion">Cadence v1.2 • Local Storage:</strong> Your data lives <strong>only in this browser</strong>. Export a backup file regularly to save or move it.
     </div>
     <div class="sidebar-actions">
       <button class="btn btn-sm" onclick="exportBackup()" title="Download a JSON backup of all your projects, tasks, notes, and time">⬇️ Export</button>
@@ -1434,7 +1684,10 @@ let state = {
     reportRange: 'week', // week | month | custom | all
     reportStart: '',
     reportEnd: '',
-    activeTaskPresetId: ''
+    activeTaskPresetId: '',
+    showMoreFilters: false,
+    showViewsMenu: false,
+    showAssigneeStrip: true
   }
 };
 
@@ -2686,33 +2939,53 @@ function deleteSavedTaskPreset(presetId) {
   showToast('Saved filter removed');
 }
 
-function renderSavedTaskFiltersBar() {
+function countActiveExtraFilters() {
+  const f = state.ui.taskFilters || {};
+  let cnt = 0;
+  if (f.stageId) cnt++;
+  if (f.category) cnt++;
+  if (f.status && f.status !== '__open__') cnt++;
+  if (f.team) cnt++;
+  if (f.planned) cnt++;
+  if (f.priority) cnt++;
+  if (f.due) cnt++;
+  return cnt;
+}
+
+function renderSavedViewsPopover() {
+  if (!state.ui.showViewsMenu) return '';
   const presets = state.savedTaskFilters || [];
   const activeId = state.ui.activeTaskPresetId || '';
   const hasDefault = Boolean(state.defaultTaskFilter && state.defaultTaskFilter.filters);
 
-  const chipsHtml = presets.map(p => {
-    const isAct = activeId === p.id;
-    return `
-      <span class="preset-chip ${isAct ? 'active' : ''}" onclick="applySavedTaskPreset('${p.id}')" title="${esc(p.description)}">
-        <span>🔖 ${esc(p.name)}</span>
-        <span style="font-size:0.72rem;opacity:0.85;font-weight:500;">— ${esc(p.description)}</span>
-        <button type="button" class="btn btn-xs btn-ghost" style="padding:0 3px;color:inherit;" onclick="event.stopPropagation();openSaveFilterPresetModal('${p.id}')" title="Edit label or description">✎</button>
-        <button type="button" class="btn btn-xs btn-ghost" style="padding:0 3px;color:inherit;" onclick="event.stopPropagation();deleteSavedTaskPreset('${p.id}')" title="Delete saved filter">✕</button>
-      </span>
-    `;
-  }).join('');
-
   return `
-    <div class="saved-filters-bar">
-      <div class="saved-filters-chips">
-        <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em;">Saved Filters:</span>
-        ${chipsHtml || '<span style="font-size:0.78rem;color:var(--text-muted);">No described filters saved yet.</span>'}
+    <div class="views-popover" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="font-size:0.84rem;">🔖 Saved Views & Default</strong>
+        <button type="button" class="btn btn-xs btn-ghost" onclick="state.ui.showViewsMenu=false;render()">✕</button>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-        <button type="button" class="btn btn-xs" onclick="saveCurrentFiltersAsDefault()" title="Save current filter selections as the default when opening Tasks">⭐ Save as Default</button>
-        ${hasDefault ? `<button type="button" class="btn btn-xs btn-ghost" style="color:var(--danger)" onclick="clearSavedDefaultTaskFilter()" title="Remove saved default filter override">Clear Default</button>` : ''}
-        <button type="button" class="btn btn-xs btn-primary" onclick="openSaveFilterPresetModal()" title="Save current filters with a name and description">+ Save with Description</button>
+      <div style="max-height:220px;overflow-y:auto;margin-bottom:8px;">
+        ${presets.length === 0
+          ? `<div style="font-size:0.78rem;color:var(--text-muted);padding:8px 4px;">No named views saved yet. Save your current filters below for 1-click monitoring.</div>`
+          : presets.map(p => `
+            <div class="views-popover-item ${activeId === p.id ? 'active' : ''}" onclick="state.ui.showViewsMenu=false;applySavedTaskPreset('${p.id}')">
+              <div style="min-width:0;flex:1;">
+                <div style="font-weight:700;font-size:0.82rem;">${esc(p.name)}</div>
+                <div style="font-size:0.73rem;color:var(--text-muted);">${esc(p.description)}</div>
+              </div>
+              <div style="display:flex;gap:2px;flex-shrink:0;">
+                <button type="button" class="btn btn-xs btn-ghost" onclick="event.stopPropagation();state.ui.showViewsMenu=false;openSaveFilterPresetModal('${p.id}')" title="Edit">✎</button>
+                <button type="button" class="btn btn-xs btn-ghost" style="color:var(--danger)" onclick="event.stopPropagation();deleteSavedTaskPreset('${p.id}')" title="Delete">✕</button>
+              </div>
+            </div>
+          `).join('')}
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:6px;">
+        <button type="button" class="btn btn-xs btn-primary" style="width:100%;" onclick="state.ui.showViewsMenu=false;openSaveFilterPresetModal()">+ Save Current View with Description</button>
+        <div style="display:flex;gap:6px;">
+          <button type="button" class="btn btn-xs" style="flex:1;" onclick="state.ui.showViewsMenu=false;saveCurrentFiltersAsDefault()">⭐ Set Current as Default</button>
+          ${hasDefault ? `<button type="button" class="btn btn-xs btn-ghost" style="color:var(--danger)" onclick="state.ui.showViewsMenu=false;clearSavedDefaultTaskFilter()">Clear Default</button>` : ''}
+        </div>
       </div>
     </div>
   `;
@@ -2818,9 +3091,10 @@ function getFilteredTasks() {
   });
 }
 
-function computeAssigneeStats(matchFn, today) {
+function computeAssigneeStats(matchFn, today, projectIdFilter = '') {
   let total = 0, done = 0, overdue = 0, blocked = 0;
   state.tasks.forEach(t => {
+    if (projectIdFilter && t.projectId !== projectIdFilter) return;
     if (matchFn((t.assignee || '').trim())) {
       total++;
       if (t.status === 'Done') done++;
@@ -2843,49 +3117,37 @@ function computeAssigneeStats(matchFn, today) {
   return { total, done, open: total - done, overdue, blocked };
 }
 
-function buildAssigneeTileHtml({ idVal, labelText, icon, teamText, leftOrg, stats, isSelected, onClickExpr, titleText }) {
-  const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
+function buildAssigneePillHtml({ labelText, icon, teamText, leftOrg, stats, isSelected, onClickExpr, titleText }) {
   const safeTeam = esc(teamText || '').replace(/'/g, "\\'");
   return `
-    <div class="colleague-card ${isSelected ? 'active' : ''}"
-      style="${leftOrg ? 'opacity:0.75;border-style:dashed;' : ''}"
+    <div class="assignee-pill-tile ${isSelected ? 'active' : ''}"
+      style="${leftOrg ? 'opacity:0.7;border-style:dashed;' : ''}"
       onclick="${onClickExpr}"
       title="${esc(titleText)}">
-      <div class="colleague-card-top">
-        <span class="colleague-card-check">
-          <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation();${onClickExpr}" title="Select/deselect ${esc(labelText)}" />
-          <span>${icon} ${esc(labelText)}</span>
-        </span>
-        <span style="font-size:0.76rem;color:var(--primary);">${pct}%</span>
-      </div>
-      ${(teamText || leftOrg) ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">
-        ${teamText ? `<span class="badge b-cat clickable-team-badge" style="font-size:0.68rem;" onclick="event.stopPropagation();filterByTeamName('${safeTeam}')" title="Click to filter tasks & subtasks for team ${esc(teamText)}">🏷️ ${esc(teamText)}</span>` : ''}
-        ${leftOrg ? `<span class="badge b-blocked" style="font-size:0.68rem;">Left org</span>` : ''}
-      </div>` : ''}
-      <div class="progress-track" style="max-width:100%;height:6px;">
-        <div class="progress-fill" style="width:${pct}%"></div>
-      </div>
-      <div class="colleague-stats">
-        <span><strong>${stats.open}</strong> open</span>
-        <span><strong>${stats.done}</strong>/${stats.total} done</span>
-        ${stats.overdue ? `<span style="color:var(--danger);font-weight:700;">🔥 ${stats.overdue} overdue</span>` : ''}
-        ${stats.blocked ? `<span style="color:var(--warning);font-weight:700;">⛔ ${stats.blocked} blocked</span>` : ''}
-      </div>
+      <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation();${onClickExpr}" />
+      <span style="font-weight:700;">${icon} ${esc(labelText)}</span>
+      ${teamText ? `<span class="badge b-cat clickable-team-badge" style="font-size:0.66rem;padding:1px 6px;" onclick="event.stopPropagation();filterByTeamName('${safeTeam}')" title="Click to filter team ${esc(teamText)}">${esc(teamText)}</span>` : ''}
+      <span class="assignee-pill-metrics">
+        <span><strong>${stats.open}</strong>/${stats.total}</span>
+        ${stats.overdue ? `<span class="ap-badge-warn" title="${stats.overdue} overdue">🔥${stats.overdue}</span>` : ''}
+        ${stats.blocked ? `<span class="ap-badge-blk" title="${stats.blocked} blocked">⛔${stats.blocked}</span>` : ''}
+      </span>
     </div>
   `;
 }
 
 function renderAssigneeProgressStrip() {
+  if (!state.ui.showAssigneeStrip) return '';
   syncAssigneesFromTasks();
   const today = todayStr();
   const selectedList = getSelectedAssignees();
   const teamFilter = state.ui.taskFilters.team || '';
+  const projFilter = state.ui.taskFilters.projectId || '';
   const isSelectedFn = (val) => selectedList.some(x => x.toLowerCase() === val.toLowerCase());
 
-  const meStats = computeAssigneeStats(name => !name, today);
+  const meStats = computeAssigneeStats(name => !name, today, projFilter);
   const showMe = !teamFilter || teamFilter === '__unassigned__';
-  const meTile = showMe ? buildAssigneeTileHtml({
-    idVal: '__me__',
+  const meTile = showMe ? buildAssigneePillHtml({
     labelText: 'Me',
     icon: '🙋',
     teamText: '',
@@ -2893,7 +3155,7 @@ function renderAssigneeProgressStrip() {
     stats: meStats,
     isSelected: isSelectedFn('__me__'),
     onClickExpr: "toggleAssigneeSelection('__me__')",
-    titleText: 'Toggle filter for tasks/subtasks assigned to Me'
+    titleText: `Me: ${meStats.open} open, ${meStats.done}/${meStats.total} done`
   }) : '';
 
   const sortedAssignees = [...state.assignees].sort((a, b) => {
@@ -2908,16 +3170,15 @@ function renderAssigneeProgressStrip() {
         if (teamFilter === '__unassigned__' && tName) return false;
         if (teamFilter !== '__unassigned__' && tName !== teamFilter) return false;
       }
-      const stats = computeAssigneeStats(n => n.toLowerCase() === a.name.toLowerCase(), today);
+      const stats = computeAssigneeStats(n => n.toLowerCase() === a.name.toLowerCase(), today, projFilter);
       if (a.leftOrg && stats.total === 0 && !isSelectedFn(a.name)) return false;
       return true;
     })
     .map(a => {
-      const stats = computeAssigneeStats(n => n.toLowerCase() === a.name.toLowerCase(), today);
+      const stats = computeAssigneeStats(n => n.toLowerCase() === a.name.toLowerCase(), today, projFilter);
       const isSelected = isSelectedFn(a.name);
       const safeName = esc(a.name).replace(/'/g, "\\'");
-      return buildAssigneeTileHtml({
-        idVal: a.name,
+      return buildAssigneePillHtml({
         labelText: a.name,
         icon: a.leftOrg ? '🚪' : '👤',
         teamText: a.team || '',
@@ -2925,18 +3186,126 @@ function renderAssigneeProgressStrip() {
         stats,
         isSelected,
         onClickExpr: `toggleAssigneeSelection('${safeName}')`,
-        titleText: `Toggle filter for tasks/subtasks assigned to ${a.name}${a.team ? ' (' + a.team + ')' : ''}${a.leftOrg ? ' — Left organisation' : ''}`
+        titleText: `${a.name}${a.team ? ' (' + a.team + ')' : ''}: ${stats.open} open, ${stats.done}/${stats.total} done${stats.overdue ? ', ' + stats.overdue + ' overdue' : ''}${stats.blocked ? ', ' + stats.blocked + ' blocked' : ''}`
       });
     }).join('');
 
   return `
-    <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-      <span style="font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em;">
-        👥 Assignees (check one or more to filter • click team tag for team tasks)
-      </span>
-      ${(selectedList.length > 0 || teamFilter) ? `<button class="btn btn-xs btn-ghost" onclick="state.ui.taskFilters.assignees=[];state.ui.taskFilters.team='';render()">Clear assignee/team filter</button>` : ''}
+    <div class="assignee-ribbon-wrap">
+      <div class="assignee-ribbon-header">
+        <span><strong>👥 Team Workload</strong> <span style="opacity:0.8;">(check members to multi-filter • click team pill for team tasks)</span></span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          ${(selectedList.length > 0 || teamFilter) ? `<button type="button" class="btn btn-xs btn-ghost" onclick="state.ui.taskFilters.assignees=[];state.ui.taskFilters.team='';render()">Clear selection</button>` : ''}
+          <button type="button" class="btn btn-xs btn-ghost" onclick="state.ui.showAssigneeStrip=false;render()" title="Hide team bar to maximize task list space">Hide</button>
+        </div>
+      </div>
+      <div class="assignee-ribbon">${meTile}${personTiles}</div>
     </div>
-    <div class="colleague-strip">${meTile}${personTiles}</div>
+  `;
+}
+
+function renderActiveFilterPills() {
+  const f = state.ui.taskFilters;
+  const pills = [];
+  if (f.projectId) {
+    const p = getProject(f.projectId);
+    pills.push({ label: `📁 ${p ? p.name : 'Project'}`, clear: "state.ui.taskFilters.projectId='';state.ui.taskFilters.stageId='';render()" });
+  }
+  if (f.stageId && f.projectId) {
+    const st = getStage(getProject(f.projectId), f.stageId);
+    if (st) pills.push({ label: `Stage: ${st.name}`, clear: "state.ui.taskFilters.stageId='';render()" });
+  }
+  if (f.team) {
+    pills.push({ label: `🏷️ Team: ${f.team === '__unassigned__' ? 'No Team' : f.team}`, clear: "state.ui.taskFilters.team='';render()" });
+  }
+  const selAss = getSelectedAssignees();
+  if (selAss.length > 0) {
+    const names = selAss.map(x => x === '__me__' ? 'Me' : (x === '__delegated__' ? 'Others' : x)).join(', ');
+    pills.push({ label: `👤 ${names}`, clear: "state.ui.taskFilters.assignees=[];render()" });
+  }
+  if (f.status && f.status !== '__open__') {
+    pills.push({ label: `Status: ${f.status}`, clear: "state.ui.taskFilters.status='__open__';render()" });
+  } else if (f.status === '') {
+    pills.push({ label: `Status: All (incl. Done)`, clear: "state.ui.taskFilters.status='__open__';render()" });
+  }
+  if (f.due) {
+    pills.push({ label: `Due: ${f.due}`, clear: "state.ui.taskFilters.due='';render()" });
+  }
+  if (f.priority) {
+    pills.push({ label: `Priority: ${f.priority}`, clear: "state.ui.taskFilters.priority='';render()" });
+  }
+  if (f.category) {
+    pills.push({ label: `Cat: ${f.category}`, clear: "state.ui.taskFilters.category='';render()" });
+  }
+  if (f.planned) {
+    pills.push({ label: f.planned === 'planned' ? '🗓️ Planned' : '📋 Non-planned', clear: "state.ui.taskFilters.planned='';render()" });
+  }
+  if (f.search) {
+    pills.push({ label: `🔍 "${f.search}"`, clear: "state.ui.taskFilters.search='';render()" });
+  }
+  if (pills.length === 0) return '';
+  return `
+    <div class="active-filter-pills">
+      ${pills.map(p => `<span class="af-pill">${esc(p.label)} <button type="button" onclick="${p.clear}" title="Remove filter">×</button></span>`).join('')}
+      <button type="button" class="btn btn-xs btn-ghost" onclick="clearTaskFilters()">Reset all</button>
+    </div>
+  `;
+}
+
+function renderImplementationPulseBar() {
+  const f = state.ui.taskFilters;
+  const today = todayStr();
+  const baseTasks = state.tasks.filter(t => (!f.projectId || t.projectId === f.projectId) && (!f.team || (function() {
+    const m = (raw) => {
+      const c = (raw || '').trim();
+      if (!c) return f.team === '__unassigned__';
+      const tm = (getAssigneeMeta(c)?.team || '').trim();
+      return f.team === '__unassigned__' ? !tm : tm === f.team;
+    };
+    return m(t.assignee) || (t.subtasks || []).some(s => m(s.assignee));
+  })()));
+
+  const openCount = baseTasks.filter(t => t.status !== 'Done').length;
+  const overdueCount = baseTasks.filter(t => t.status !== 'Done' && t.dueDate && t.dueDate < today).length;
+  const blockedCount = baseTasks.filter(t => t.status === 'Blocked' || isTaskBlockedByUnfinished(t)).length;
+  const dueTodayCount = baseTasks.filter(t => t.status !== 'Done' && t.dueDate === today).length;
+
+  const isOpenActive = f.status === '__open__' && !f.due;
+  const isOverdueActive = f.due === 'overdue';
+  const isBlockedActive = f.status === 'Blocked';
+  const isTodayActive = f.due === 'today';
+
+  return `
+    <div class="impl-pulse-grid">
+      <div class="pulse-tile ${isOpenActive ? 'active' : ''}" onclick="state.ui.taskFilters.status='__open__';state.ui.taskFilters.due='';render()" title="Show all open tasks">
+        <div>
+          <div class="pulse-tile-label">Open Scope</div>
+          <div class="pulse-tile-sub">Active implementation items</div>
+        </div>
+        <div class="pulse-tile-num">${openCount}</div>
+      </div>
+      <div class="pulse-tile ${isOverdueActive ? 'active' : ''}" onclick="state.ui.taskFilters.due=(state.ui.taskFilters.due==='overdue'?'':'overdue');state.ui.taskFilters.status='__open__';render()" title="Filter overdue tasks">
+        <div>
+          <div class="pulse-tile-label" style="color:${overdueCount ? 'var(--danger)' : 'var(--text-muted)'}">Overdue</div>
+          <div class="pulse-tile-sub">Past due date</div>
+        </div>
+        <div class="pulse-tile-num" style="color:${overdueCount ? 'var(--danger)' : 'var(--text)'}">${overdueCount}</div>
+      </div>
+      <div class="pulse-tile ${isBlockedActive ? 'active' : ''}" onclick="state.ui.taskFilters.status=(state.ui.taskFilters.status==='Blocked'?'__open__':'Blocked');render()" title="Filter blocked tasks">
+        <div>
+          <div class="pulse-tile-label" style="color:${blockedCount ? 'var(--warning)' : 'var(--text-muted)'}">Blocked / At Risk</div>
+          <div class="pulse-tile-sub">Needs escalation</div>
+        </div>
+        <div class="pulse-tile-num" style="color:${blockedCount ? 'var(--warning)' : 'var(--text)'}">${blockedCount}</div>
+      </div>
+      <div class="pulse-tile ${isTodayActive ? 'active' : ''}" onclick="state.ui.taskFilters.due=(state.ui.taskFilters.due==='today'?'':'today');state.ui.taskFilters.status='__open__';render()" title="Filter tasks due today">
+        <div>
+          <div class="pulse-tile-label" style="color:var(--info)">Due Today</div>
+          <div class="pulse-tile-sub">${today}</div>
+        </div>
+        <div class="pulse-tile-num" style="color:var(--info)">${dueTodayCount}</div>
+      </div>
+    </div>
   `;
 }
 
@@ -2944,76 +3313,115 @@ function renderTasks(el) {
   const f = state.ui.taskFilters;
   const selectedProj = f.projectId ? getProject(f.projectId) : null;
   const tasks = getFilteredTasks();
+  const extraFilterCount = countActiveExtraFilters();
+  const presetCount = (state.savedTaskFilters || []).length;
+  const activePreset = presetCount ? (state.savedTaskFilters || []).find(p => p.id === state.ui.activeTaskPresetId) : null;
 
   el.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-      <p class="helper-banner" style="margin:0;">Manage tasks and subtasks, filter by any field, or drag cards across the Kanban board.</p>
-      <div style="display:flex;gap:8px;align-items:center;">
+    <div class="tasks-cmd-bar">
+      <div class="tasks-cmd-left">
+        <input type="text" id="taskSearchInput" class="tasks-cmd-search" placeholder="🔍 Search task, ref, or person..." value="${esc(f.search)}" oninput="state.ui.taskFilters.search=this.value;refreshTaskResults()" />
+        <select class="tasks-cmd-select" onchange="state.ui.taskFilters.projectId=this.value;state.ui.taskFilters.stageId='';render()" title="Filter by Project">
+          <option value="">All Projects</option>
+          ${state.projects.map(p => `<option value="${p.id}" ${f.projectId === p.id ? 'selected' : ''}>${p.isDefault ? '⭐ ' : ''}${esc(p.name)}</option>`).join('')}
+        </select>
+        <select class="tasks-cmd-select" onchange="state.ui.taskFilters.team=this.value;render()" title="Filter by Team">
+          <option value="" ${!f.team ? 'selected' : ''}>All Teams</option>
+          <option value="__unassigned__" ${f.team === '__unassigned__' ? 'selected' : ''}>No Team</option>
+          ${getAllTeams().map(tm => `<option value="${esc(tm)}" ${f.team === tm ? 'selected' : ''}>🏷️ ${esc(tm)}</option>`).join('')}
+        </select>
+        <button type="button" class="btn btn-sm ${state.ui.showMoreFilters || extraFilterCount ? 'btn-primary' : ''}" onclick="state.ui.showMoreFilters=!state.ui.showMoreFilters;render()">
+          🎛️ Filters${extraFilterCount ? ` (${extraFilterCount})` : ''}
+        </button>
+      </div>
+
+      <div class="tasks-cmd-right">
+        ${!state.ui.showAssigneeStrip ? `<button type="button" class="btn btn-sm" onclick="state.ui.showAssigneeStrip=true;render()" title="Show team member workload bar">👥 Team Bar</button>` : ''}
+        <div class="views-popover-wrap">
+          <button type="button" class="btn btn-sm ${activePreset ? 'btn-primary' : ''}" onclick="event.stopPropagation();state.ui.showViewsMenu=!state.ui.showViewsMenu;render()" title="Saved views & default filter">
+            🔖 ${activePreset ? esc(activePreset.name) : 'Views'}${presetCount ? ` (${presetCount})` : ''} ▾
+          </button>
+          ${renderSavedViewsPopover()}
+        </div>
         <div class="tab-switch">
           <button class="tab-btn ${state.ui.taskViewMode === 'list' ? 'active' : ''}" onclick="state.ui.taskViewMode='list';render()">📋 List</button>
           <button class="tab-btn ${state.ui.taskViewMode === 'kanban' ? 'active' : ''}" onclick="state.ui.taskViewMode='kanban';render()">🗂️ Kanban</button>
         </div>
-        <button class="btn btn-primary" onclick="openTaskModal()">+ New Task</button>
+        <button class="btn btn-primary btn-sm" onclick="openTaskModal()">+ New Task</button>
       </div>
     </div>
 
-    <div class="filter-bar">
-      <input type="text" id="taskSearchInput" placeholder="🔍 Search tasks..." value="${esc(f.search)}" oninput="state.ui.taskFilters.search=this.value;refreshTaskResults()" />
-      <select onchange="state.ui.taskFilters.projectId=this.value;state.ui.taskFilters.stageId='';render()">
-        <option value="">All Projects</option>
-        ${state.projects.map(p => `<option value="${p.id}" ${f.projectId === p.id ? 'selected' : ''}>${p.isDefault ? '⭐ ' : ''}${esc(p.name)}</option>`).join('')}
-      </select>
-      ${selectedProj ? `
-        <select onchange="state.ui.taskFilters.stageId=this.value;render()">
-          <option value="">All Stages</option>
-          ${(selectedProj.stages||[]).map(s => `<option value="${s.id}" ${f.stageId === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
-        </select>
-      ` : ''}
-      <select onchange="state.ui.taskFilters.category=this.value;render()">
-        <option value="">All Categories</option>
-        ${getCategories().map(c => `<option ${f.category === c ? 'selected' : ''}>${c}</option>`).join('')}
-      </select>
-      <select onchange="state.ui.taskFilters.status=this.value;render()">
-        <option value="__open__" ${f.status === '__open__' ? 'selected' : ''}>All open statuses</option>
-        <option value="" ${f.status === '' ? 'selected' : ''}>All Statuses</option>
-        ${STATUSES.map(s => `<option value="${s}" ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}
-      </select>
-      <select onchange="state.ui.taskFilters.team=this.value;render()">
-        <option value="" ${!f.team ? 'selected' : ''}>All Teams</option>
-        <option value="__unassigned__" ${f.team === '__unassigned__' ? 'selected' : ''}>No Team Assigned</option>
-        ${getAllTeams().map(tm => `<option value="${esc(tm)}" ${f.team === tm ? 'selected' : ''}>🏷️ ${esc(tm)}</option>`).join('')}
-      </select>
-      <select onchange="state.ui.taskFilters.planned=this.value;render()">
-        <option value="" ${!f.planned ? 'selected' : ''}>Planned & Non-planned</option>
-        <option value="planned" ${f.planned === 'planned' ? 'selected' : ''}>🗓️ Planned Only</option>
-        <option value="nonplanned" ${f.planned === 'nonplanned' ? 'selected' : ''}>📋 Non-planned Only</option>
-      </select>
-      <select onchange="state.ui.taskFilters.assignees=this.value?[this.value]:[];render()">
-        <option value="" ${getSelectedAssignees().length === 0 ? 'selected' : ''}>${getSelectedAssignees().length > 1 ? `Multiple (${getSelectedAssignees().length} selected)` : 'All Assignees'}</option>
-        <option value="__me__" ${getSelectedAssignees().length === 1 && getSelectedAssignees()[0] === '__me__' ? 'selected' : ''}>Assigned to Me</option>
-        <option value="__delegated__" ${getSelectedAssignees().length === 1 && getSelectedAssignees()[0] === '__delegated__' ? 'selected' : ''}>All Assignees (Others)</option>
-        ${getAllAssignees(true).map(c => {
-          const meta = getAssigneeMeta(c);
-          const suffix = meta?.leftOrg ? ' (Left org)' : (meta?.team ? ` • ${meta.team}` : '');
-          const sel = getSelectedAssignees().length === 1 && getSelectedAssignees()[0].toLowerCase() === c.toLowerCase();
-          return `<option value="${esc(c)}" ${sel ? 'selected' : ''}>👤 ${esc(c + suffix)}</option>`;
-        }).join('')}
-      </select>
-      <select onchange="state.ui.taskFilters.priority=this.value;render()">
-        <option value="">All Priorities</option>
-        ${PRIORITIES.map(p => `<option ${f.priority === p ? 'selected' : ''}>${p}</option>`).join('')}
-      </select>
-      <select onchange="state.ui.taskFilters.due=this.value;render()">
-        <option value="">Any Due Date</option>
-        <option value="overdue" ${f.due === 'overdue' ? 'selected' : ''}>Overdue</option>
-        <option value="today" ${f.due === 'today' ? 'selected' : ''}>Due Today</option>
-        <option value="week" ${f.due === 'week' ? 'selected' : ''}>Due This Week</option>
-        <option value="none" ${f.due === 'none' ? 'selected' : ''}>No Due Date</option>
-      </select>
-      <button class="btn btn-sm btn-ghost" onclick="clearTaskFilters()">Reset</button>
-    </div>
+    ${state.ui.showMoreFilters ? `
+      <div class="tasks-drawer">
+        <div class="tasks-drawer-grid">
+          ${selectedProj ? `
+            <div>
+              <label>Stage</label>
+              <select onchange="state.ui.taskFilters.stageId=this.value;render()">
+                <option value="">All Stages</option>
+                ${(selectedProj.stages||[]).map(s => `<option value="${s.id}" ${f.stageId === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
+              </select>
+            </div>
+          ` : ''}
+          <div>
+            <label>Status</label>
+            <select onchange="state.ui.taskFilters.status=this.value;render()">
+              <option value="__open__" ${f.status === '__open__' ? 'selected' : ''}>All Open</option>
+              <option value="" ${f.status === '' ? 'selected' : ''}>All (incl. Done)</option>
+              ${STATUSES.map(s => `<option value="${s}" ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label>Due Window</label>
+            <select onchange="state.ui.taskFilters.due=this.value;render()">
+              <option value="">Any Due Date</option>
+              <option value="overdue" ${f.due === 'overdue' ? 'selected' : ''}>Overdue</option>
+              <option value="today" ${f.due === 'today' ? 'selected' : ''}>Due Today</option>
+              <option value="week" ${f.due === 'week' ? 'selected' : ''}>Due This Week</option>
+              <option value="none" ${f.due === 'none' ? 'selected' : ''}>No Due Date</option>
+            </select>
+          </div>
+          <div>
+            <label>Priority</label>
+            <select onchange="state.ui.taskFilters.priority=this.value;render()">
+              <option value="">All Priorities</option>
+              ${PRIORITIES.map(p => `<option ${f.priority === p ? 'selected' : ''}>${p}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label>Category</label>
+            <select onchange="state.ui.taskFilters.category=this.value;render()">
+              <option value="">All Categories</option>
+              ${getCategories().map(c => `<option ${f.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label>Planning Type</label>
+            <select onchange="state.ui.taskFilters.planned=this.value;render()">
+              <option value="" ${!f.planned ? 'selected' : ''}>All Types</option>
+              <option value="planned" ${f.planned === 'planned' ? 'selected' : ''}>🗓️ Planned Only</option>
+              <option value="nonplanned" ${f.planned === 'nonplanned' ? 'selected' : ''}>📋 Non-planned Only</option>
+            </select>
+          </div>
+          <div>
+            <label>Quick Assignee</label>
+            <select onchange="state.ui.taskFilters.assignees=this.value?[this.value]:[];render()">
+              <option value="" ${getSelectedAssignees().length === 0 ? 'selected' : ''}>${getSelectedAssignees().length > 1 ? `Multiple (${getSelectedAssignees().length})` : 'All Assignees'}</option>
+              <option value="__me__" ${getSelectedAssignees().length === 1 && getSelectedAssignees()[0] === '__me__' ? 'selected' : ''}>Assigned to Me</option>
+              <option value="__delegated__" ${getSelectedAssignees().length === 1 && getSelectedAssignees()[0] === '__delegated__' ? 'selected' : ''}>All Delegated</option>
+              ${getAllAssignees(true).map(c => {
+                const sel = getSelectedAssignees().length === 1 && getSelectedAssignees()[0].toLowerCase() === c.toLowerCase();
+                return `<option value="${esc(c)}" ${sel ? 'selected' : ''}>${esc(c)}</option>`;
+              }).join('')}
+            </select>
+          </div>
+        </div>
+      </div>
+    ` : ''}
 
-    ${renderSavedTaskFiltersBar()}
+    ${renderActiveFilterPills()}
+
+    ${renderImplementationPulseBar()}
 
     ${renderAssigneeProgressStrip()}
 
@@ -6578,6 +6986,13 @@ function openShortcutsModal() {
   `);
 }
 
+document.addEventListener('click', () => {
+  if (state.ui && state.ui.showViewsMenu) {
+    state.ui.showViewsMenu = false;
+    render();
+  }
+});
+
 document.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
   const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
@@ -7446,7 +7861,7 @@ function saveSettingsForm(e, silent = false) {
 
 // ===================== INIT =====================
 
-const CADENCE_VERSION = 'v1.1';
+const CADENCE_VERSION = 'v1.2';
 function getCadenceVersion() {
   return CADENCE_VERSION;
 }
